@@ -2,55 +2,2223 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>בדיקת חיבור פיירבייס</title>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מערכת ניהול "עזר חתנים" - ממשק מלא</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- jsPDF CDN for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5; /* Light gray background */
+        }
+        /* Custom styles for message box and modals */
+        .message-box-overlay, .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            visibility: hidden;
+            opacity: 0;
+            transition: visibility 0s, opacity 0.3s ease;
+        }
+        .message-box-overlay.visible, .modal-overlay.visible {
+            visibility: visible;
+            opacity: 1;
+        }
+        .message-box-content, .modal-content {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            max-width: 550px; /* Slightly wider for new fields */
+            width: 90%;
+            position: relative; /* For close button positioning */
+            max-height: 90vh; /* Limit modal height */
+            overflow-y: auto; /* Enable scrolling for long forms */
+        }
+        .message-box-content button, .modal-content button.close-btn {
+            background-color: #4f46e5; /* Indigo-600 */
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: background-color 0.2s ease;
+        }
+        .message-box-content button:hover, .modal-content button.close-btn:hover {
+            background-color: #4338ca; /* Indigo-700 */
+        }
+        .modal-content button.close-btn {
+            position: absolute;
+            top: 10px;
+            left: 10px; /* Adjusted for RTL */
+            background: none;
+            color: #4a5568; /* Gray-700 */
+            font-size: 1.5rem;
+            padding: 0.5rem;
+            border-radius: 50%;
+            line-height: 1;
+            width: 36px; /* Fixed size */
+            height: 36px; /* Fixed size */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.7;
+        }
+        .modal-content button.close-btn:hover {
+            background-color: #edf2f7; /* Gray-100 */
+            opacity: 1;
+        }
+        /* Form specific styles inside modal */
+        .modal-content form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            text-align: right; /* RTL */
+        }
+        .modal-content form label {
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 0.25rem;
+            display: block;
+        }
+        .modal-content form input[type="text"],
+        .modal-content form input[type="number"],
+        .modal-content form input[type="date"],
+        .modal-content form select,
+        .modal-content form textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #cbd5e0; /* Gray-300 */
+            border-radius: 0.5rem;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .modal-content form button[type="submit"] {
+            background-color: #10b981; /* Emerald-500 */
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-top: 1rem;
+            transition: background-color 0.2s ease;
+        }
+        .modal-content form button[type="submit"]:hover {
+            background-color: #059669; /* Emerald-600 */
+        }
+
+        /* Hidden content sections by default */
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+        }
+        /* Drag and drop styling */
+        .drag-area {
+            min-height: 150px;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background-color: #f9fafb;
+            display: flex; /* Make it a flex container */
+            flex-wrap: wrap; /* Allow items to wrap */
+            align-content: flex-start; /* Align content to the start when wrapping */
+            gap: 0.5rem; /* Space between drag items */
+        }
+        .drag-item {
+            background-color: #e0e7ff; /* Indigo-100 */
+            color: #312e81; /* Indigo-900 */
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: grab;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            flex-shrink: 0; /* Prevent items from shrinking too much */
+        }
+        /* Styling for dynamic rows in settings */
+        .setting-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* Flexible columns */
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px dashed #eee;
+        }
+        .setting-row:last-of-type {
+            border-bottom: none;
+        }
+        .setting-row .remove-btn {
+            background-color: #ef4444; /* Red-500 */
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            transition: background-color 0.2s ease;
+            cursor: pointer;
+            width: fit-content; /* Ensure button doesn't stretch */
+            justify-self: end; /* Align button to the end of its grid cell */
+        }
+        .setting-row .remove-btn:hover {
+            background-color: #dc2626; /* Red-600 */
+        }
+        .setting-row input, .setting-row select, .setting-row label {
+            padding: 0.75rem;
+            border: 1px solid #ccc;
+            border-radius: 0.5rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .setting-row label {
+            border: none; /* Labels shouldn't have borders */
+            padding: 0;
+            display: flex;
+            align-items: center;
+            white-space: nowrap; /* Prevent wrapping for labels */
+        }
+        /* Specific styling for the settings sections */
+        #settings .bg-white {
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            margin-bottom: 1.5rem;
+        }
+        .no-data-message {
+            text-align: center;
+            color: #6b7280; /* Gray-500 */
+            padding: 2rem;
+            font-style: italic;
+        }
+
+        /* Styles for the simple bar chart */
+        .bar-chart {
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-end;
+            height: 150px;
+            background-color: #f0f4f8; /* Light blue-gray */
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 1rem;
+            gap: 5px;
+        }
+        .bar {
+            width: 30%; /* Adjust width for 2 bars */
+            background-color: #4c51bf; /* Indigo-700 */
+            transition: height 0.5s ease-in-out;
+            border-radius: 4px 4px 0 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: center;
+            position: relative;
+        }
+        .bar.income { background-color: #10b981; /* Emerald */ }
+        .bar.expense { background-color: #ef4444; /* Red */ }
+        .bar-label {
+            position: absolute;
+            bottom: -20px;
+            font-size: 0.75rem;
+            color: #4a5568;
+        }
+        .bar-value {
+            position: absolute;
+            top: -20px;
+            font-size: 0.75rem;
+            color: #4a5568;
+            font-weight: 600;
+        }
+        /* Styles for dynamic donation history */
+        #donationHistoryContainer .donation-entry {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 0.5rem;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px dashed #e0e0e0;
+        }
+        #donationHistoryContainer .donation-entry:last-child {
+            border-bottom: none;
+        }
+        #donationHistoryContainer .donation-entry input {
+            padding: 0.5rem;
+            border: 1px solid #ccc;
+            border-radius: 0.25rem;
+        }
+    </style>
 </head>
-<body>
-    <div style="padding: 50px; text-align: center; font-family: sans-serif;">
-        <h1>בדיקת כתיבה לפיירבייס</h1>
-        <input type="text" id="testInput" placeholder="כתוב משהו כאן..." style="padding: 10px; width: 300px;">
-        <button onclick="writeToFirebase()" style="padding: 10px 20px; cursor: pointer; background: blue; color: white; border: none; border-radius: 5px;">
-            שלח לפיירבייס
-        </button>
-        <p id="status"></p>
+<body class="flex h-screen">
+    <!-- Custom Message Box HTML -->
+    <div id="messageBoxOverlay" class="message-box-overlay">
+        <div class="message-box-content">
+            <p id="messageBoxText" class="text-lg font-semibold mb-4 text-gray-800"></p>
+            <button id="messageBoxCloseBtn">אישור</button>
+        </div>
     </div>
 
+    <!-- Modal for Adding/Editing Student -->
+    <div id="studentModal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="close-btn" onclick="hideModal('studentModal')">X</button>
+            <h3 class="text-2xl font-bold text-gray-800 mb-6" id="studentModalTitle">הוספת בחור חדש</h3>
+            <form id="studentForm">
+                <input type="hidden" id="studentId">
+                <label for="studentName">שם מלא:</label>
+                <input type="text" id="studentName" required placeholder="לדוגמה: יוסף כהן">
+
+                <label for="studentIDNum">תעודת זהות:</label>
+                <input type="text" id="studentIDNum" placeholder="לדוגמה: 123456789">
+
+                <label for="studentRegDate">תאריך תחילת השתתפות:</label>
+                <input type="date" id="studentRegDate" value="2024-01-01">
+
+                <label for="studentMarriageDate">תאריך חתונה משוער:</label>
+                <input type="date" id="studentMarriageDate">
+
+                <label for="studentPaymentStatus">סטטוס תשלומים:</label>
+                <select id="studentPaymentStatus">
+                    <option value="חוב">חוב</option>
+                    <option value="תשלום חלקי">תשלום חלקי</option>
+                    <option value="משולם">משולם</option>
+                    <option value="קיבל מענק">קיבל מענק</option>
+                </select>
+
+                <label for="studentAnnualPaid">שולם השנה למכסה (₪):</label>
+                <input type="number" id="studentAnnualPaid" value="0" min="0">
+
+                <label for="studentRemainingQuota">יתרה למכסה השנתית (₪):</label>
+                <input type="number" id="studentRemainingQuota" value="0" min="0" disabled>
+
+                <label for="studentDonorsCount">מספר תורמים שגויסו:</label>
+                <input type="number" id="studentDonorsCount" value="0" min="0">
+
+                <button type="submit">שמור בחור</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Adding/Editing Donor -->
+    <div id="donorModal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="close-btn" onclick="hideModal('donorModal')">X</button>
+            <h3 class="text-2xl font-bold text-gray-800 mb-6" id="donorModalTitle">הוספת תורם חדש</h3>
+            <form id="donorForm">
+                <input type="hidden" id="donorId">
+                <label for="donorName">שם מלא:</label>
+                <input type="text" id="donorName" required placeholder="לדוגמה: ראובן לוי">
+
+                <label for="donorPhone">טלפון:</label>
+                <input type="text" id="donorPhone" placeholder="לדוגמה: 05X-XXXXXXX">
+
+                <label for="donorEmail">אימייל:</label>
+                <input type="email" id="donorEmail" placeholder="name@example.com">
+
+                <label for="donorAddress">כתובת:</label>
+                <input type="text" id="donorAddress" placeholder="לדוגמה: רחוב הרצל 10">
+
+                <label for="donorAddressNotes">הערות לכתובת (קומה, כניסה, וכו'):</label>
+                <textarea id="donorAddressNotes" rows="2" placeholder="לדוגמה: קומה 2, דירה 5, מאחורי הבניין"></textarea>
+
+                <label for="donorContactHours">שעות פנויות ליצירת קשר:</label>
+                <input type="text" id="donorContactHours" placeholder="לדוגמה: 10:00-12:00 בבוקר">
+
+                <label for="donorTrack">מסלול תורם:</label>
+                <input type="text" id="donorTrack" placeholder="לדוגמה: מסלול זהב">
+
+                <h4 class="font-semibold text-gray-700 mt-4 mb-2">היסטוריית תרומות:</h4>
+                <div id="donationHistoryContainer" class="border p-3 rounded-lg bg-gray-50 mb-3">
+                    <!-- Dynamic donation year/amount inputs will go here -->
+                    <p id="noDonationHistory" class="text-gray-500 italic text-center text-sm">אין תרומות קודמות, הוסף אחת.</p>
+                </div>
+                <button type="button" onclick="addDonationEntry()" class="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg self-start">
+                    הוסף תרומה לשנה נוספת
+                </button>
+
+                <label for="donorDateAdded">תאריך הוספה למערכת:</label>
+                <input type="date" id="donorDateAdded" value="2024-01-01">
+
+                <button type="submit">שמור תורם</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Adding/Editing Campaign -->
+    <div id="campaignModal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="close-btn" onclick="hideModal('campaignModal')">X</button>
+            <h3 class="text-2xl font-bold text-gray-800 mb-6" id="campaignModalTitle">הוספת מגבית חדשה</h3>
+            <form id="campaignForm">
+                <input type="hidden" id="campaignId">
+                <label for="campaignName">שם המגבית:</label>
+                <input type="text" id="campaignName" required placeholder="לדוגמה: מגבית פסח תשפ''ה">
+
+                <label for="campaignGoal">יעד גיוס (₪):</label>
+                <input type="number" id="campaignGoal" value="0" min="0">
+
+                <label for="campaignRaised">גויס בפועל (₪):</label>
+                <input type="number" id="campaignRaised" value="0" min="0">
+
+                <label for="campaignStartDate">תאריך התחלה:</label>
+                <input type="date" id="campaignStartDate" value="2024-01-01">
+
+                <label for="campaignEndDate">תאריך סיום:</label>
+                <input type="date" id="campaignEndDate">
+
+                <label for="campaignStatus">סטטוס:</label>
+                <select id="campaignStatus">
+                    <option value="פעילה">פעילה</option>
+                    <option value="סגורה">סגורה</option>
+                    <option value="מתוכננת">מתוכננת</option>
+                </select>
+
+                <button type="submit">שמור מגבית</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Adding/Editing Ledger Entry -->
+    <div id="ledgerEntryModal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="close-btn" onclick="hideModal('ledgerEntryModal')">X</button>
+            <h3 class="text-2xl font-bold text-gray-800 mb-6" id="ledgerEntryModalTitle">הוספת תנועה כספית</h3>
+            <form id="ledgerEntryForm">
+                <input type="hidden" id="ledgerEntryId">
+                <label for="ledgerEntryType">סוג תנועה:</label>
+                <select id="ledgerEntryType">
+                    <option value="income">הכנסה</option>
+                    <option value="expense">הוצאה</option>
+                </select>
+
+                <label for="ledgerEntryDate">תאריך:</label>
+                <input type="date" id="ledgerEntryDate" value="2024-01-01">
+
+                <label for="ledgerEntryDescription">תיאור:</label>
+                <input type="text" id="ledgerEntryDescription" required placeholder="לדוגמה: תשלום שכירות / תרומה מבחור">
+
+                <label for="ledgerEntryAmount">סכום (₪):</label>
+                <input type="number" id="ledgerEntryAmount" value="0" min="0" required>
+
+                <label for="ledgerEntryParty">למי/ממי:</label>
+                <input type="text" id="ledgerEntryParty" placeholder="שם הבחור/תורם/ספק">
+
+                <button type="submit">שמור תנועה</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Adding/Editing Group -->
+    <div id="groupModal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="close-btn" onclick="hideModal('groupModal')">X</button>
+            <h3 class="text-2xl font-bold text-gray-800 mb-6" id="groupModalTitle">הוספת קבוצה חדשה</h3>
+            <form id="groupForm">
+                <input type="hidden" id="groupId">
+                <label for="groupName">שם הקבוצה:</label>
+                <input type="text" id="groupName" required placeholder="לדוגמה: קבוצת בוגרי ישיבה">
+                <button type="submit">שמור קבוצה</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Bulk Add Students -->
+    <div id="bulkAddStudentsModal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="close-btn" onclick="hideModal('bulkAddStudentsModal')">X</button>
+            <h3 class="text-2xl font-bold text-gray-800 mb-6">הוספת בחורים בכמות גדולה</h3>
+            <form id="bulkAddStudentsForm">
+                <label for="bulkStudentsList">הזן רשימת שמות בחורים (כל שם בשורה נפרדת: שם פרטי \[שם אמצעי] שם משפחה):</label>
+                <textarea id="bulkStudentsList" rows="10" placeholder="משה כהן&#10;דוד לוי&#10;יוסף ישראל"></textarea>
+                <p class="text-sm text-gray-600 mt-2">לאחר ההוספה, ניתן לערוך כל בחור בנפרד להוספת פרטים נוספים.</p>
+                <button type="submit">הוסף בחורים</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Bulk Add Donors -->
+    <div id="bulkAddDonorsModal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="close-btn" onclick="hideModal('bulkAddDonorsModal')">X</button>
+            <h3 class="text-2xl font-bold text-gray-800 mb-6">הוספת תורמים בכמות גדולה</h3>
+            <form id="bulkAddDonorsForm">
+                <label for="bulkDonorsList">הזן רשימת שמות תורמים (כל שם בשורה נפרדת: שם פרטי \[שם אמצעי] שם משפחה):</label>
+                <textarea id="bulkDonorsList" rows="10" placeholder="ראובן גבאי&#10;שמעון ישראל&#10;לוי בן יצחק"></textarea>
+                <p class="text-sm text-gray-600 mt-2">לאחר ההוספה, ניתן לערוך כל תורם בנפרד להוספת פרטים נוספים.</p>
+                <button type="submit">הוסף תורמים</button>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- Sidebar / ניווט צדדי -->
+    <aside class="w-64 bg-indigo-800 text-white p-6 shadow-lg flex-shrink-0 rounded-l-lg md:rounded-r-none md:rounded-l-lg sm:rounded-none">
+        <h1 class="text-3xl font-bold mb-8 text-center border-b-2 border-indigo-600 pb-4">עזר חתנים</h1>
+        <nav>
+            <ul>
+                <li class="mb-4">
+                    <a href="#" class="flex items-center p-3 rounded-lg hover:bg-indigo-700 transition duration-200 active-link" data-section="dashboard">
+                        <svg class="w-6 h-6 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m0 0l7 7m-11 7v-3m0 0v3a1 1 0 001 1h3m-6 3a9 9 0 1118 0M3 12h18"></path></svg>
+                        לוח מחוונים
+                    </a>
+                </li>
+                <li class="mb-4">
+                    <a href="#" class="flex items-center p-3 rounded-lg hover:bg-indigo-700 transition duration-200" data-section="students">
+                        <svg class="w-6 h-6 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h-5m-1-9l4-4m-1.293 1.293L19 10m-2 2h2m-2 2v2m0-4h-2m-4-2.586V14h4v-2h2m-1-9a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2h-4a2 2 0 01-2-2V9.414z"></path></svg>
+                        ניהול בחורים
+                    </a>
+                </li>
+                <li class="mb-4">
+                    <a href="#" class="flex items-center p-3 rounded-lg hover:bg-indigo-700 transition duration-200" data-section="donors-campaigns">
+                        <svg class="w-6 h-6 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292V15a2 2 0 01-2 2H6a2 2 0 01-2-2v-4m12 0h-4m-4 0v4m-2 4h4"></path></svg>
+                        ניהול תורמים ומגביות
+                    </a>
+                </li>
+                <li class="mb-4">
+                    <a href="#" class="flex items-center p-3 rounded-lg hover:bg-indigo-700 transition duration-200" data-section="ledger">
+                        <svg class="w-6 h-6 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 2v-6m2 4h2a2 2 0 002-2V7a2 2 0 00-2-2H9a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                        כרטיסת הוצאות והכנסות
+                    </a>
+                </li>
+                <li class="mb-4">
+                    <a href="#" class="flex items-center p-3 rounded-lg hover:bg-indigo-700 transition duration-200" data-section="reports">
+                        <svg class="w-6 h-6 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 2v-6m2 4h2a2 2 0 002-2V7a2 2 0 00-2-2H9a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                        דוחות וסטטיסטיקות
+                    </a>
+                </li>
+                <li class="mb-4">
+                    <a href="#" class="flex items-center p-3 rounded-lg hover:bg-indigo-700 transition duration-200" data-section="settings">
+                        <svg class="w-6 h-6 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        הגדרות מערכת
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </aside>
+
+    <!-- Main Content / תוכן ראשי -->
+    <main class="flex-grow p-8 overflow-y-auto">
+        <!-- Dashboard Section -->
+        <section id="dashboard" class="content-section active">
+            <h2 class="text-4xl font-bold text-gray-800 mb-8">לוח מחוונים</h2>
+
+            <!-- Financial Summary Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white p-6 rounded-xl shadow-md transform hover:scale-105 transition duration-300">
+                    <p class="text-gray-500 text-sm">סך תרומות שהתקבלו</p>
+                    <p class="text-3xl font-bold text-green-600 mt-1" id="totalDonations">₪0</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-md transform hover:scale-105 transition duration-300">
+                    <p class="text-gray-500 text-sm">סך תשלומים מבחורים</p>
+                    <p class="text-3xl font-bold text-blue-600 mt-1" id="totalStudentPayments">₪0</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-md transform hover:scale-105 transition duration-300">
+                    <p class="text-gray-500 text-sm">יתרה קיימת בקופה</p>
+                    <p class="text-3xl font-bold text-indigo-600 mt-1" id="currentBalance">₪0</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-md transform hover:scale-105 transition duration-300">
+                    <p class="text-gray-500 text-sm">מענקים ששולמו לחתנים</p>
+                    <p class="text-3xl font-bold text-red-600 mt-1" id="totalGrantsPaid">₪0</p>
+                </div>
+            </div>
+
+            <!-- Fundraising Status / Goal Progress -->
+            <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+                <h3 class="text-2xl font-semibold text-gray-800 mb-4">סטטוס גיוס</h3>
+                <div class="mb-4">
+                    <p class="text-gray-700">התקדמות ליעד גיוס כללי (₪<span id="overallGoalDisplay">0</span>)</p>
+                    <div class="w-full bg-gray-200 rounded-full h-4 mt-2">
+                        <div id="overallProgressBar" class="bg-yellow-500 h-4 rounded-full" style="width: 0%;"></div>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-1"><span id="overallProgressPercent">0%</span> הושלם (₪<span id="overallProgressAmount">0</span> מתוך ₪<span id="overallGoalAmount">0</span>)</p>
+                </div>
+                <p class="text-gray-700">מגביות פעילות: <span class="font-bold text-indigo-600" id="activeCampaignsCount">0</span></p>
+            </div>
+
+            <!-- Student Status and Alerts -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h3 class="text-2xl font-semibold text-gray-800 mb-4">סטטוס בחורים</h3>
+                    <p class="text-gray-700 mb-2">בחורים רשומים: <span class="font-bold text-indigo-600" id="registeredStudentsCount">0</span></p>
+                    <p class="text-gray-700 mb-2">חתנים שקיבלו מענק: <span class="font-bold text-green-600" id="grantedStudentsCount">0</span></p>
+                    <div class="mt-4">
+                        <h4 class="font-semibold text-gray-700 mb-2">תשלומים עתידיים / חובות צפויים</h4>
+                        <div class="w-full bg-gray-100 rounded-lg p-4 h-32 flex items-end justify-around text-gray-500 text-center">
+                            אין נתוני תשלומים
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h3 class="text-2xl font-semibold text-gray-800 mb-4">התראות מיידיות</h3>
+                    <ul class="space-y-3" id="alertsList">
+                        <li class="no-data-message">אין התראות חדשות</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Quick Action Shortcuts -->
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <h3 class="text-2xl font-semibold text-gray-800 mb-4">פעולות מהירות</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <button onclick="showModal('bulkAddStudentsModal')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-xl shadow-md transition duration-300 transform hover:scale-105">
+                        הוספת בחורים
+                    </button>
+                    <button onclick="showModal('bulkAddDonorsModal')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-xl shadow-md transition duration-300 transform hover:scale-105">
+                        הוספת תורמים
+                    </button>
+                    <button onclick="showMessageBox('הפקת דוח כספי תשלח לקובץ PDF במערכת אמיתית.')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-xl shadow-md transition duration-300 transform hover:scale-105">
+                        הפקת דוח כספי
+                    </button>
+                </div>
+            </div>
+             <!-- Financial Overview Chart -->
+            <div class="bg-white p-6 rounded-xl shadow-md mt-8">
+                <h3 class="text-2xl font-semibold text-gray-800 mb-4">התפלגות תרומות וסטטוס קמפיינים</h3>
+                <p class="text-gray-600 mb-4">
+                    גרף זה מציג סקירה כללית של הכנסות והוצאות.
+                    הצגת התפלגות התרומות בכל מגבית לפי קבוצות (והבחורים ללא קבוצה) דורשת תשתית נתונים מורכבת יותר
+                    (קישור תרומות ספציפיות למגביות, תורמים לבחורים, ובחורים לקבוצות) ויכולות גרפיות מתקדמות עבור יישום מלא בדמו זה.
+                </p>
+                <div id="financialBarChart" class="bar-chart">
+                    <!-- Bars will be rendered here by JS -->
+                </div>
+                <p class="text-xs text-gray-500 text-center mt-6">הגרף למעלה מציג סך הכנסות מול סך הוצאות מתוך כרטיסת ההוצאות והכנסות.</p>
+            </div>
+        </section>
+
+        <!-- Student Management Section -->
+        <section id="students" class="content-section">
+            <h2 class="text-4xl font-bold text-gray-800 mb-8">ניהול בחורים</h2>
+
+            <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+                <h3 class="text-2xl font-semibold text-gray-800 mb-4">רשימת בחורים</h3>
+                <div class="flex flex-wrap gap-4 mb-4">
+                    <button onclick="showModal('bulkAddStudentsModal')" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-300">
+                        הוסף בחורים
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-white rounded-lg overflow-hidden">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="py-3 px-4 text-right text-gray-600 font-semibold text-sm">שם הבחור</th>
+                                <th class="py-3 px-4 text-right text-gray-600 font-semibold text-sm">ת"ז</th>
+                                <th class="py-3 px-4 text-right text-gray-600 font-semibold text-sm">תאריך התחלה</th>
+                                <th class="py-3 px-4 text-right text-gray-600 font-semibold text-sm">שולם השנה</th>
+                                <th class="py-3 px-4 text-right text-gray-600 font-semibold text-sm">יתרה למכסה שנתית</th>
+                                <th class="py-3 px-4 text-right text-gray-600 font-semibold text-sm">סטטוס תשלומים</th>
+                                <th class="py-3 px-4 text-right text-gray-600 font-semibold text-sm">תורמים שגייס</th>
+                                <th class="py-3 px-4 text-right text-gray-600 font-semibold text-sm">קבוצה</th>
+                                <th class="py-3 px-4 text-right text-gray-600 font-semibold text-sm">פעולות</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentsTableBody">
+                            <!-- Student rows will be rendered here by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+                <h3 class="text-2xl font-semibold text-gray-800 mb-4">ניהול קבוצות (גרירה ושחרור)</h3>
+                <p class="text-gray-600 mb-4">גרור בחורים בין הרשימות כדי לשייך אותם לקבוצות ולקבל הנחה.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h4 class="font-semibold text-lg mb-2 text-gray-700">בחורים ללא קבוצה</h4>
+                        <div id="unassigned-students" class="drag-area">
+                            <!-- Unassigned students will be rendered here -->
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-lg mb-2 text-gray-700">קבוצות פעילות</h4>
+                        <div id="groupsContainer" class="space-y-4">
+                            <!-- Group drag areas will be rendered here -->
+                        </div>
+                        <button onclick="showModalForAdd('group')" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg mt-4 transition duration-300">
+                            הוסף קבוצה חדשה
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Donor and Campaign Management Section -->
+        <section id="donors-campaigns" class="content-section">
+            <h2 class="text-4xl font-bold text-gray-800 mb-8">ניהול תורמים ומגביות</h2>
+
+            <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+                <h3 class="text-2xl font-semibold text-gray-800 mb-4">רשימת תורמים</h3>
+                <div class="flex flex-wrap gap-4 mb-4">
+                    <button onclick="showModal('bulkAddDonorsModal')" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-300">
+                        הוסף תורמים
+                    </button>
+                     <button onclick="generateDonorAddressPDF()" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-300">
+                        הפק רשימת כתובות תורמים (PDF)
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-white rounded-lg overflow-hidden">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="py-3 px-4 text-right text-gray-600 font-semibold text-sm">שם התורם</th>
+                                <th class="py-3 px-4 text-right text-gray-600 font-semibold text-sm">טלפון</th>
+                                <th class="py-3 px-4 text-right text-gray-600 font-semibold text-sm">בחור מגייס</th>
+                                <th class="py-3 px-4 text-right text-gray-600 font-semibold text-sm">תאריך הוספה</th>
+                                <th class="py-3 px-4 text-right text-gray-600 font-semibold text-sm">שעות פנויות ליצירת קשר</th>
+                                <th class="py-3 px-4 text-right text-gray-600 font-semibold text-sm">מסלול</th>
+                                <th class="py-3 px-4 text-right text-gray-600 font-semibold text-sm">פעולות</th>
+                            </tr>
+                        </thead>
+                        <tbody id="donorsTableBody">
+                            <!-- Donor rows will be rendered here by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+                <h3 class="text-2xl font-semibold text-gray-800 mb-4">ניהול מגביות</h3>
+                <button onclick="showModalForAdd('campaign')" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg mb-4 transition duration-300">
+                    הוסף מגבית חדשה
+                </button>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-white rounded-lg overflow-hidden">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="py-3 px-4 text-right text-gray-600 font-semibold text-sm">שם מגבית</th>
+                                <th class="py-3 px-4 text-right text-gray-600 font-semibold text-sm">יעד גיוס</th>
+                                <th class="py-3 px-4 text-right text-gray-600 font-semibold text-sm">גויס בפועל</th>
+                                <th class="py-3 px-4 text-right text-gray-600 font-semibold text-sm">אחוז התקדמות</th>
+                                <th class="py-3 px-4 text-right text-gray-600 font-semibold text-sm">סטטוס</th>
+                                <th class="py-3 px-4 text-right text-gray-600 font-semibold text-sm">פעולות</th>
+                            </tr>
+                        </thead>
+                        <tbody id="campaignsTableBody">
+                            <!-- Campaign rows will be rendered here by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Ledger Section -->
+        <section id="ledger" class="content-section">
+            <h2 class="text-4xl font-bold text-gray-800 mb-8">כרטיסת הוצאות והכנסות</h2>
+
+            <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+                <h3 class="text-2xl font-semibold text-gray-800 mb-4">סיכום כספי</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+                    <div class="bg-green-50 p-4 rounded-lg shadow">
+                        <p class="text-green-700 font-semibold">סך הכנסות</p>
+                        <p class="text-3xl font-bold text-green-800 mt-1" id="ledgerTotalIncome">₪0</p>
+                    </div>
+                    <div class="bg-red-50 p-4 rounded-lg shadow">
+                        <p class="text-red-700 font-semibold">סך הוצאות</p>
+                        <p class="text-3xl font-bold text-red-800 mt-1" id="ledgerTotalExpense">₪0</p>
+                    </div>
+                    <div class="bg-blue-50 p-4 rounded-lg shadow">
+                        <p class="text-blue-700 font-semibold">יתרה נטו</p>
+                        <p class="text-3xl font-bold text-blue-800 mt-1" id="ledgerNetBalance">₪0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+                <h3 class="text-2xl font-semibold text-gray-800 mb-4">פירוט תנועות</h3>
+                <div class="flex flex-wrap gap-4 mb-4">
+                    <button onclick="showModalForAdd('ledger')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-300">
+                        הוסף תנועה
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-white rounded-lg overflow-hidden">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="py-3 px-4 text-right text-gray-600 font-semibold text-sm">סוג</th>
+                                <th class="py-3 px-4 text-right text-gray-600 font-semibold text-sm">תאריך</th>
+                                <th class="py-3 px-4 text-right text-gray-600 font-semibold text-sm">תיאור</th>
+                                <th class="py-3 px-4 text-right text-gray-600 font-semibold text-sm">סכום (₪)</th>
+                                <th class="py-3 px-4 text-right text-gray-600 font-semibold text-sm">למי/ממי</th>
+                                <th class="py-3 px-4 text-right text-gray-600 font-semibold text-sm">פעולות</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ledgerTableBody">
+                            <!-- Ledger entries will be rendered here by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- Reports and Statistics Section -->
+        <section id="reports" class="content-section">
+            <h2 class="text-4xl font-bold text-gray-800 mb-8">דוחות וסטטיסטיקות</h2>
+
+            <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+                <h3 class="text-2xl font-semibold text-gray-800 mb-4">הפקת דוחות</h3>
+                <p class="text-gray-600 mb-4">בחר את סוג הדוח וטווח התאריכים להפקה.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                    <select class="p-3 border border-gray-300 rounded-lg shadow-sm">
+                        <option>דוח כספי מקיף</option>
+                        <option>דוח זכאות למענקים</option>
+                        <option>דוח התקדמות יעדים</option>
+                    </select>
+                    <input type="date" class="p-3 border border-gray-300 rounded-lg shadow-sm" value="2024-01-01">
+                    <input type="date" class="p-3 border border-gray-300 rounded-lg shadow-sm" value="2024-12-31">
+                </div>
+                <button onclick="showMessageBox('הפקת דוח PDF עבור הנתונים שנבחרו. (פונקציונליות מלאה לדיווח כללי אינה חלק מהדמו).')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-xl shadow-md transition duration-300">
+                    הפק דוח (PDF)
+                </button>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+                <h3 class="text-2xl font-semibold text-gray-800 mb-4">דוחות ספציפיים</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <select id="studentReportSelect" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm mb-2">
+                            <option value="">בחר בחור לדוח</option>
+                            <!-- Students will be loaded here dynamically -->
+                        </select>
+                        <button onclick="generateSpecificStudentReport()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg w-full transition duration-300">
+                            הפק דוח בחור ספציפי
+                        </button>
+                    </div>
+                    <div>
+                        <select id="donorReportSelect" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm mb-2">
+                            <option value="">בחר תורם לדוח</option>
+                            <!-- Donors will be loaded here dynamically -->
+                        </select>
+                        <button onclick="generateSpecificDonorReport()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg w-full transition duration-300">
+                            הפק דוח תורם ספציפי
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <h3 class="text-2xl font-semibold text-gray-800 mb-4">סטטיסטיקות ויזואליות</h3>
+                <p class="text-gray-600">גרפים ונתונים סטטיסטיים יוצגו כאן. לדוגמה:</p>
+                <div class="bg-gray-100 rounded-lg h-64 flex items-center justify-center text-gray-500 mt-4">
+                    גרף פאי: התפלגות הכנסות
+                    <p class="no-data-message mt-2">הפקת גרפים מורכבים (כמו התפלגות לפי קטגוריות) אינה חלק מהדמו הזה.</p>
+                </div>
+                <div class="bg-gray-100 rounded-lg h-64 flex items-center justify-center text-gray-500 mt-4">
+                    גרף קווי: מגמות גיוס כספים לאורך זמן
+                    <p class="no-data-message mt-2">הפקת גרפים מורכבים (כמו מגמות לאורך זמן) אינה חלק מהדמו הזה.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- System Settings Section -->
+        <section id="settings" class="content-section">
+            <h2 class="text-4xl font-bold text-gray-800 mb-8">הגדרות מערכת</h2>
+
+            <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+                <h3 class="text-2xl font-semibold text-gray-800 mb-4">הגדרות כספים כלליות</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="grantAmount" class="block text-gray-700 text-sm font-semibold mb-2">סכום מענק חתונה:</label>
+                        <input type="number" id="grantAmount" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm" value="9000">
+                    </div>
+                     <div>
+                        <label for="overallGoalSetting" class="block text-gray-700 text-sm font-semibold mb-2">יעד גיוס כללי (₪):</label>
+                        <input type="number" id="overallGoalSetting" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm" value="0">
+                    </div>
+                </div>
+                <button onclick="saveGeneralSettings()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-xl shadow-md transition duration-300 mt-6">
+                    שמור הגדרות כלליות
+                </button>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+                <h3 class="text-2xl font-semibold text-gray-800 mb-4">הגדרות תשלומים לבחורים</h3>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-semibold mb-2">מודל תשלום:</label>
+                    <select id="paymentModel" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm">
+                        <option value="annual">שנתי</option>
+                        <option value="monthly">חודשי</option>
+                        <option value="fixed_installments">מספר תשלומים קבוע (שנים ויעדים)</option>
+                    </select>
+                </div>
+
+                <div id="annualPaymentConfig" class="payment-config-section">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label for="annualSinglePayment" class="block text-gray-700 text-sm font-semibold mb-2">סכום לתשלום שנתי:</label>
+                            <input type="number" id="annualSinglePayment" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm" value="1800">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="monthlyPaymentConfig" class="payment-config-section hidden">
+                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label for="monthlyPaymentAmount" class="block text-gray-700 text-sm font-semibold mb-2">סכום לתשלום חודשי:</label>
+                            <input type="number" id="monthlyPaymentAmount" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm" value="150">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="fixedInstallmentsConfig" class="payment-config-section hidden">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label for="totalGoalAmount" class="block text-gray-700 text-sm font-semibold mb-2">יעד כספי כולל (על פני כל השנים):</label>
+                            <input type="number" id="totalGoalAmount" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm" value="5400">
+                        </div>
+                        <div>
+                            <label for="numberOfYears" class="block text-gray-700 text-sm font-semibold mb-2">מספר שנים ליעד הכספי:</label>
+                            <input type="number" id="numberOfYears" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm" value="3" min="1">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label for="numInstallmentsPerYear" class="block text-gray-700 text-sm font-semibold mb-2">מספר תשלומים בשנה:</label>
+                            <input type="number" id="numInstallmentsPerYear" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm" value="3" min="1">
+                        </div>
+                    </div>
+                    <div id="dynamicInstallmentsContainer">
+                        <!-- Installment inputs will be generated here by JS -->
+                    </div>
+                    <button id="addSpecificInstallmentBtn" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg mt-4 transition duration-300">
+                        הוסף תשלום ספציפי
+                    </button>
+                </div>
+                <button onclick="showMessageBox('הגדרות התשלומים לבחורים נשמרו.')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-xl shadow-md transition duration-300 mt-6">
+                    שמור הגדרות תשלומים
+                </button>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+                <h3 class="text-2xl font-semibold text-gray-800 mb-4">מעקב תרומות בחורים וסטטוס מכסה שנתית</h3>
+                <p class="text-gray-600 mb-4">הגדר כיצד המערכת תחשב ותעקוב אחר תרומות המגויסות ע"י בחורים לטובת המכסה השנתית שלהם.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label for="annualQuota" class="block text-gray-700 text-sm font-semibold mb-2">מכסה שנתית לתשלום בחור (לפני הנחות):</label>
+                        <input type="number" id="annualQuota" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm" value="1800">
+                    </div>
+                    <div>
+                        <label for="percentOfDonorContribution" class="block text-gray-700 text-sm font-semibold mb-2">אחוז תרומת תורם שיחשב למכסה:</label>
+                        <input type="number" id="percentOfDonorContribution" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm" value="50" min="0" max="100">
+                    </div>
+                </div>
+                <button onclick="showMessageBox('הגדרות מעקב תרומות בחורים נשמרו.')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-xl shadow-md transition duration-300 mt-6">
+                    שמור הגדרות מעקב
+                </button>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+                <h3 class="text-2xl font-semibold text-gray-800 mb-4">ניהול הנחות לבחורים</h3>
+                <div id="discountsContainer">
+                    <div class="setting-row">
+                        <input type="text" placeholder="שם הנחה (לדוגמה: הנחת קבוצה)" value="הנחת קבוצה" class="w-full">
+                        <input type="number" placeholder="סכום הנחה (₪)" value="200" class="w-full">
+                        <button onclick="removeDynamicRow(this)" class="remove-btn">הסר</button>
+                    </div>
+                </div>
+                <button id="addDiscountBtn" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg mt-4 transition duration-300">
+                    הוסף הנחה חדשה
+                </button>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+                <h3 class="text-2xl font-semibold text-gray-800 mb-4">אחוזי עמלה על גיוס תורמים</h3>
+                <div id="commissionsContainer">
+                    <div class="setting-row">
+                        <label>עד סכום (₪):</label>
+                        <input type="number" placeholder="סכום (₪)" value="200" class="w-full">
+                        <label>אחוז עמלה:</label>
+                        <input type="number" placeholder="אחוז (%)" value="10" class="w-full">
+                        <button onclick="removeDynamicRow(this)" class="remove-btn">הסר</button>
+                    </div>
+                     <div class="setting-row">
+                        <label>עד סכום (₪):</label>
+                        <input type="number" placeholder="סכום (₪)" value="500" class="w-full">
+                        <label>אחוז עמלה:</label>
+                        <input type="number" placeholder="אחוז (%)" value="12" class="w-full">
+                        <button onclick="removeDynamicRow(this)" class="remove-btn">הסר</button>
+                    </div>
+                    <div class="setting-row">
+                        <label>מעל סכום (₪):</label>
+                        <input type="number" placeholder="סכום (₪)" value="500" class="w-full">
+                        <label>אחוז עמלה:</label>
+                        <input type="number" placeholder="אחוז (%)" value="15" class="w-full">
+                        <button onclick="removeDynamicRow(this)" class="remove-btn">הסר</button>
+                    </div>
+                </div>
+                <button id="addCommissionBtn" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg mt-4 transition duration-300">
+                    הוסף רמת עמלה
+                </button>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+                <h3 class="text-2xl font-semibold text-gray-800 mb-4">הגדרות דוחות וקבלות</h3>
+                <div class="grid grid-cols-1 gap-4">
+                    <div>
+                        <label for="reportLogoUrl" class="block text-gray-700 text-sm font-semibold mb-2">לוגו לדוחות (כתובת URL):</label>
+                        <input type="text" id="reportLogoUrl" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm" placeholder="https://placehold.co/150x50/cccccc/333333?text=Logo">
+                    </div>
+                    <div>
+                        <label for="reportHeader" class="block text-gray-700 text-sm font-semibold mb-2">כותרת עליונה לדוחות:</label>
+                        <textarea id="reportHeader" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm" rows="3" placeholder="כותרת שתופיע בראש כל דוח"></textarea>
+                    </div>
+                    <div>
+                        <label for="receiptFooter" class="block text-gray-700 text-sm font-semibold mb-2">הערה תחתונה לקבלות:</label>
+                        <textarea id="receiptFooter" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm" rows="3" placeholder="טקסט קבוע בתחתית הקבלה"></textarea>
+                    </div>
+                    <div>
+                        <label for="invoicePrefix" class="block text-gray-700 text-sm font-semibold mb-2">קידומת מספרי חשבוניות:</label>
+                        <input type="text" id="invoicePrefix" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm" value="INV-">
+                    </div>
+                </div>
+                <button onclick="showMessageBox('הגדרות דוחות וקבלות נשמרו.')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-xl shadow-md transition duration-300 mt-6">
+                    שמור הגדרות דוחות וקבלות
+                </button>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+                <h3 class="text-2xl font-semibold text-gray-800 mb-4">ניהול שדות מותאמים אישית</h3>
+                <p class="text-gray-600 mb-4">הוסף שדות מידע נוספים עבור בחורים או תורמים.</p>
+                <div id="customFieldsContainer">
+                     <div class="setting-row">
+                        <select class="w-full p-3 border border-gray-300 rounded-lg shadow-sm">
+                            <option>בחור</option>
+                            <option>תורם</option>
+                        </select>
+                        <input type="text" placeholder="שם שדה (לדוגמה: עיר מגורים)" class="w-full">
+                        <select class="w-full p-3 border border-gray-300 rounded-lg shadow-sm">
+                            <option>טקסט</option>
+                            <option>מספר</option>
+                            <option>תאריך</option>
+                            <option>בוליאני (כן/לא)</option>
+                        </select>
+                        <button onclick="removeDynamicRow(this)" class="remove-btn">הסר</button>
+                    </div>
+                </div>
+                <button id="addCustomFieldBtn" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg mt-4 transition duration-300">
+                    הוסף שדה מותאם אישית
+                </button>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+                <h3 class="text-2xl font-semibold text-gray-800 mb-4">ניהול משתמשים (מנהלים)</h3>
+                <p class="text-600 mb-4">כאן ניתן להוסיף, לערוך ולמחוק משתמשים בעלי גישה לפאנל הניהול.</p>
+                <button onclick="showMessageBox('כאן יופיע טופס לניהול משתמשי מערכת.')" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-300">
+                    הוסף משתמש חדש
+                </button>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <h3 class="text-2xl font-semibold text-gray-800 mb-4">הגדרות התראות</h3>
+                <p class="text-gray-600 mb-4">הגדר את סוגי ומועדי ההתראות במערכת.</p>
+                <label class="inline-flex items-center mb-2">
+                    <input type="checkbox" class="form-checkbox h-5 w-5 text-indigo-600 rounded" checked>
+                    <span class="ml-2 text-gray-700">התראות מייל על תשלומים חסרים</span>
+                </label>
+                <label class="inline-flex items-center mb-2 mr-4">
+                    <input type="checkbox" class="form-checkbox h-5 w-5 text-indigo-600 rounded">
+                    <span class="ml-2 text-gray-700">התראות SMS על מגביות חדשות</span>
+                </label>
+                 <label class="inline-flex items-center">
+                    <input type="checkbox" class="form-checkbox h-5 w-5 text-indigo-600 rounded" checked>
+                    <span class="ml-2 text-gray-700">התראה במערכת על בקשת מענק</span>
+                </label>
+                <button onclick="showMessageBox('הגדרות התראות נשמרו.')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-300 mt-4 block">
+                    שמור הגדרות התראות
+                </button>
+            </div>
+        </section>
+
+    </main>
+
     <script>
-        // ההגדרות של הפרויקט שלך
-        const firebaseConfig = {
-            apiKey: "AIzaSyDM6W9-cPi84mr7H-ZqaEnh36IbM-MxXsA",
-            authDomain: "management-system-f98b0.firebaseapp.com",
-            projectId: "management-system-f98b0",
-            storageBucket: "management-system-f98b0.firebasestorage.app",
-            messagingSenderId: "910174071968",
-            appId: "1:910174071968:web:5a7a8d2a6989beba026dc5"
-        };
+        // --- Global Data Storage (In-memory for demo) ---
+        // Initialize an empty array for students
+        let students = []; // { id: 's1', name: 'משה כהן', id_number: '123456789', regDate: '2024-01-01', marriageDate: '2025-10-20', paymentStatus: 'חוב', currentYearPaid: 0, annualQuota: 1800, donorsCount: 0, group: null }
+        // Initialize an empty array for donors
+        let donors = []; // { id: 'd1', name: 'ראובן גבאי', phone: '050-1234567', email: 'reuven@example.com', address: '', addressNotes: '', contactHours: '10:00-12:00', track: 'מסלול זהב', donationsHistory: [{year: 2023, amount: 500}], dateAdded: '2024-01-01', broughtByStudentId: null }
+        // Initialize an empty array for campaigns
+        let campaigns = []; // { id: 'c1', name: 'מגבית חנוכה', goal: 0, raised: 0, startDate: '2023-12-01', endDate: '2023-12-31', status: 'פעילה' }
+        // Initialize an empty array for ledger entries
+        let ledgerEntries = []; // { id: 'l1', type: 'income', date: '2024-06-15', description: 'תשלום בחור - משה כהן', amount: 0, party: 'משה כהן' }
+        // Initialize an empty array for groups (or pre-fill if needed)
+        let groups = []; // { id: 'group-a', name: 'קבוצה א' }
+        let overallGoal = 0; // Overall fundraising goal, now editable in settings
 
-        // אתחול
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+        // --- Helper Functions for Modals and Messages ---
+        const messageBoxOverlay = document.getElementById('messageBoxOverlay');
+        const messageBoxText = document.getElementById('messageBoxText');
+        const messageBoxCloseBtn = document.getElementById('messageBoxCloseBtn');
 
-        async function writeToFirebase() {
-            const val = document.getElementById('testInput').value;
-            const status = document.getElementById('status');
-            
-            status.innerText = "שולח...";
-            
-            try {
-                // ניסיון לכתוב לאוסף שנקרא TestData מסמך בשם "check"
-                await db.collection("TestData").doc("check").set({
-                    myValue: val,
-                    lastUpdated: new Date()
-                });
-                status.innerText = "✅ נכתב בהצלחה! בדוק עכשיו ב-Console";
-                status.style.color = "green";
-            } catch (error) {
-                status.innerText = "❌ שגיאה: " + error.message;
-                status.style.color = "red";
-                console.error(error);
+        function showMessageBox(message) {
+            messageBoxText.textContent = message;
+            messageBoxOverlay.classList.add('visible');
+        }
+
+        messageBoxCloseBtn.addEventListener('click', () => {
+            messageBoxOverlay.classList.remove('visible');
+        });
+
+        // Generic show/hide modal functions
+        function showModal(modalId) {
+            document.getElementById(modalId).classList.add('visible');
+        }
+
+        function hideModal(modalId) {
+            document.getElementById(modalId).classList.remove('visible');
+        }
+
+        // --- CRUD Modal Handling (Add/Edit Logic) ---
+
+        // Function to show modals for Add or Edit based on type
+        function showModalForAdd(type) {
+            let modalId, formId, titleId;
+            let today = new Date().toISOString().split('T')[0];
+
+            // Reset forms and set default values
+            if (type === 'student') {
+                modalId = 'studentModal';
+                formId = 'studentForm';
+                titleId = 'studentModalTitle';
+                document.getElementById('studentId').value = ''; // Clear ID for add
+                document.getElementById('studentName').value = '';
+                document.getElementById('studentIDNum').value = '';
+                document.getElementById('studentRegDate').value = today;
+                document.getElementById('studentMarriageDate').value = '';
+                document.getElementById('studentPaymentStatus').value = 'חוב';
+                document.getElementById('studentAnnualPaid').value = 0;
+                // Calculate remaining quota based on annualQuota from settings
+                document.getElementById('studentRemainingQuota').value = (parseFloat(document.getElementById('annualQuota').value) || 1800) - 0;
+                document.getElementById('studentDonorsCount').value = 0;
+                document.getElementById(titleId).textContent = 'הוספת בחור חדש';
+            } else if (type === 'donor') {
+                modalId = 'donorModal';
+                formId = 'donorForm';
+                titleId = 'donorModalTitle';
+                document.getElementById('donorId').value = ''; // Clear ID for add
+                document.getElementById('donorName').value = '';
+                document.getElementById('donorPhone').value = '';
+                document.getElementById('donorEmail').value = '';
+                document.getElementById('donorAddress').value = '';
+                document.getElementById('donorAddressNotes').value = '';
+                document.getElementById('donorContactHours').value = '';
+                document.getElementById('donorTrack').value = '';
+                // Clear and hide history section for new donor until added
+                document.getElementById('donationHistoryContainer').innerHTML = '<p id="noDonationHistory" class="text-gray-500 italic text-center text-sm">אין תרומות קודמות, הוסף אחת.</p>';
+                document.getElementById('donorDateAdded').value = today; // Auto-set date added
+                document.getElementById(titleId).textContent = 'הוספת תורם חדש';
+            } else if (type === 'campaign') {
+                modalId = 'campaignModal';
+                formId = 'campaignForm';
+                titleId = 'campaignModalTitle';
+                document.getElementById('campaignId').value = ''; // Clear ID for add
+                document.getElementById('campaignName').value = '';
+                document.getElementById('campaignGoal').value = 0;
+                document.getElementById('campaignRaised').value = 0;
+                document.getElementById('campaignStartDate').value = today;
+                document.getElementById('campaignEndDate').value = '';
+                document.getElementById('campaignStatus').value = 'פעילה';
+                document.getElementById(titleId).textContent = 'הוספת מגבית חדשה';
+            } else if (type === 'ledger') {
+                modalId = 'ledgerEntryModal';
+                formId = 'ledgerEntryForm';
+                titleId = 'ledgerEntryModalTitle';
+                document.getElementById('ledgerEntryId').value = ''; // Clear ID for add
+                document.getElementById('ledgerEntryType').value = 'income';
+                document.getElementById('ledgerEntryDate').value = today;
+                document.getElementById('ledgerEntryDescription').value = '';
+                document.getElementById('ledgerEntryAmount').value = 0;
+                document.getElementById('ledgerEntryParty').value = '';
+                document.getElementById(titleId).textContent = 'הוספת תנועה כספית';
+            } else if (type === 'group') {
+                modalId = 'groupModal';
+                formId = 'groupForm';
+                titleId = 'groupModalTitle';
+                document.getElementById('groupId').value = ''; // Clear ID for add
+                document.getElementById('groupName').value = '';
+                document.getElementById(titleId).textContent = 'הוספת קבוצה חדשה';
+            }
+            showModal(modalId);
+        }
+
+        function showModalForEdit(type, id) {
+            let modalId, formId, titleId, item;
+
+            if (type === 'student') {
+                modalId = 'studentModal';
+                formId = 'studentForm';
+                titleId = 'studentModalTitle';
+                item = students.find(s => s.id === id);
+                document.getElementById('studentId').value = item.id;
+                document.getElementById('studentName').value = item.name;
+                document.getElementById('studentIDNum').value = item.id_number;
+                document.getElementById('studentRegDate').value = item.regDate;
+                document.getElementById('studentMarriageDate').value = item.marriageDate;
+                document.getElementById('studentPaymentStatus').value = item.paymentStatus;
+                document.getElementById('studentAnnualPaid').value = item.currentYearPaid;
+                // Calculate remaining quota on edit based on current annualQuota from settings and paid amount
+                const annualQuotaFromSettings = parseFloat(document.getElementById('annualQuota').value) || 1800;
+                document.getElementById('studentRemainingQuota').value = annualQuotaFromSettings - item.currentYearPaid;
+                document.getElementById('studentDonorsCount').value = item.donorsCount;
+                document.getElementById(titleId).textContent = `עריכת בחור: ${item.name}`;
+            } else if (type === 'donor') {
+                modalId = 'donorModal';
+                formId = 'donorForm';
+                titleId = 'donorModalTitle';
+                item = donors.find(d => d.id === id);
+                document.getElementById('donorId').value = item.id;
+                document.getElementById('donorName').value = item.name;
+                document.getElementById('donorPhone').value = item.phone;
+                document.getElementById('donorEmail').value = item.email;
+                document.getElementById('donorAddress').value = item.address;
+                document.getElementById('donorAddressNotes').value = item.addressNotes;
+                document.getElementById('donorContactHours').value = item.contactHours;
+                document.getElementById('donorTrack').value = item.track;
+                // Populate donation history
+                renderDonationHistory(item.donationsHistory || []);
+                document.getElementById('donorDateAdded').value = item.dateAdded;
+                document.getElementById(titleId).textContent = `עריכת תורם: ${item.name}`;
+            } else if (type === 'campaign') {
+                modalId = 'campaignModal';
+                formId = 'campaignForm';
+                titleId = 'campaignModalTitle';
+                item = campaigns.find(c => c.id === id);
+                document.getElementById('campaignId').value = item.id;
+                document.getElementById('campaignName').value = item.name;
+                document.getElementById('campaignGoal').value = item.goal;
+                document.getElementById('campaignRaised').value = item.raised;
+                document.getElementById('campaignStartDate').value = item.startDate;
+                document.getElementById('campaignEndDate').value = item.endDate;
+                document.getElementById('campaignStatus').value = item.status;
+                document.getElementById(titleId).textContent = `עריכת מגבית: ${item.name}`;
+            } else if (type === 'ledger') {
+                modalId = 'ledgerEntryModal';
+                formId = 'ledgerEntryForm';
+                titleId = 'ledgerEntryModalTitle';
+                item = ledgerEntries.find(e => e.id === id);
+                document.getElementById('ledgerEntryId').value = item.id;
+                document.getElementById('ledgerEntryType').value = item.type;
+                document.getElementById('ledgerEntryDate').value = item.date;
+                document.getElementById('ledgerEntryDescription').value = item.description;
+                document.getElementById('ledgerEntryAmount').value = item.amount;
+                document.getElementById('ledgerEntryParty').value = item.party;
+                document.getElementById(titleId).textContent = `עריכת תנועה: ${item.description}`;
+            } else if (type === 'group') {
+                modalId = 'groupModal';
+                formId = 'groupForm';
+                titleId = 'groupModalTitle';
+                item = groups.find(g => g.id === id);
+                document.getElementById('groupId').value = item.id;
+                document.getElementById('groupName').value = item.name;
+                document.getElementById(titleId).textContent = `עריכת קבוצה: ${item.name}`;
+            }
+            showModal(modalId);
+        }
+
+
+        // --- Section Management ---
+        function showSection(sectionId) {
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.getElementById(sectionId).classList.add('active');
+            // Update active class in sidebar
+            document.querySelectorAll('nav a').forEach(innerLink => {
+                innerLink.classList.remove('bg-indigo-700');
+            });
+            document.querySelector(`[data-section="${sectionId}"]`).classList.add('bg-indigo-700');
+
+            // Re-render specific sections when navigated to
+            if (sectionId === 'dashboard') {
+                renderDashboardSummary();
+                renderFinancialOverviewGraphs();
+            } else if (sectionId === 'students') {
+                renderStudentsTable();
+                renderDragAndDropAreas();
+            } else if (sectionId === 'donors-campaigns') {
+                renderDonorsTable();
+                renderCampaignsTable();
+            } else if (sectionId === 'ledger') {
+                renderLedgerTable();
+                renderLedgerSummary();
+            } else if (sectionId === 'reports') {
+                populateReportsDropdowns(); // Populate dropdowns when navigating to reports
+            } else if (sectionId === 'settings') {
+                updatePaymentConfigDisplay();
+                document.getElementById('overallGoalSetting').value = overallGoal; // Load current overall goal
             }
         }
+
+        // --- Initial Load ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Load initial settings or defaults
+            overallGoal = parseFloat(document.getElementById('overallGoalSetting').value) || 0;
+            showSection('dashboard'); // Initial render of dashboard to show 0s and graphs
+        });
+
+        // --- Sidebar Navigation ---
+        document.querySelectorAll('nav a').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const sectionId = link.getAttribute('data-section');
+                showSection(sectionId);
+            });
+        });
+
+        // --- Dashboard Rendering ---
+        function renderDashboardSummary() {
+            const totalIncome = ledgerEntries.filter(e => e.type === 'income').reduce((sum, e) => sum + e.amount, 0);
+            const totalExpenses = ledgerEntries.filter(e => e.type === 'expense').reduce((sum, e) => sum + e.amount, 0);
+
+            // Calculate total donations from history
+            const totalDonations = donors.reduce((donorSum, donor) => {
+                return donorSum + (donor.donationsHistory || []).reduce((historySum, entry) => historySum + entry.amount, 0);
+            }, 0);
+            // Sum student payments (assuming currentYearPaid reflects their contributions)
+            const totalStudentPayments = students.reduce((sum, s) => sum + s.currentYearPaid, 0);
+
+            document.getElementById('totalDonations').textContent = `₪${totalDonations.toLocaleString()}`;
+            document.getElementById('totalStudentPayments').textContent = `₪${totalStudentPayments.toLocaleString()}`;
+            document.getElementById('currentBalance').textContent = `₪${(totalIncome - totalExpenses).toLocaleString()}`;
+            document.getElementById('totalGrantsPaid').textContent = `₪${ledgerEntries.filter(e => e.type === 'expense' && e.description.includes('מענק חתונה')).reduce((sum, e) => sum + e.amount, 0).toLocaleString()}`;
+
+            // Use the editable overallGoal
+            document.getElementById('overallGoalDisplay').textContent = overallGoal.toLocaleString();
+            document.getElementById('overallGoalAmount').textContent = overallGoal.toLocaleString();
+
+            const overallProgressAmount = totalIncome; // Overall progress from all income
+            const overallProgressPercent = overallGoal > 0 ? ((overallProgressAmount / overallGoal) * 100).toFixed(0) : 0;
+
+            document.getElementById('overallProgressAmount').textContent = overallProgressAmount.toLocaleString();
+            document.getElementById('overallProgressPercent').textContent = `${overallProgressPercent}%`;
+            document.getElementById('overallProgressBar').style.width = `${overallProgressPercent > 100 ? 100 : overallProgressPercent}%`;
+
+            document.getElementById('activeCampaignsCount').textContent = campaigns.filter(c => c.status === 'פעילה').length;
+            document.getElementById('registeredStudentsCount').textContent = students.length;
+            document.getElementById('grantedStudentsCount').textContent = students.filter(s => s.paymentStatus === 'קיבל מענק').length;
+
+            renderFinancialOverviewGraphs(); // Update graphs whenever dashboard summary is rendered
+        }
+
+        function renderFinancialOverviewGraphs() {
+            const financialBarChart = document.getElementById('financialBarChart');
+            financialBarChart.innerHTML = ''; // Clear previous bars
+
+            const totalIncome = ledgerEntries.filter(e => e.type === 'income').reduce((sum, e) => sum + e.amount, 0);
+            const totalExpense = ledgerEntries.filter(e => e.type === 'expense').reduce((sum, e) => sum + e.amount, 0);
+
+            const maxAmount = Math.max(totalIncome, totalExpense, 1); // Ensure division by zero is avoided
+            
+            // Add a small height if amount is 0 to make the bar visible
+            const incomeHeight = (totalIncome === 0 && maxAmount === 1) ? 5 : (totalIncome / maxAmount) * 100;
+            const expenseHeight = (totalExpense === 0 && maxAmount === 1) ? 5 : (totalExpense / maxAmount) * 100;
+
+            const incomeBar = document.createElement('div');
+            incomeBar.classList.add('bar', 'income');
+            incomeBar.style.height = `${incomeHeight}%`;
+            incomeBar.innerHTML = `<span class="bar-value">₪${totalIncome.toLocaleString()}</span><span class="bar-label">הכנסות</span>`;
+            financialBarChart.appendChild(incomeBar);
+
+            const expenseBar = document.createElement('div');
+            expenseBar.classList.add('bar', 'expense');
+            expenseBar.style.height = `${expenseHeight}%`;
+            expenseBar.innerHTML = `<span class="bar-value">₪${totalExpense.toLocaleString()}</span><span class="bar-label">הוצאות</span>`;
+            financialBarChart.appendChild(expenseBar);
+
+             if (totalIncome === 0 && totalExpense === 0) {
+                financialBarChart.innerHTML = `<p class="no-data-message">אין נתונים כספיים להצגה בגרף זה.</p>`;
+                financialBarChart.style.display = 'flex'; // Ensure flex layout even with message
+                financialBarChart.style.justifyContent = 'center';
+                financialBarChart.style.alignItems = 'center';
+            } else {
+                 financialBarChart.style.display = 'flex';
+            }
+        }
+
+
+        // --- Students Management ---
+        const studentsTableBody = document.getElementById('studentsTableBody');
+        const studentForm = document.getElementById('studentForm');
+
+        // Event listener for student annual paid input to update remaining quota
+        document.getElementById('studentAnnualPaid').addEventListener('input', () => {
+            const annualQuotaFromSettings = parseFloat(document.getElementById('annualQuota').value) || 1800;
+            const currentYearPaidVal = parseFloat(document.getElementById('studentAnnualPaid').value) || 0;
+            document.getElementById('studentRemainingQuota').value = (annualQuotaFromSettings - currentYearPaidVal).toLocaleString();
+        });
+
+        function renderStudentsTable() {
+            studentsTableBody.innerHTML = '';
+            if (students.length === 0) {
+                studentsTableBody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-gray-500 italic">אין בחורים רשומים במערכת.</td></tr>`;
+                return;
+            }
+            students.forEach(student => {
+                const row = studentsTableBody.insertRow();
+                row.classList.add('border-b', 'border-gray-200', 'hover:bg-gray-50');
+                const annualQuotaFromSettings = parseFloat(document.getElementById('annualQuota').value) || 1800;
+                const remainingQuota = annualQuotaFromSettings - student.currentYearPaid;
+
+                row.innerHTML = `
+                    <td class="py-3 px-4">${student.name}</td>
+                    <td class="py-3 px-4">${student.id_number || 'אין'}</td>
+                    <td class="py-3 px-4">${student.regDate}</td>
+                    <td class="py-3 px-4">₪${student.currentYearPaid.toLocaleString()}</td>
+                    <td class="py-3 px-4">₪${remainingQuota.toLocaleString()}</td>
+                    <td class="py-3 px-4 ${student.paymentStatus === 'משולם' ? 'text-green-700' : student.paymentStatus === 'תשלום חלקי' ? 'text-yellow-700' : 'text-red-700'}">${student.paymentStatus}</td>
+                    <td class="py-3 px-4">${student.donorsCount}</td>
+                    <td class="py-3 px-4">${student.group ? groups.find(g => g.id === student.group)?.name : 'אין קבוצה'}</td>
+                    <td class="py-3 px-4">
+                        <button onclick="showModalForEdit('student', '${student.id}')" class="text-blue-600 hover:text-blue-800 ml-2">צפה/ערוך</button>
+                        <button onclick="deleteStudent('${student.id}')" class="text-red-600 hover:text-red-800">מחק</button>
+                    </td>
+                `;
+            });
+        }
+
+        studentForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const studentId = document.getElementById('studentId').value;
+            const annualQuotaFromSettings = parseFloat(document.getElementById('annualQuota').value) || 1800;
+            const currentYearPaidVal = parseFloat(document.getElementById('studentAnnualPaid').value) || 0;
+
+            const studentData = {
+                id: studentId || 's' + Date.now(), // Generate new ID if adding
+                name: document.getElementById('studentName').value,
+                id_number: document.getElementById('studentIDNum').value,
+                regDate: document.getElementById('studentRegDate').value,
+                marriageDate: document.getElementById('studentMarriageDate').value,
+                paymentStatus: document.getElementById('studentPaymentStatus').value,
+                currentYearPaid: currentYearPaidVal,
+                annualQuota: annualQuotaFromSettings, // Store for reference or calculation
+                donorsCount: parseInt(document.getElementById('studentDonorsCount').value) || 0,
+                group: null // Group assigned via drag & drop
+            };
+
+            if (studentId) { // Edit existing student
+                const index = students.findIndex(s => s.id === studentId);
+                if (index !== -1) {
+                    students[index] = { ...students[index], ...studentData }; // Merge existing with new
+                }
+                showMessageBox(`הבחור ${studentData.name} עודכן בהצלחה.`);
+            } else { // Add new student
+                students.push(studentData);
+                showMessageBox(`הבחור ${studentData.name} נוסף בהצלחה.`);
+            }
+
+            renderStudentsTable();
+            renderDragAndDropAreas();
+            renderDashboardSummary();
+            hideModal('studentModal');
+            studentForm.reset();
+            populateReportsDropdowns(); // Update reports dropdowns
+        });
+
+        function deleteStudent(studentId) {
+            students = students.filter(s => s.id !== studentId);
+            renderStudentsTable();
+            renderDragAndDropAreas();
+            renderDashboardSummary();
+            populateReportsDropdowns(); // Update reports dropdowns
+            showMessageBox('הבחור נמחק בהצלחה.');
+        }
+
+        // --- Bulk Add Students ---
+        const bulkAddStudentsForm = document.getElementById('bulkAddStudentsForm');
+        bulkAddStudentsForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const namesList = document.getElementById('bulkStudentsList').value.split('\n').map(name => name.trim()).filter(name => name !== '');
+            const today = new Date().toISOString().split('T')[0];
+            const annualQuotaFromSettings = parseFloat(document.getElementById('annualQuota').value) || 1800;
+
+            namesList.forEach(name => {
+                const newStudent = {
+                    id: 's' + Date.now() + Math.random().toString(36).substr(2, 5), // More robust ID
+                    name: name,
+                    id_number: '',
+                    regDate: today,
+                    marriageDate: '',
+                    paymentStatus: 'חוב',
+                    currentYearPaid: 0,
+                    annualQuota: annualQuotaFromSettings,
+                    donorsCount: 0,
+                    group: null
+                };
+                students.push(newStudent);
+            });
+            renderStudentsTable();
+            renderDragAndDropAreas();
+            renderDashboardSummary();
+            hideModal('bulkAddStudentsModal');
+            bulkAddStudentsForm.reset();
+            populateReportsDropdowns(); // Update reports dropdowns
+            showMessageBox(`${namesList.length} בחורים נוספו בהצלחה.`);
+        });
+
+
+        // --- Drag & Drop Students & Groups ---
+        const unassignedStudentsArea = document.getElementById('unassigned-students');
+        const groupsContainer = document.getElementById('groupsContainer');
+        const groupForm = document.getElementById('groupForm');
+
+        function renderDragAndDropAreas() {
+            unassignedStudentsArea.innerHTML = '';
+            const unassigned = students.filter(s => s.group === null);
+            if (unassigned.length === 0) {
+                unassignedStudentsArea.innerHTML = `<p class="no-data-message">אין בחורים ללא קבוצה.</p>`;
+            } else {
+                 unassigned.forEach(student => {
+                    const studentDiv = document.createElement('div');
+                    studentDiv.classList.add('drag-item');
+                    studentDiv.setAttribute('draggable', 'true');
+                    studentDiv.dataset.studentId = student.id;
+                    studentDiv.textContent = student.name;
+                    unassignedStudentsArea.appendChild(studentDiv);
+                });
+            }
+
+            groupsContainer.innerHTML = '';
+            if (groups.length === 0) {
+                 groupsContainer.innerHTML = `<p class="no-data-message">אין קבוצות מוגדרות.</p>`;
+            } else {
+                groups.forEach(group => {
+                    const groupArea = document.createElement('div');
+                    groupArea.classList.add('drag-area', 'flex', 'flex-col', 'items-start', 'relative', 'p-4'); // Added relative for edit button
+                    groupArea.id = group.id; // Assign ID to the group drag area
+                    groupArea.innerHTML = `
+                        <h5 class="font-medium text-gray-800 mb-2 w-full text-center p-2 rounded-md bg-indigo-200">
+                            ${group.name}
+                            <button onclick="showModalForEdit('group', '${group.id}')" class="absolute top-2 left-2 text-indigo-700 hover:text-indigo-900 focus:outline-none">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.38-2.827-2.828z" />
+                                </svg>
+                            </button>
+                        </h5>
+                    `;
+
+                    const studentsInGroup = students.filter(s => s.group === group.id);
+                    if (studentsInGroup.length === 0) {
+                        groupArea.innerHTML += `<p class="no-data-message">גרור לכאן בחורים לקבוצה.</p>`;
+                    } else {
+                        studentsInGroup.forEach(student => {
+                            const studentDiv = document.createElement('div');
+                            studentDiv.classList.add('drag-item');
+                            studentDiv.setAttribute('draggable', 'true');
+                            studentDiv.dataset.studentId = student.id;
+                            studentDiv.textContent = student.name;
+                            groupArea.appendChild(studentDiv);
+                        });
+                    }
+                    groupsContainer.appendChild(groupArea);
+                });
+            }
+            addDragAndDropListeners();
+        }
+
+        // Group Form (Add/Edit)
+        groupForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const groupId = document.getElementById('groupId').value;
+            const newGroupName = document.getElementById('groupName').value;
+
+            if (groupId) { // Edit existing group
+                const index = groups.findIndex(g => g.id === groupId);
+                if (index !== -1) {
+                    groups[index].name = newGroupName;
+                }
+                showMessageBox(`הקבוצה "${newGroupName}" עודכנה בהצלחה.`);
+            } else { // Add new group
+                const newGroup = {
+                    id: 'group-' + Date.now(),
+                    name: newGroupName
+                };
+                groups.push(newGroup);
+                showMessageBox(`הקבוצה "${newGroupName}" נוספה בהצלחה.`);
+            }
+            renderDragAndDropAreas();
+            hideModal('groupModal');
+            groupForm.reset();
+        });
+
+        let draggedItem = null;
+
+        function addDragAndDropListeners() {
+            document.querySelectorAll('.drag-item').forEach(item => {
+                item.addEventListener('dragstart', (e) => {
+                    draggedItem = e.target;
+                    e.dataTransfer.setData('text/plain', e.target.dataset.studentId);
+                    setTimeout(() => { e.target.classList.add('opacity-50'); }, 0);
+                });
+                item.addEventListener('dragend', (e) => {
+                    if (draggedItem) {
+                        draggedItem.classList.remove('opacity-50');
+                        draggedItem = null;
+                    }
+                });
+            });
+
+            document.querySelectorAll('.drag-area').forEach(area => {
+                area.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.target.closest('.drag-area').style.borderColor = '#6366f1';
+                });
+                area.addEventListener('dragleave', (e) => {
+                    e.target.closest('.drag-area').style.borderColor = '#ccc';
+                });
+                area.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    const targetArea = e.target.closest('.drag-area');
+                    if (targetArea && draggedItem) {
+                        const studentId = draggedItem.dataset.studentId;
+                        const student = students.find(s => s.id === studentId);
+
+                        if (student) {
+                            // Update student's group
+                            student.group = targetArea.id.startsWith('group-') ? targetArea.id : null;
+
+                            renderDragAndDropAreas(); // Re-render both drag & drop areas to reflect changes correctly
+                            renderStudentsTable(); // Also update student table if group column is shown
+                            showMessageBox(`הבחור "${student.name}" הועבר בהצלחה.`);
+                        }
+                    }
+                    targetArea.style.borderColor = '#ccc';
+                });
+            });
+        }
+
+
+        // --- Donors Management ---
+        const donorsTableBody = document.getElementById('donorsTableBody');
+        const donorForm = document.getElementById('donorForm');
+        const donationHistoryContainer = document.getElementById('donationHistoryContainer');
+
+        function renderDonationHistory(history) {
+            donationHistoryContainer.innerHTML = ''; // Clear previous entries
+            if (!history || history.length === 0) {
+                donationHistoryContainer.innerHTML = '<p id="noDonationHistory" class="text-gray-500 italic text-center text-sm">אין תרומות קודמות, הוסף אחת.</p>';
+                return;
+            }
+            document.getElementById('noDonationHistory')?.remove(); // Remove placeholder if exists
+
+            history.forEach((entry, index) => {
+                const div = document.createElement('div');
+                div.classList.add('donation-entry');
+                div.innerHTML = `
+                    <label>שנה:</label>
+                    <input type="number" class="donation-year" value="${entry.year}" placeholder="שנה" min="1900" max="2100">
+                    <label>סכום (₪):</label>
+                    <input type="number" class="donation-amount" value="${entry.amount}" placeholder="סכום (₪)" min="0">
+                    <button type="button" onclick="removeDonationEntry(this)" class="bg-red-500 hover:bg-red-600 text-white p-2 rounded-md">הסר</button>
+                `;
+                donationHistoryContainer.appendChild(div);
+            });
+        }
+
+        function addDonationEntry() {
+            const div = document.createElement('div');
+            div.classList.add('donation-entry');
+            const currentYear = new Date().getFullYear();
+            div.innerHTML = `
+                <label>שנה:</label>
+                <input type="number" class="donation-year" value="${currentYear}" placeholder="שנה" min="1900" max="2100">
+                <label>סכום (₪):</label>
+                <input type="number" class="donation-amount" value="0" placeholder="סכום (₪)" min="0">
+                <button type="button" onclick="removeDonationEntry(this)" class="bg-red-500 hover:bg-red-600 text-white p-2 rounded-md">הסר</button>
+            `;
+            // Remove the "no history" message if it exists
+            document.getElementById('noDonationHistory')?.remove();
+            donationHistoryContainer.appendChild(div);
+        }
+
+        function removeDonationEntry(buttonElement) {
+            buttonElement.closest('.donation-entry').remove();
+            if (donationHistoryContainer.children.length === 0) {
+                donationHistoryContainer.innerHTML = '<p id="noDonationHistory" class="text-gray-500 italic text-center text-sm">אין תרומות קודמות, הוסף אחת.</p>';
+            }
+        }
+
+        function renderDonorsTable() {
+            donorsTableBody.innerHTML = '';
+            if (donors.length === 0) {
+                donorsTableBody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-gray-500 italic">אין תורמים רשומים במערכת.</td></tr>`;
+                return;
+            }
+            donors.forEach(donor => {
+                const row = donorsTableBody.insertRow();
+                row.classList.add('border-b', 'border-gray-200', 'hover:bg-gray-50');
+                row.innerHTML = `
+                    <td class="py-3 px-4">${donor.name}</td>
+                    <td class="py-3 px-4">${donor.phone || 'אין'}</td>
+                    <td class="py-3 px-4">${donor.broughtByStudentId ? students.find(s => s.id === donor.broughtByStudentId)?.name || 'לא ידוע' : 'לא רלוונטי'}</td>
+                    <td class="py-3 px-4">${donor.dateAdded || 'אין'}</td>
+                    <td class="py-3 px-4">${donor.contactHours || 'לא צוין'}</td>
+                    <td class="py-3 px-4">${donor.track || 'רגיל'}</td>
+                    <td class="py-3 px-4">
+                        <button onclick="showModalForEdit('donor', '${donor.id}')" class="text-blue-600 hover:text-blue-800 ml-2">צפה/ערוך</button>
+                        <button onclick="deleteDonor('${donor.id}')" class="text-red-600 hover:text-red-800">מחק</button>
+                    </td>
+                `;
+            });
+        }
+
+        donorForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const donorId = document.getElementById('donorId').value;
+            
+            // Get donation history from dynamic inputs
+            const donationEntries = Array.from(donationHistoryContainer.querySelectorAll('.donation-entry')).map(entryDiv => {
+                const year = parseInt(entryDiv.querySelector('.donation-year').value);
+                const amount = parseFloat(entryDiv.querySelector('.donation-amount').value);
+                return { year, amount };
+            }).filter(entry => !isNaN(entry.year) && !isNaN(entry.amount)); // Filter out invalid entries
+
+
+            const donorData = {
+                id: donorId || 'd' + Date.now(),
+                name: document.getElementById('donorName').value,
+                phone: document.getElementById('donorPhone').value,
+                email: document.getElementById('donorEmail').value,
+                address: document.getElementById('donorAddress').value,
+                addressNotes: document.getElementById('donorAddressNotes').value,
+                contactHours: document.getElementById('donorContactHours').value,
+                track: document.getElementById('donorTrack').value,
+                donationsHistory: donationEntries, // Save the collected history
+                dateAdded: document.getElementById('donorDateAdded').value, // Capture this
+                broughtByStudentId: null // Keep null, would be set in a dedicated form or via student edit
+            };
+
+            if (donorId) { // Edit existing donor
+                const index = donors.findIndex(d => d.id === donorId);
+                if (index !== -1) {
+                    donors[index] = { ...donors[index], ...donorData };
+                }
+                showMessageBox(`התורם ${donorData.name} עודכן בהצלחה.`);
+            } else { // Add new donor
+                donors.push(donorData);
+                showMessageBox(`התורם ${donorData.name} נוסף בהצלחה.`);
+            }
+            renderDonorsTable();
+            renderDashboardSummary();
+            hideModal('donorModal');
+            donorForm.reset();
+            // Reset donation history display
+            donationHistoryContainer.innerHTML = '<p id="noDonationHistory" class="text-gray-500 italic text-center text-sm">אין תרומות קודמות, הוסף אחת.</p>';
+            populateReportsDropdowns(); // Update reports dropdowns
+        });
+
+        function deleteDonor(donorId) {
+            donors = donors.filter(d => d.id !== donorId);
+            renderDonorsTable();
+            renderDashboardSummary();
+            populateReportsDropdowns(); // Update reports dropdowns
+            showMessageBox('התורם נמחק בהצלחה.');
+        }
+
+        // --- Bulk Add Donors ---
+        const bulkAddDonorsForm = document.getElementById('bulkAddDonorsForm');
+        bulkAddDonorsForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const namesList = document.getElementById('bulkDonorsList').value.split('\n').map(name => name.trim()).filter(name => name !== '');
+            const today = new Date().toISOString().split('T')[0];
+            
+            namesList.forEach(name => {
+                const newDonor = {
+                    id: 'd' + Date.now() + Math.random().toString(36).substr(2, 5), // More robust ID
+                    name: name,
+                    phone: '', email: '', address: '', addressNotes: '',
+                    contactHours: '', track: '',
+                    donationsHistory: [], // Initialize empty history for bulk added
+                    dateAdded: today, // Auto-set date for bulk
+                    broughtByStudentId: null
+                };
+                donors.push(newDonor);
+            });
+            renderDonorsTable();
+            renderDashboardSummary();
+            hideModal('bulkAddDonorsModal');
+            bulkAddDonorsForm.reset();
+            populateReportsDropdowns(); // Update reports dropdowns
+            showMessageBox(`${namesList.length} תורמים נוספו בהצלחה.`);
+        });
+
+
+        // --- Generate Donor Address PDF ---
+        function generateDonorAddressPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({
+                unit: 'mm',
+                format: 'a4',
+                orientation: 'portrait'
+            });
+
+            // Note: For full Hebrew font support (e.g., Noto Sans Hebrew with proper ligatures),
+            // you would need to embed the font data (e.g., base64) into jsPDF, which is beyond
+            // the scope of this simple HTML demo.
+            // Using default font (Helvetica) and relying on align: 'right' for RTL.
+            doc.setFont("Helvetica");
+            
+            let y = 10;
+            const margin = 10;
+            const lineHeight = 7;
+            const maxWidth = 190;
+
+            doc.setFontSize(16);
+            // Use text alignment for RTL
+            doc.text("רשימת כתובות תורמים - עזר חתנים", doc.internal.pageSize.width / 2, y, { align: 'center' });
+            y += lineHeight * 2;
+
+            if (donors.length === 0) {
+                doc.setFontSize(12);
+                doc.text("אין תורמים רשומים במערכת להפקת כתובות.", doc.internal.pageSize.width / 2, y, { align: 'center' });
+                y += lineHeight;
+            } else {
+                doc.setFontSize(10);
+                donors.forEach((donor, index) => {
+                    const donorName = `שם: ${donor.name}`;
+                    const donorAddress = `כתובת: ${donor.address || 'לא צוין'}`;
+                    const donorNotes = `הערות: ${donor.addressNotes || 'אין'}`;
+                    const donorPhone = `טלפון: ${donor.phone || 'אין'}`;
+
+                    // Calculate space needed for this entry (name + address + notes + phone + gap)
+                    const entryHeight = lineHeight * 4.5;
+
+                    if (y + entryHeight > doc.internal.pageSize.height - margin) { // Check if new page is needed
+                        doc.addPage();
+                        y = margin;
+                        doc.setFontSize(16);
+                        doc.text("רשימת כתובות תורמים - עזר חתנים (המשך)", doc.internal.pageSize.width / 2, y, { align: 'center' });
+                        y += lineHeight * 2;
+                        doc.setFontSize(10);
+                    }
+
+                    // For RTL text with jsPDF, passing text and using align: 'right' is the common approach without complex plugins.
+                    doc.text(`${index + 1}. ${donorName}`, doc.internal.pageSize.width - margin, y, { align: 'right' });
+                    y += lineHeight;
+                    doc.text(`   ${donorAddress}`, doc.internal.pageSize.width - margin, y, { align: 'right' });
+                    y += lineHeight;
+                    doc.text(`   ${donorNotes}`, doc.internal.pageSize.width - margin, y, { align: 'right' });
+                    y += lineHeight;
+                    doc.text(`   ${donorPhone}`, doc.internal.pageSize.width - margin, y, { align: 'right' });
+                    y += lineHeight * 1.5; // Add some extra space between entries
+                });
+            }
+
+            doc.save("רשימת-כתובות-תורמים.pdf");
+            showMessageBox('קובץ PDF של כתובות תורמים הופק בהצלחה! ייתכנו שיבושים קלים בהצגת עברית ללא הטמעת פונטים מלאה.');
+        }
+
+
+        // --- Campaigns Management ---
+        const campaignsTableBody = document.getElementById('campaignsTableBody');
+        const campaignForm = document.getElementById('campaignForm');
+
+        function renderCampaignsTable() {
+            campaignsTableBody.innerHTML = '';
+            if (campaigns.length === 0) {
+                campaignsTableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500 italic">אין מגביות מוגדרות במערכת.</td></tr>`;
+                return;
+            }
+            campaigns.forEach(campaign => {
+                const progress = campaign.goal > 0 ? ((campaign.raised / campaign.goal) * 100).toFixed(0) : 0;
+                const statusClass = campaign.status === 'פעילה' ? 'text-yellow-700' : campaign.status === 'סגורה' ? 'text-green-700' : 'text-gray-700';
+                const row = campaignsTableBody.insertRow();
+                row.classList.add('border-b', 'border-gray-200', 'hover:bg-gray-50');
+                row.innerHTML = `
+                    <td class="py-3 px-4">${campaign.name}</td>
+                    <td class="py-3 px-4">₪${campaign.goal.toLocaleString()}</td>
+                    <td class="py-3 px-4">₪${campaign.raised.toLocaleString()}</td>
+                    <td class="py-3 px-4">${progress}%</td>
+                    <td class="py-3 px-4 ${statusClass}">${campaign.status}</td>
+                    <td class="py-3 px-4">
+                        <button onclick="showModalForEdit('campaign', '${campaign.id}')" class="text-blue-600 hover:text-blue-800 ml-2">צפה/ערוך</button>
+                        <button onclick="deleteCampaign('${campaign.id}')" class="text-red-600 hover:text-red-800">מחק</button>
+                    </td>
+                `;
+            });
+        }
+
+        campaignForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const campaignId = document.getElementById('campaignId').value;
+            const campaignData = {
+                id: campaignId || 'c' + Date.now(),
+                name: document.getElementById('campaignName').value,
+                goal: parseFloat(document.getElementById('campaignGoal').value) || 0,
+                raised: parseFloat(document.getElementById('campaignRaised').value) || 0,
+                startDate: document.getElementById('campaignStartDate').value,
+                endDate: document.getElementById('campaignEndDate').value,
+                status: document.getElementById('campaignStatus').value
+            };
+
+            if (campaignId) { // Edit existing campaign
+                const index = campaigns.findIndex(c => c.id === campaignId);
+                if (index !== -1) {
+                    campaigns[index] = { ...campaigns[index], ...campaignData };
+                }
+                showMessageBox(`המגבית "${campaignData.name}" עודכנה בהצלחה.`);
+            } else { // Add new campaign
+                campaigns.push(campaignData);
+                showMessageBox(`המגבית "${campaignData.name}" נוספה בהצלחה.`);
+            }
+            renderCampaignsTable();
+            renderDashboardSummary();
+            hideModal('campaignModal');
+            campaignForm.reset();
+        });
+
+        function deleteCampaign(campaignId) {
+            campaigns = campaigns.filter(c => c.id !== campaignId);
+            renderCampaignsTable();
+            renderDashboardSummary(); // Update dashboard if campaigns change
+            showMessageBox('המגבית נמחקה בהצלחה.');
+        }
+
+
+        // --- Ledger Management ---
+        const ledgerTableBody = document.getElementById('ledgerTableBody');
+        const ledgerEntryForm = document.getElementById('ledgerEntryForm');
+
+        function renderLedgerTable() {
+            ledgerTableBody.innerHTML = '';
+            if (ledgerEntries.length === 0) {
+                ledgerTableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500 italic">אין תנועות כספיות להצגה.</td></tr>`;
+                return;
+            }
+            ledgerEntries.forEach(entry => {
+                const row = ledgerTableBody.insertRow();
+                row.classList.add('border-b', 'border-gray-200', 'hover:bg-gray-50');
+                const typeClass = entry.type === 'income' ? 'text-green-700' : 'text-red-700';
+                row.innerHTML = `
+                    <td class="py-3 px-4 ${typeClass}">${entry.type === 'income' ? 'הכנסה' : 'הוצאה'}</td>
+                    <td class="py-3 px-4">${entry.date}</td>
+                    <td class="py-3 px-4">${entry.description}</td>
+                    <td class="py-3 px-4">₪${entry.amount.toLocaleString()}</td>
+                    <td class="py-3 px-4">${entry.party || 'לא צוין'}</td>
+                    <td class="py-3 px-4">
+                        <button onclick="showModalForEdit('ledger', '${entry.id}')" class="text-blue-600 hover:text-blue-800 ml-2">צפה/ערוך</button>
+                        <button onclick="deleteLedgerEntry('${entry.id}')" class="text-red-600 hover:text-red-800">מחק</button>
+                    </td>
+                `;
+            });
+        }
+
+        function deleteLedgerEntry(entryId) {
+            ledgerEntries = ledgerEntries.filter(e => e.id !== entryId);
+            renderLedgerTable();
+            renderLedgerSummary();
+            renderDashboardSummary();
+            showMessageBox('התנועה נמחקה בהצלחה.');
+        }
+
+        function renderLedgerSummary() {
+            const totalIncome = ledgerEntries.filter(e => e.type === 'income').reduce((sum, e) => sum + e.amount, 0);
+            const totalExpense = ledgerEntries.filter(e => e.type === 'expense').reduce((sum, e) => sum + e.amount, 0);
+            document.getElementById('ledgerTotalIncome').textContent = `₪${totalIncome.toLocaleString()}`;
+            document.getElementById('ledgerTotalExpense').textContent = `₪${totalExpense.toLocaleString()}`;
+            document.getElementById('ledgerNetBalance').textContent = `₪${(totalIncome - totalExpense).toLocaleString()}`;
+        }
+
+        ledgerEntryForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const ledgerEntryId = document.getElementById('ledgerEntryId').value;
+            const entryData = {
+                id: ledgerEntryId || 'l' + Date.now(),
+                type: document.getElementById('ledgerEntryType').value,
+                date: document.getElementById('ledgerEntryDate').value,
+                description: document.getElementById('ledgerEntryDescription').value,
+                amount: parseFloat(document.getElementById('ledgerEntryAmount').value) || 0,
+                party: document.getElementById('ledgerEntryParty').value
+            };
+
+            if (ledgerEntryId) { // Edit existing entry
+                const index = ledgerEntries.findIndex(e => e.id === ledgerEntryId);
+                if (index !== -1) {
+                    ledgerEntries[index] = { ...ledgerEntries[index], ...entryData };
+                }
+                showMessageBox(`התנועה "${entryData.description}" עודכנה בהצלחה.`);
+            } else { // Add new entry
+                ledgerEntries.push(entryData);
+                showMessageBox(`תנועה "${entryData.description}" נוספה בהצלחה.`);
+            }
+            renderLedgerTable();
+            renderLedgerSummary();
+            renderDashboardSummary();
+            hideModal('ledgerEntryModal');
+            ledgerEntryForm.reset();
+        });
+
+
+        // --- Reports and Statistics Section ---
+        const studentReportSelect = document.getElementById('studentReportSelect');
+        const donorReportSelect = document.getElementById('donorReportSelect');
+
+        function populateReportsDropdowns() {
+            // Populate student dropdown
+            studentReportSelect.innerHTML = '<option value="">בחר בחור לדוח</option>';
+            students.forEach(student => {
+                const option = document.createElement('option');
+                option.value = student.id;
+                option.textContent = student.name;
+                studentReportSelect.appendChild(option);
+            });
+
+            // Populate donor dropdown
+            donorReportSelect.innerHTML = '<option value="">בחר תורם לדוח</option>';
+            donors.forEach(donor => {
+                const option = document.createElement('option');
+                option.value = donor.id;
+                option.textContent = donor.name;
+                donorReportSelect.appendChild(option);
+            });
+        }
+
+        function generateSpecificStudentReport() {
+            const selectedStudentId = studentReportSelect.value;
+            if (!selectedStudentId) {
+                showMessageBox('אנא בחר בחור מהרשימה כדי להפיק דוח.');
+                return;
+            }
+            const student = students.find(s => s.id === selectedStudentId);
+            if (student) {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+                doc.setFont("Helvetica");
+
+                let y = 10;
+                const margin = 10;
+                const lineHeight = 7;
+
+                doc.setFontSize(16);
+                doc.text(`דוח בחור: ${student.name}`, doc.internal.pageSize.width / 2, y, { align: 'center' });
+                y += lineHeight * 2;
+
+                doc.setFontSize(10);
+                doc.text(`תעודת זהות: ${student.id_number || 'אין'}`, doc.internal.pageSize.width - margin, y, { align: 'right' }); y += lineHeight;
+                doc.text(`תאריך תחילת השתתפות: ${student.regDate}`, doc.internal.pageSize.width - margin, y, { align: 'right' }); y += lineHeight;
+                doc.text(`תאריך חתונה משוער: ${student.marriageDate || 'לא צוין'}`, doc.internal.pageSize.width - margin, y, { align: 'right' }); y += lineHeight;
+                doc.text(`סטטוס תשלומים: ${student.paymentStatus}`, doc.internal.pageSize.width - margin, y, { align: 'right' }); y += lineHeight;
+                doc.text(`שולם השנה למכסה: ₪${student.currentYearPaid.toLocaleString()}`, doc.internal.pageSize.width - margin, y, { align: 'right' }); y += lineHeight;
+                doc.text(`יתרה למכסה השנתית: ₪${(student.annualQuota - student.currentYearPaid).toLocaleString()}`, doc.internal.pageSize.width - margin, y, { align: 'right' }); y += lineHeight;
+                doc.text(`מספר תורמים שגויסו: ${student.donorsCount}`, doc.internal.pageSize.width - margin, y, { align: 'right' }); y += lineHeight;
+                doc.text(`קבוצה: ${student.group ? groups.find(g => g.id === student.group)?.name : 'אין קבוצה'}`, doc.internal.pageSize.width - margin, y, { align: 'right' }); y += lineHeight * 2;
+
+                doc.text("(במערכת מלאה, כאן יוצגו פירוטי תשלומים, היסטוריה וכו')", doc.internal.pageSize.width / 2, y, { align: 'center' });
+                doc.save(`דוח-בחור-${student.name}.pdf`);
+                showMessageBox('קובץ PDF של דוח בחור הופק בהצלחה! ייתכנו שיבושים קלים בהצגת עברית ללא הטמעת פונטים מלאה.');
+            } else {
+                showMessageBox('הבחור שנבחר לא נמצא.');
+            }
+        }
+
+        function generateSpecificDonorReport() {
+            const selectedDonorId = donorReportSelect.value;
+            if (!selectedDonorId) {
+                showMessageBox('אנא בחר תורם מהרשימה כדי להפיק דוח.');
+                return;
+            }
+            const donor = donors.find(d => d.id === selectedDonorId);
+            if (donor) {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+                doc.setFont("Helvetica");
+
+                let y = 10;
+                const margin = 10;
+                const lineHeight = 7;
+
+                doc.setFontSize(16);
+                doc.text(`דוח תורם: ${donor.name}`, doc.internal.pageSize.width / 2, y, { align: 'center' });
+                y += lineHeight * 2;
+
+                doc.setFontSize(10);
+                doc.text(`טלפון: ${donor.phone || 'אין'}`, doc.internal.pageSize.width - margin, y, { align: 'right' }); y += lineHeight;
+                doc.text(`אימייל: ${donor.email || 'אין'}`, doc.internal.pageSize.width - margin, y, { align: 'right' }); y += lineHeight;
+                doc.text(`כתובת: ${donor.address || 'אין'}`, doc.internal.pageSize.width - margin, y, { align: 'right' }); y += lineHeight;
+                doc.text(`הערות לכתובת: ${donor.addressNotes || 'אין'}`, doc.internal.pageSize.width - margin, y, { align: 'right' }); y += lineHeight;
+                doc.text(`שעות פנויות ליצירת קשר: ${donor.contactHours || 'לא צוין'}`, doc.internal.pageSize.width - margin, y, { align: 'right' }); y += lineHeight;
+                doc.text(`מסלול: ${donor.track || 'רגיל'}`, doc.internal.pageSize.width - margin, y, { align: 'right' }); y += lineHeight;
+                doc.text(`תאריך הוספה למערכת: ${donor.dateAdded || 'אין'}`, doc.internal.pageSize.width - margin, y, { align: 'right' }); y += lineHeight * 1.5;
+
+                doc.text("היסטוריית תרומות:", doc.internal.pageSize.width - margin, y, { align: 'right' }); y += lineHeight;
+                if (donor.donationsHistory && donor.donationsHistory.length > 0) {
+                    donor.donationsHistory.forEach(entry => {
+                        doc.text(`- שנה: ${entry.year}, סכום: ₪${entry.amount.toLocaleString()}`, doc.internal.pageSize.width - margin - 5, y, { align: 'right' }); y += lineHeight;
+                    });
+                } else {
+                    doc.text("אין היסטוריית תרומות.", doc.internal.pageSize.width - margin - 5, y, { align: 'right' }); y += lineHeight;
+                }
+                y += lineHeight;
+
+                doc.text("(במערכת מלאה, כאן יוצגו פירוט תרומות לאורך השנים, מגביות שתרם להן וכו')", doc.internal.pageSize.width / 2, y, { align: 'center' });
+                doc.save(`דוח-תורם-${donor.name}.pdf`);
+                showMessageBox('קובץ PDF של דוח תורם הופק בהצלחה! ייתכנו שיבושים קלים בהצגת עברית ללא הטמעת פונטים מלאה.');
+            } else {
+                showMessageBox('התורם שנבחר לא נמצא.');
+            }
+        }
+
+
+        // --- Settings Section Dynamic Forms ---
+
+        // Helper function for removing dynamic rows
+        function removeDynamicRow(buttonElement) {
+            buttonElement.closest('.setting-row').remove();
+            showMessageBox('השדה הוסר בהצלחה.');
+        }
+
+        // Save general settings (overall goal)
+        function saveGeneralSettings() {
+            overallGoal = parseFloat(document.getElementById('overallGoalSetting').value) || 0;
+            renderDashboardSummary(); // Update dashboard with new goal
+            showMessageBox('הגדרות כלליות נשמרו.');
+        }
+
+
+        // Payment Settings for Students (Logic remains the same as before, just included for context)
+        const paymentModelSelect = document.getElementById('paymentModel');
+        const annualPaymentConfig = document.getElementById('annualPaymentConfig');
+        const monthlyPaymentConfig = document.getElementById('monthlyPaymentConfig');
+        const fixedInstallmentsConfig = document.getElementById('fixedInstallmentsConfig');
+
+        const totalGoalAmountInput = document.getElementById('totalGoalAmount');
+        const numberOfYearsInput = document.getElementById('numberOfYears');
+        const numInstallmentsPerYearInput = document.getElementById('numInstallmentsPerYear');
+        const dynamicInstallmentsContainer = document.getElementById('dynamicInstallmentsContainer');
+        const addSpecificInstallmentBtn = document.getElementById('addSpecificInstallmentBtn');
+
+
+        function updatePaymentConfigDisplay() {
+            annualPaymentConfig.classList.add('hidden');
+            monthlyPaymentConfig.classList.add('hidden');
+            fixedInstallmentsConfig.classList.add('hidden');
+
+            const selectedModel = paymentModelSelect.value;
+            if (selectedModel === 'annual') {
+                annualPaymentConfig.classList.remove('hidden');
+            } else if (selectedModel === 'monthly') {
+                monthlyPaymentConfig.classList.remove('hidden');
+            } else if (selectedModel === 'fixed_installments') {
+                fixedInstallmentsConfig.classList.remove('hidden');
+                generateFixedInstallmentInputs(); // Regenerate inputs when model changes
+            }
+        }
+
+        function generateFixedInstallmentInputs() {
+            dynamicInstallmentsContainer.innerHTML = ''; // Clear existing inputs
+            const totalGoal = parseFloat(totalGoalAmountInput.value) || 0;
+            const years = parseInt(numberOfYearsInput.value) || 1;
+            const installmentsPerYear = parseInt(numInstallmentsPerYearInput.value) || 1;
+            const totalInstallments = years * installmentsPerYear;
+            const defaultInstallmentAmount = (totalInstallments > 0 ? (totalGoal / totalInstallments) : 0).toFixed(2); // Avoid division by zero
+
+            for (let y = 0; y < years; y++) {
+                const yearHeader = document.createElement('h5');
+                yearHeader.classList.add('font-medium', 'text-gray-800', 'mb-2', 'mt-4', 'w-full');
+                yearHeader.textContent = `שנה ${y + 1}:`;
+                dynamicInstallmentsContainer.appendChild(yearHeader);
+
+                for (let i = 0; i < installmentsPerYear; i++) {
+                    const div = document.createElement('div');
+                    div.classList.add('setting-row');
+                    div.innerHTML = `
+                        <label class="text-gray-700 text-sm font-semibold whitespace-nowrap">תשלום ${i + 1} (₪):</label>
+                        <input type="number" placeholder="סכום תשלום" value="${defaultInstallmentAmount}">
+                        <button onclick="removeDynamicRow(this)" type="button" class="remove-btn">הסר</button>
+                    `;
+                    dynamicInstallmentsContainer.appendChild(div);
+                }
+            }
+        }
+
+        paymentModelSelect.addEventListener('change', updatePaymentConfigDisplay);
+        totalGoalAmountInput.addEventListener('change', generateFixedInstallmentInputs);
+        numberOfYearsInput.addEventListener('change', generateFixedInstallmentInputs);
+        numInstallmentsPerYearInput.addEventListener('change', generateFixedInstallmentInputs);
+
+        addSpecificInstallmentBtn.addEventListener('click', () => {
+             const div = document.createElement('div');
+             div.classList.add('setting-row');
+             div.innerHTML = `
+                <label class="text-gray-700 text-sm font-semibold whitespace-nowrap">תשלום חדש (₪):</label>
+                <input type="number" placeholder="סכום תשלום" value="">
+                <button onclick="removeDynamicRow(this)" type="button" class="remove-btn">הסר</button>
+             `;
+             dynamicInstallmentsContainer.appendChild(div);
+             showMessageBox('שדה תשלום ספציפי נוסף.');
+        });
+
+
+        // Discounts Management
+        const discountsContainer = document.getElementById('discountsContainer');
+        const addDiscountBtn = document.getElementById('addDiscountBtn');
+
+        addDiscountBtn.addEventListener('click', () => {
+            const div = document.createElement('div');
+            div.classList.add('setting-row');
+            div.innerHTML = `
+                <input type="text" placeholder="שם הנחה (לדוגמה: הנחת שנת לימודים)" class="w-full">
+                <input type="number" placeholder="סכום הנחה (₪) או אחוז (%)" class="w-full">
+                <button onclick="removeDynamicRow(this)" type="button" class="remove-btn">הסר</button>
+            `;
+            discountsContainer.appendChild(div);
+            showMessageBox('הנחה חדשה נוספה.');
+        });
+
+        // Commissions Management
+        const commissionsContainer = document.getElementById('commissionsContainer');
+        const addCommissionBtn = document.getElementById('addCommissionBtn');
+
+        addCommissionBtn.addEventListener('click', () => {
+            const div = document.createElement('div');
+            div.classList.add('setting-row');
+            div.innerHTML = `
+                <label class="text-gray-700 text-sm font-semibold whitespace-nowrap">עד סכום (₪):</label>
+                <input type="number" placeholder="סכום (₪)" class="w-full">
+                <label class="text-gray-700 text-sm font-semibold whitespace-nowrap">אחוז עמלה:</label>
+                <input type="number" placeholder="אחוז (%)" class="w-full">
+                <button onclick="removeDynamicRow(this)" type="button" class="remove-btn">הסר</button>
+            `;
+            commissionsContainer.appendChild(div);
+            showMessageBox('רמת עמלה חדשה נוספה.');
+        });
+
+        // Custom Fields Management
+        const customFieldsContainer = document.getElementById('customFieldsContainer');
+        const addCustomFieldBtn = document.getElementById('addCustomFieldBtn');
+
+        addCustomFieldBtn.addEventListener('click', () => {
+            const div = document.createElement('div');
+            div.classList.add('setting-row');
+            div.innerHTML = `
+                <select class="w-full p-3 border border-gray-300 rounded-lg shadow-sm">
+                    <option>בחור</option>
+                    <option>תורם</option>
+                </select>
+                <input type="text" placeholder="שם שדה (לדוגמה: עיר מגורים)" class="w-full">
+                <select class="w-full p-3 border border-gray-300 rounded-lg shadow-sm">
+                    <option>טקסט</option>
+                    <option>מספר</option>
+                    <option>תאריך</option>
+                    <option>בוליאני (כן/לא)</option>
+                </select>
+                <button onclick="removeDynamicRow(this)" type="button" class="remove-btn">הסר</button>
+            `;
+            customFieldsContainer.appendChild(div);
+            showMessageBox('שדה מותאם אישית נוסף.');
+        });
+
     </script>
 </body>
 </html>
