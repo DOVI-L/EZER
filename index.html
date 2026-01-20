@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>בדיקת חיבור פיירבייס</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <div style="padding: 50px; text-align: center; font-family: sans-serif;">
+        <h1>בדיקת כתיבה לפיירבייס</h1>
+        <input type="text" id="testInput" placeholder="כתוב משהו כאן..." style="padding: 10px; width: 300px;">
+        <button onclick="writeToFirebase()" style="padding: 10px 20px; cursor: pointer; background: blue; color: white; border: none; border-radius: 5px;">
+            שלח לפיירבייס
+        </button>
+        <p id="status"></p>
+    </div>
+
+    <script>
+        // ההגדרות של הפרויקט שלך
+        const firebaseConfig = {
+            apiKey: "AIzaSyDM6W9-cPi84mr7H-ZqaEnh36IbM-MxXsA",
+            authDomain: "management-system-f98b0.firebaseapp.com",
+            projectId: "management-system-f98b0",
+            storageBucket: "management-system-f98b0.firebasestorage.app",
+            messagingSenderId: "910174071968",
+            appId: "1:910174071968:web:5a7a8d2a6989beba026dc5"
+        };
+
+        // אתחול
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        async function writeToFirebase() {
+            const val = document.getElementById('testInput').value;
+            const status = document.getElementById('status');
+            
+            status.innerText = "שולח...";
+            
+            try {
+                // ניסיון לכתוב לאוסף שנקרא TestData מסמך בשם "check"
+                await db.collection("TestData").doc("check").set({
+                    myValue: val,
+                    lastUpdated: new Date()
+                });
+                status.innerText = "✅ נכתב בהצלחה! בדוק עכשיו ב-Console";
+                status.style.color = "green";
+            } catch (error) {
+                status.innerText = "❌ שגיאה: " + error.message;
+                status.style.color = "red";
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>
