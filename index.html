@@ -2,478 +2,662 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>מערכת ניהול - עזר חתנים</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>מערכת ניהול - עזר חתנים | גרסה מלאה ומשודרגת</title>
     
     <!-- ספריות חיצוניות -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <!-- SheetJS - גרסה מלאה ליבוא ויצוא אקסל -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- ספריה לצילום מסך (עבור PDF מושלם) -->
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- פונט משודרג -->
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;800&display=swap" rel="stylesheet">
 
     <style>
-        /* הגדרות בסיס ועיצוב */
-        @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700&display=swap');
-        body { font-family: 'Rubik', sans-serif; background-color: #f1f5f9; overflow: hidden; }
+        /* הגדרות עיצוב מתקדמות */
+        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; /* מניעת גלילה ראשית */ }
+        body { font-family: 'Heebo', sans-serif; background-color: #f0f2f5; }
         
-        /* גלילה מותאמת */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .bg-sidebar { background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); }
+        .bg-main { background-color: #f3f4f6; }
+        
+        /* Scrollbar מעוצב ודק */
+        .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* החלה גורפת על אזורי תוכן */
+        .view-section { 
+            height: 100%; 
+            overflow-y: auto; 
+            padding-bottom: 2rem;
+            /* החלת הסקרולבר המותאם */
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e1 transparent;
+        }
+        .view-section::-webkit-scrollbar { width: 6px; }
+        .view-section::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
 
-        /* אנימציות ומעברים */
         .hidden-screen { display: none !important; }
-        .fade-in { animation: fadeIn 0.3s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* סגנונות מיוחדים להדפסה (PDF/Route Sheet) */
+        /* --- אזור הדפסה משודרג (PDF Perfect) --- */
         @media print {
             body * { visibility: hidden; }
             #print-area, #print-area * { visibility: visible; }
-            #print-area { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: white; z-index: 99999; direction: rtl; padding: 0; margin: 0; }
-            @page { size: A4; margin: 10mm; }
-            .print-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-            .print-table th, .print-table td { border: 1px solid #000; padding: 4px; text-align: right; }
-            .print-header { text-align: center; margin-bottom: 10px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+            #print-area { 
+                position: absolute; left: 0; top: 0; width: 100%; min-height: 100%; 
+                background: white; z-index: 99999; direction: rtl; padding: 0; margin: 0; 
+                font-family: 'Heebo', sans-serif;
+            }
+            @page { size: A4; margin: 0; }
+            
+            .print-table { width: 90%; margin: 20px auto; border-collapse: collapse; font-size: 12pt; }
+            .print-table th { background-color: #e2e8f0 !important; border: 2px solid #000; padding: 10px; text-align: right; color: #000 !important; font-weight: 800; -webkit-print-color-adjust: exact; }
+            .print-table td { border: 1px solid #000; padding: 8px; text-align: right; color: #000; }
+            .print-table tr:nth-child(even) { background-color: #f1f5f9 !important; -webkit-print-color-adjust: exact; }
+            
+            .print-header { text-align: center; margin-bottom: 30px; border-bottom: 3px solid #000; padding: 20px; background: #f8fafc; -webkit-print-color-adjust: exact; }
+            .print-header h1 { font-size: 28px; font-weight: 900; margin: 0; color: #000; }
+            .print-header h3 { font-size: 16px; font-weight: normal; margin: 5px 0 0 0; color: #444; }
+            
             .no-print { display: none !important; }
         }
         #print-area { display: none; }
         
-        /* הסתרת אלמנטים פיננסיים למשתמשים רגילים */
+        /* הרשאות */
         body.role-user .financial-data { display: none !important; }
         body.role-user .admin-only { display: none !important; }
 
-        /* עיצוב לוגו */
         .logo-img-login { max-height: 120px; width: auto; margin: 0 auto 1.5rem auto; display: block; }
-        .logo-img-sidebar { max-height: 50px; width: auto; max-width: 100%; object-fit: contain; }
+        /* הגדלת לוגו כבקשתך */
+        .logo-img-sidebar { max-height: 90px; width: auto; max-width: 100%; object-fit: contain; }
+        .nav-btn.active { background-color: rgba(255,255,255,0.1); border-right-color: #6366f1; color: white; }
+
+        /* Toast Notifications */
+        #toast-container { position: fixed; bottom: 20px; left: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; }
+        .toast { min-width: 300px; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 15px; display: flex; align-items: center; gap: 12px; animation: slideInLeft 0.3s ease; border-right: 4px solid transparent; }
+        .toast.success { border-right-color: #10b981; }
+        .toast.error { border-right-color: #ef4444; }
+        .toast.info { border-right-color: #3b82f6; }
+        .toast-icon { font-size: 1.2rem; }
+        .success .toast-icon { color: #10b981; }
+        .error .toast-icon { color: #ef4444; }
+        .info .toast-icon { color: #3b82f6; }
+        @keyframes slideInLeft { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* Status Indicator for Offline */
+        #connection-status {
+            position: fixed; bottom: 10px; right: 10px; z-index: 9999;
+            padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;
+            display: none; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .status-offline { background-color: #fee2e2; color: #991b1b; display: flex !important; }
+        .status-syncing { background-color: #fef3c7; color: #92400e; display: flex !important; }
     </style>
 </head>
-<body class="h-screen flex text-gray-800">
+<body class="h-full text-slate-800 bg-main overflow-hidden">
+
+    <!-- מכל התראות -->
+    <div id="toast-container"></div>
+    
+    <!-- מחוון חיבור -->
+    <div id="connection-status" class="items-center gap-2">
+        <i class="fas fa-wifi"></i> <span id="conn-text">מנותק - שומר מקומית</span>
+    </div>
+
+    <!-- אלמנט נסתר ליבוא קבצים -->
+    <input type="file" id="excel-upload-input" accept=".xlsx, .xls" class="hidden" onchange="Importer.handleFileSelect(this)">
 
     <!-- אזור הדפסה -->
     <div id="print-area"></div>
 
-    <!-- מסך טעינה -->
-    <div id="loader" class="fixed inset-0 z-[100] bg-indigo-900 flex flex-col justify-center items-center transition-opacity duration-500">
-        <div id="loader-spinner" class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-white mb-4"></div>
-        <h2 id="loader-text" class="text-white text-xl font-bold">טוען מערכת...</h2>
-        
-        <!-- אזור הודעת שגיאה שיופיע במידה ונתקע -->
-        <div id="loader-error" class="hidden text-center mt-6 p-4 bg-red-800/80 rounded-lg max-w-md mx-4">
-            <div class="text-red-200 text-lg font-bold mb-2"><i class="fas fa-exclamation-triangle"></i> התחברות נכשלת</div>
-            <p class="text-white text-sm mb-4">המערכת לא מצליחה להתחבר לשרת. ייתכן שיש בעיה בחיבור לאינטרנט או בהגדרות ה-Firebase.</p>
-            <button onclick="location.reload()" class="bg-white text-red-900 px-4 py-2 rounded font-bold hover:bg-gray-200 transition">נסה שוב</button>
+    <!-- טיימר התנתקות (פופאפ) -->
+    <div id="timeout-modal" class="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center hidden-screen backdrop-blur-sm">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-md border-t-8 border-red-500 animate-bounce-slight">
+            <div class="text-6xl text-red-500 mb-4"><i class="fas fa-hourglass-half"></i></div>
+            <h2 class="text-2xl font-bold mb-2">זיהינו חוסר פעילות</h2>
+            <p class="text-gray-600 mb-6">המערכת תתנתק באופן אוטומטי בעוד <span id="timeout-countdown" class="font-bold text-red-600 text-xl">60</span> שניות לצורכי אבטחה.</p>
+            <button onclick="InactivityTimer.stayLoggedIn()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg">השאר אותי מחובר</button>
         </div>
+    </div>
+
+    <!-- מסך טעינה -->
+    <div id="loader" class="fixed inset-0 z-[100] bg-slate-900 flex flex-col justify-center items-center transition-opacity duration-500">
+        <div id="loader-spinner" class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-indigo-500 mb-4"></div>
+        <h2 id="loader-text" class="text-white text-xl font-medium tracking-wide">טוען נתונים...</h2>
     </div>
 
     <!-- מסך התחברות -->
-    <div id="login-screen" class="fixed inset-0 z-50 bg-slate-900 flex flex-col justify-center items-center hidden-screen">
-        <div class="bg-white p-8 rounded-2xl shadow-2xl w-96 text-center">
-            
-            <!-- שינוי לוגו (1.JPG) -->
+    <div id="login-screen" class="fixed inset-0 z-50 bg-slate-900 flex flex-col justify-center items-center hidden-screen bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]">
+        <div class="bg-white/95 backdrop-blur p-10 rounded-3xl shadow-2xl w-96 text-center border border-white/20">
             <img src="1.JPG" alt="לוגו מערכת" class="logo-img-login" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
-            <div class="hidden text-indigo-700 text-5xl mb-4"><i class="fas fa-synagogue"></i></div> <!-- גיבוי אם אין תמונה -->
+            <div class="hidden text-indigo-700 text-6xl mb-6"><i class="fas fa-synagogue"></i></div>
             
-            <p class="text-gray-500 mb-6 text-sm font-bold mt-2">ניהול מערכת - כניסה מאובטחת</p>
-            <form onsubmit="Auth.login(event)" class="space-y-4">
-                <input type="email" id="email" placeholder="אימייל" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition" required>
-                <input type="password" id="password" placeholder="סיסמה" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition" required>
-                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-bold transition shadow-lg transform active:scale-95">כניסה</button>
+            <h1 class="text-2xl font-bold text-slate-800 mb-1">ברוכים הבאים</h1>
+            <p class="text-gray-500 mb-8 text-sm">ניהול מערכת - עזר חתנים</p>
+            
+            <!-- טופס התחברות ללא שמירת סיסמה -->
+            <form onsubmit="Auth.login(event)" class="space-y-4" autocomplete="off">
+                <div class="relative">
+                    <i class="fas fa-envelope absolute top-3.5 right-3 text-gray-400"></i>
+                    <!-- Autocomplete off + fake input to prevent browser fill -->
+                    <input style="display:none" type="text" name="fakeusernameremembered"/>
+                    <input style="display:none" type="password" name="fakepasswordremembered"/>
+                    
+                    <input type="email" id="email" placeholder="אימייל" autocomplete="off" class="w-full bg-slate-50 border border-slate-200 p-3 pr-10 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition" required>
+                </div>
+                <div class="relative">
+                    <i class="fas fa-lock absolute top-3.5 right-3 text-gray-400"></i>
+                    <input type="password" id="password" placeholder="סיסמה" autocomplete="new-password" class="w-full bg-slate-50 border border-slate-200 p-3 pr-10 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition" required>
+                </div>
+                <div class="flex items-center gap-2 text-sm text-gray-600 mb-2 justify-start w-full">
+                    <input type="checkbox" id="remember-email" class="rounded text-indigo-600 focus:ring-indigo-500">
+                    <label for="remember-email">זכור אימייל בלבד</label>
+                </div>
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold transition shadow-lg transform active:scale-95">כניסה למערכת</button>
             </form>
-            <div id="login-msg" class="text-red-500 text-sm mt-4 hidden font-bold"></div>
+            <div id="login-msg" class="text-red-500 text-sm mt-4 hidden font-bold bg-red-50 p-2 rounded"></div>
         </div>
     </div>
 
-    <!-- תפריט צד -->
-    <aside id="sidebar" class="w-64 bg-slate-900 text-slate-100 flex flex-col hidden-screen shadow-xl z-20">
-        <div class="p-6 border-b border-slate-800 flex items-center justify-center bg-slate-950 h-24">
-            <!-- לוגו בתפריט (1.JPG) -->
-            <img src="1.JPG" alt="לוגו" class="logo-img-sidebar" onerror="this.outerHTML='<h2 class=\'font-bold text-lg\'>עזר חתנים</h2>'">
-        </div>
+    <!-- ממשק האפליקציה -->
+    <div class="flex h-full w-full relative overflow-hidden">
 
-        <nav class="flex-1 overflow-y-auto py-4 space-y-1">
-            <button onclick="Router.go('dashboard')" class="nav-btn w-full text-right px-6 py-3 hover:bg-slate-800 transition flex items-center gap-3 border-r-4 border-transparent hover:border-indigo-500">
-                <i class="fas fa-chart-line w-5 text-center"></i> לוח מחוונים
-            </button>
+        <!-- תפריט צד -->
+        <aside id="sidebar" class="w-64 bg-sidebar text-slate-300 flex flex-col hidden-screen shadow-2xl z-20 h-full border-l border-slate-700 shrink-0">
+            <!-- לוגו מוגדל -->
+            <div class="p-6 border-b border-slate-700/50 flex items-center justify-center h-32 bg-black/20">
+                <img src="1.JPG" alt="לוגו" class="logo-img-sidebar hover:scale-105 transition" onerror="this.outerHTML='<h2 class=\'font-bold text-xl text-white\'>עזר חתנים</h2>'">
+            </div>
+
+            <nav class="flex-1 overflow-y-auto py-6 space-y-1 custom-scroll">
+                <button onclick="Router.go('dashboard')" id="nav-dashboard" class="nav-btn w-full text-right px-6 py-3.5 hover:bg-white/5 transition flex items-center gap-4 border-r-4 border-transparent text-sm font-medium">
+                    <i class="fas fa-chart-pie w-5 text-center text-indigo-400"></i> לוח מחוונים
+                </button>
+                
+                <div class="px-6 py-3 text-xs font-bold text-slate-500 uppercase mt-2 tracking-wider">ניהול נתונים</div>
+                <button onclick="Router.go('students')" id="nav-students" class="nav-btn w-full text-right px-6 py-3.5 hover:bg-white/5 transition flex items-center gap-4 border-r-4 border-transparent text-sm font-medium">
+                    <i class="fas fa-user-graduate w-5 text-center text-blue-400"></i> בחורים
+                </button>
+                <button onclick="Router.go('donors')" id="nav-donors" class="nav-btn w-full text-right px-6 py-3.5 hover:bg-white/5 transition flex items-center gap-4 border-r-4 border-transparent text-sm font-medium">
+                    <i class="fas fa-hand-holding-usd w-5 text-center text-emerald-400"></i> תורמים
+                </button>
+                <button onclick="Router.go('groups')" id="nav-groups" class="nav-btn w-full text-right px-6 py-3.5 hover:bg-white/5 transition flex items-center gap-4 border-r-4 border-transparent text-sm font-medium">
+                    <i class="fas fa-users-cog w-5 text-center text-amber-400"></i> קבוצות ומסלולים
+                </button>
+
+                <div class="px-6 py-3 text-xs font-bold text-slate-500 uppercase mt-2 tracking-wider financial-data">כספים ודוחות</div>
+                <button onclick="Router.go('finance')" id="nav-finance" class="nav-btn financial-data w-full text-right px-6 py-3.5 hover:bg-white/5 transition flex items-center gap-4 border-r-4 border-transparent text-sm font-medium">
+                    <i class="fas fa-cash-register w-5 text-center text-rose-400"></i> ניהול קופה
+                </button>
+                <button onclick="Router.go('reports')" id="nav-reports" class="nav-btn financial-data w-full text-right px-6 py-3.5 hover:bg-white/5 transition flex items-center gap-4 border-r-4 border-transparent text-sm font-medium">
+                    <i class="fas fa-file-excel w-5 text-center text-green-400"></i> דוחות והדפסות
+                </button>
+                
+                <div class="px-6 py-3 text-xs font-bold text-slate-500 uppercase mt-2 tracking-wider admin-only">מנהל</div>
+                <button onclick="Router.go('settings')" id="nav-settings" class="nav-btn admin-only w-full text-right px-6 py-3.5 hover:bg-white/5 transition flex items-center gap-4 border-r-4 border-transparent text-sm font-medium">
+                    <i class="fas fa-sliders-h w-5 text-center text-gray-400"></i> הגדרות מערכת
+                </button>
+            </nav>
+
+            <div class="p-4 bg-black/30 border-t border-slate-700/50 backdrop-blur-sm">
+                <!-- תוספת קרדיט -->
+                <div class="text-center text-xs text-slate-500 mb-3 pb-3 border-b border-slate-700/50">
+                    נבנה על ידי <span class="text-slate-300">דובי לוי</span><br>
+                    <a href="mailto:7640421@gmail.com" class="text-indigo-400 hover:text-indigo-300 hover:underline">7640421@gmail.com</a>
+                </div>
+
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg"><i class="fas fa-user-shield text-sm"></i></div>
+                    <div class="text-xs overflow-hidden">
+                        <div id="user-email-display" class="font-bold truncate w-36 text-white">user@sys</div>
+                        <div id="user-role-display" class="text-slate-400">טוען...</div>
+                    </div>
+                </div>
+                <button onclick="Auth.logout()" class="w-full bg-slate-700/50 hover:bg-red-900/80 text-slate-300 hover:text-white py-2 rounded-lg text-xs transition border border-slate-600/50">
+                    <i class="fas fa-sign-out-alt ml-1"></i> יציאה
+                </button>
+            </div>
+        </aside>
+
+        <!-- תוכן ראשי -->
+        <main id="main-content" class="flex-1 flex flex-col hidden-screen h-full overflow-hidden relative bg-slate-50">
             
-            <div class="px-6 py-2 text-xs font-bold text-slate-500 uppercase mt-2">נתונים</div>
-            <button onclick="Router.go('students')" class="nav-btn w-full text-right px-6 py-3 hover:bg-slate-800 transition flex items-center gap-3 border-r-4 border-transparent hover:border-indigo-500">
-                <i class="fas fa-user-graduate w-5 text-center"></i> בחורים
-            </button>
-            <button onclick="Router.go('donors')" class="nav-btn w-full text-right px-6 py-3 hover:bg-slate-800 transition flex items-center gap-3 border-r-4 border-transparent hover:border-indigo-500">
-                <i class="fas fa-hand-holding-heart w-5 text-center"></i> תורמים
-            </button>
-            <button onclick="Router.go('groups')" class="nav-btn w-full text-right px-6 py-3 hover:bg-slate-800 transition flex items-center gap-3 border-r-4 border-transparent hover:border-indigo-500">
-                <i class="fas fa-users w-5 text-center"></i> קבוצות ומסלולים
-            </button>
-
-            <div class="px-6 py-2 text-xs font-bold text-slate-500 uppercase mt-2 financial-data">כספים ודוחות</div>
-            <button onclick="Router.go('finance')" class="nav-btn financial-data w-full text-right px-6 py-3 hover:bg-slate-800 transition flex items-center gap-3 border-r-4 border-transparent hover:border-indigo-500">
-                <i class="fas fa-cash-register w-5 text-center"></i> ניהול קופה
-            </button>
-            <button onclick="Router.go('reports')" class="nav-btn financial-data w-full text-right px-6 py-3 hover:bg-slate-800 transition flex items-center gap-3 border-r-4 border-transparent hover:border-indigo-500">
-                <i class="fas fa-file-invoice-dollar w-5 text-center"></i> דוחות והדפסות
-            </button>
-            
-            <div class="px-6 py-2 text-xs font-bold text-slate-500 uppercase mt-2 admin-only">מנהל</div>
-            <button onclick="Router.go('settings')" class="nav-btn admin-only w-full text-right px-6 py-3 hover:bg-slate-800 transition flex items-center gap-3 border-r-4 border-transparent hover:border-indigo-500">
-                <i class="fas fa-cogs w-5 text-center"></i> הגדרות וזכאות
-            </button>
-        </nav>
-
-        <div class="p-4 bg-slate-950 border-t border-slate-800">
-            <div class="flex items-center gap-3 mb-3">
-                <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center"><i class="fas fa-user text-xs"></i></div>
-                <div class="text-xs">
-                    <div id="user-email-display" class="font-bold truncate w-32">user@sys</div>
-                    <div id="user-role-display" class="text-slate-400">טוען...</div>
-                </div>
-            </div>
-            <button onclick="Auth.logout()" class="w-full bg-slate-800 hover:bg-red-900/50 text-slate-300 hover:text-white py-2 rounded text-xs transition">יציאה</button>
-        </div>
-    </aside>
-
-    <!-- תוכן ראשי -->
-    <main id="main-content" class="flex-1 flex flex-col hidden-screen h-full overflow-hidden relative">
-        
-        <!-- כותרת עליונה -->
-        <header class="bg-white shadow-sm h-16 flex justify-between items-center px-6 z-10 shrink-0">
-            <div class="flex items-center gap-4">
-                <h2 id="page-title" class="text-xl font-bold text-slate-800">דף הבית</h2>
-                <div id="sync-status" class="text-xs px-2 py-1 rounded bg-green-100 text-green-700 hidden"><i class="fas fa-check"></i> מסונכרן</div>
-            </div>
-            
-            <div class="flex items-center gap-3">
-                <div class="text-sm text-gray-500 ml-2">שנה נוכחית:</div>
-                <select id="year-selector" onchange="System.changeYear(this.value)" class="bg-slate-100 border-none text-slate-800 py-1.5 px-3 rounded-lg text-sm font-bold focus:ring-2 focus:ring-indigo-500 cursor-pointer">
-                    <!-- שנים יטענו דינמית -->
-                </select>
-            </div>
-        </header>
-
-        <!-- מיכל תצוגות -->
-        <div id="views-container" class="flex-1 overflow-hidden relative bg-slate-50">
-            
-            <!-- 1. DASHBOARD -->
-            <div id="view-dashboard" class="view-section p-6 h-full overflow-y-auto fade-in hidden">
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6 financial-data">
-                    <div class="bg-white p-5 rounded-xl shadow-sm border-r-4 border-indigo-500">
-                        <div class="text-gray-500 text-sm font-bold mb-1">יתרה בקופה (כללי)</div>
-                        <div class="text-2xl font-bold text-slate-800" id="dash-total-balance">₪0</div>
-                    </div>
-                    <div class="bg-white p-5 rounded-xl shadow-sm border-r-4 border-green-500">
-                        <div class="text-gray-500 text-sm font-bold mb-1">הכנסות (<span class="curr-year"></span>)</div>
-                        <div class="text-2xl font-bold text-green-600" id="dash-income">₪0</div>
-                    </div>
-                    <div class="bg-white p-5 rounded-xl shadow-sm border-r-4 border-red-500">
-                        <div class="text-gray-500 text-sm font-bold mb-1">הוצאות (<span class="curr-year"></span>)</div>
-                        <div class="text-2xl font-bold text-red-600" id="dash-expense">₪0</div>
-                    </div>
-                    <div class="bg-white p-5 rounded-xl shadow-sm border-r-4 border-yellow-500">
-                        <div class="text-gray-500 text-sm font-bold mb-1">גיוס יעד (<span class="curr-year"></span>)</div>
-                        <div class="text-2xl font-bold text-yellow-600" id="dash-goal-progress">0%</div>
-                        <div class="w-full bg-gray-200 h-1.5 mt-2 rounded-full"><div id="dash-bar" class="bg-yellow-500 h-1.5 rounded-full" style="width:0%"></div></div>
-                    </div>
-                </div>
-
-                <!-- התראות ומשימות -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 h-[calc(100%-120px)]">
-                    <div class="bg-white rounded-xl shadow-sm flex flex-col">
-                        <div class="p-4 border-b font-bold text-slate-700 flex justify-between">
-                            <span><i class="fas fa-bell text-indigo-500"></i> עדכונים אחרונים</span>
-                            <span class="text-xs bg-gray-100 px-2 py-1 rounded">פעילות חיה</span>
-                        </div>
-                        <div id="dash-logs" class="p-4 overflow-y-auto flex-1 space-y-3 text-sm"></div>
-                    </div>
-                    <div class="bg-white rounded-xl shadow-sm flex flex-col">
-                        <div class="p-4 border-b font-bold text-slate-700">
-                            <span><i class="fas fa-chart-pie text-indigo-500"></i> סטטוס רישום (<span class="curr-year"></span>)</span>
-                        </div>
-                        <div class="p-4 grid grid-cols-2 gap-4">
-                            <div class="bg-blue-50 p-4 rounded text-center">
-                                <div class="text-3xl font-bold text-blue-600" id="dash-stat-students">0</div>
-                                <div class="text-xs text-blue-400">בחורים רשומים</div>
-                            </div>
-                            <div class="bg-purple-50 p-4 rounded text-center">
-                                <div class="text-3xl font-bold text-purple-600" id="dash-stat-donors">0</div>
-                                <div class="text-xs text-purple-400">תורמים פעילים</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 2. STUDENTS -->
-            <div id="view-students" class="view-section h-full flex flex-col hidden fade-in">
-                <div class="p-4 bg-white border-b flex gap-3 items-center shadow-sm z-10">
-                    <button onclick="Students.openAddModal()" class="btn-primary"><i class="fas fa-plus"></i> הוסף בחור</button>
-                    <button onclick="Importer.init('students')" class="btn-secondary"><i class="fas fa-file-excel"></i> יבוא/עדכון</button>
-                    <div class="flex-1 relative">
-                        <input type="text" id="student-search" oninput="Students.handleSearch(this.value)" placeholder="חפש לפי שם, שיעור, טלפון..." class="input-field w-full pl-4 pr-10">
-                        <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
-                    </div>
-                </div>
-                <div class="flex-1 overflow-y-auto p-4" id="students-container">
-                    <table class="w-full bg-white shadow rounded-lg overflow-hidden text-sm">
-                        <thead class="bg-slate-100 text-slate-600 sticky top-0 shadow-sm">
-                            <tr>
-                                <th class="p-3 text-right">שם מלא</th>
-                                <th class="p-3 text-right">שיעור (נוכחי)</th>
-                                <th class="p-3 text-right">שנת כניסה</th>
-                                <th class="p-3 text-right">יעד אישי (<span class="curr-year"></span>)</th>
-                                <th class="p-3 text-center">פעולות</th>
-                            </tr>
-                        </thead>
-                        <tbody id="students-tbody" class="divide-y divide-slate-100"></tbody>
-                    </table>
-                    <div id="students-loader-more" class="p-4 text-center">
-                        <button onclick="Students.loadMore()" class="text-indigo-600 hover:underline">טען עוד...</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 3. DONORS -->
-            <div id="view-donors" class="view-section h-full flex flex-col hidden fade-in">
-                <div class="p-4 bg-white border-b flex gap-3 items-center shadow-sm z-10">
-                    <button onclick="Donors.openAddModal()" class="btn-primary"><i class="fas fa-plus"></i> הוסף תורם</button>
-                    <button onclick="Importer.init('donors')" class="btn-secondary"><i class="fas fa-file-excel"></i> יבוא</button>
-                    <div class="flex-1 relative">
-                        <input type="text" oninput="Donors.handleSearch(this.value)" placeholder="חפש תורם..." class="input-field w-full pl-4 pr-10">
-                        <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
-                    </div>
-                </div>
-                <div class="flex-1 overflow-y-auto p-4">
-                    <div id="donors-grid" class="grid grid-cols-1 lg:grid-cols-3 gap-4"></div>
-                    <div id="donors-loader-more" class="p-4 text-center mt-4">
-                        <button onclick="Donors.loadMore()" class="text-indigo-600 hover:underline">טען עוד...</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 4. GROUPS -->
-            <div id="view-groups" class="view-section h-full flex flex-col hidden fade-in">
-                <!-- טאבים לימים -->
-                <div class="bg-white px-4 pt-2 border-b flex gap-1">
-                    <button onclick="Groups.setDay('night14')" class="group-tab active" data-day="night14">ליל י"ד</button>
-                    <button onclick="Groups.setDay('day14')" class="group-tab" data-day="day14">יום י"ד</button>
-                    <button onclick="Groups.setDay('day15')" class="group-tab" data-day="day15">יום ט"ו</button>
-                </div>
-
-                <div class="flex flex-1 overflow-hidden">
-                    <!-- רשימת קבוצות -->
-                    <div class="w-72 bg-white border-l flex flex-col">
-                        <div class="p-3 border-b flex justify-between items-center bg-gray-50">
-                            <span class="font-bold text-sm">רשימת קבוצות</span>
-                            <button onclick="Groups.addNewGroup()" class="text-indigo-600 hover:bg-indigo-100 p-1 rounded"><i class="fas fa-plus"></i></button>
-                        </div>
-                        <div id="groups-list" class="flex-1 overflow-y-auto"></div>
-                    </div>
-
-                    <!-- אזור עבודה -->
-                    <div class="flex-1 flex flex-col bg-slate-50 relative" id="group-workspace">
-                        <div id="group-placeholder" class="absolute inset-0 flex items-center justify-center text-gray-400">
-                            <div class="text-center">
-                                <i class="fas fa-people-arrows text-4xl mb-2"></i>
-                                <p>בחר קבוצה לעריכה</p>
-                            </div>
-                        </div>
-
-                        <div id="group-editor" class="hidden flex flex-col h-full">
-                            <!-- כותרת הקבוצה -->
-                            <div class="bg-white p-3 border-b flex justify-between items-center">
-                                <div class="flex gap-2 items-center">
-                                    <h3 id="active-group-name" class="font-bold text-lg cursor-pointer hover:bg-gray-100 px-2 rounded" onclick="Groups.renameGroup()"></h3>
-                                    <span id="active-group-count" class="text-xs bg-gray-200 px-2 rounded-full">0 בחורים</span>
-                                </div>
-                                <div class="flex gap-2 text-sm">
-                                    <button onclick="Groups.addQuickDonation()" class="bg-green-100 text-green-700 px-3 py-1 rounded hover:bg-green-200"><i class="fas fa-shekel-sign"></i> הכנסה לקבוצה</button>
-                                    <button onclick="Groups.printSheet('members')" class="bg-gray-100 text-gray-700 px-3 py-1 rounded hover:bg-gray-200"><i class="fas fa-list"></i> דף שמי</button>
-                                    <button onclick="Groups.printSheet('route')" class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded hover:bg-indigo-200"><i class="fas fa-route"></i> דף מסלול</button>
-                                </div>
-                            </div>
-
-                            <div class="flex flex-1 overflow-hidden">
-                                <!-- עמודת שיבוץ בחורים -->
-                                <div class="w-1/2 flex flex-col border-l">
-                                    <div class="p-2 bg-indigo-50 font-bold text-xs text-indigo-800 text-center">שיבוץ בחורים (גרירה)</div>
-                                    <div class="flex-1 flex overflow-hidden">
-                                        <div class="w-1/2 flex flex-col border-l bg-white">
-                                            <input type="text" placeholder="חפש בחור פנוי..." oninput="Groups.filterStudents(this.value)" class="p-2 border-b text-sm">
-                                            <div id="pool-students" class="flex-1 overflow-y-auto p-2 space-y-1"></div>
-                                        </div>
-                                        <div class="w-1/2 flex flex-col bg-indigo-50/30">
-                                            <div class="text-xs p-1 text-center text-gray-400">חברי הקבוצה</div>
-                                            <div id="group-members-list" class="flex-1 overflow-y-auto p-2 space-y-1"></div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- עמודת מסלול תורמים -->
-                                <div class="w-1/2 flex flex-col">
-                                    <div class="p-2 bg-green-50 font-bold text-xs text-green-800 text-center">מסלול תורמים (גרירה)</div>
-                                    <div class="flex-1 flex overflow-hidden">
-                                        <div class="w-1/2 flex flex-col border-l bg-white">
-                                            <input type="text" placeholder="חפש תורם..." oninput="Groups.filterDonors(this.value)" class="p-2 border-b text-sm">
-                                            <div id="pool-donors" class="flex-1 overflow-y-auto p-2 space-y-1"></div>
-                                        </div>
-                                        <div class="w-1/2 flex flex-col bg-green-50/30">
-                                            <div class="text-xs p-1 text-center text-gray-400">סדר המסלול</div>
-                                            <div id="group-route-list" class="flex-1 overflow-y-auto p-2 space-y-1"></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 5. FINANCE -->
-            <div id="view-finance" class="view-section h-full flex flex-col hidden fade-in financial-data">
-                <div class="bg-white p-4 border-b flex justify-between items-center shadow-sm">
-                    <div class="flex gap-2">
-                         <button onclick="Finance.openTransactionModal('income')" class="btn-primary bg-green-600 hover:bg-green-700 border-none"><i class="fas fa-plus"></i> הכנסה</button>
-                         <button onclick="Finance.openTransactionModal('expense')" class="btn-primary bg-red-600 hover:bg-red-700 border-none"><i class="fas fa-minus"></i> הוצאה</button>
-                    </div>
-                    <div class="flex gap-2 bg-gray-100 p-1 rounded-lg">
-                        <button onclick="Finance.setFilter('all')" class="px-3 py-1 rounded text-sm font-bold bg-white shadow text-indigo-600 finance-filter active" data-f="all">הכל</button>
-                        <button onclick="Finance.setFilter('income')" class="px-3 py-1 rounded text-sm text-gray-600 hover:bg-gray-200 finance-filter" data-f="income">הכנסות</button>
-                        <button onclick="Finance.setFilter('expense')" class="px-3 py-1 rounded text-sm text-gray-600 hover:bg-gray-200 finance-filter" data-f="expense">הוצאות</button>
-                        <button onclick="Finance.setFilter('purim')" class="px-3 py-1 rounded text-sm text-purple-600 font-bold hover:bg-purple-100 finance-filter" data-f="purim"><i class="fas fa-mask"></i> פורים</button>
-                    </div>
+            <!-- כותרת עליונה -->
+            <header class="bg-white shadow-sm h-16 flex justify-between items-center px-8 z-10 shrink-0 border-b border-gray-200">
+                <div class="flex items-center gap-4">
+                    <button onclick="document.getElementById('sidebar').classList.toggle('hidden-screen')" class="lg:hidden p-2 text-gray-600"><i class="fas fa-bars"></i></button>
+                    <h2 id="page-title" class="text-2xl font-bold text-slate-800 tracking-tight">דף הבית</h2>
                 </div>
                 
-                <div class="flex-1 bg-white overflow-hidden flex flex-col m-4 rounded-xl shadow border">
-                    <div class="overflow-y-auto flex-1">
-                        <table class="w-full text-sm text-right">
-                            <thead class="bg-gray-50 text-gray-600 sticky top-0">
+                <div class="flex items-center gap-4">
+                    <div class="bg-indigo-50 px-3 py-1 rounded-lg border border-indigo-100 flex items-center gap-2">
+                        <span class="text-sm text-indigo-900 font-bold">שנה נוכחית:</span>
+                        <select id="year-selector" onchange="System.changeYear(this.value)" class="bg-transparent border-none text-indigo-700 font-bold text-sm focus:ring-0 cursor-pointer py-0 outline-none">
+                            <!-- שנים יטענו דינמית -->
+                        </select>
+                    </div>
+                </div>
+            </header>
+
+            <!-- מיכל תצוגות -->
+            <div id="views-container" class="flex-1 overflow-hidden relative">
+                
+                <!-- 1. DASHBOARD -->
+                <div id="view-dashboard" class="view-section p-6 fade-in hidden space-y-6">
+                    <!-- כרטיסי סיכום (נטענים מ-Stats) -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 financial-data">
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between hover:shadow-md transition">
+                            <div>
+                                <div class="text-slate-500 text-sm font-medium mb-1">יתרה בקופה (כללי)</div>
+                                <div class="text-3xl font-bold text-slate-800" id="dash-total-balance">...</div>
+                            </div>
+                            <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl"><i class="fas fa-wallet"></i></div>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between hover:shadow-md transition">
+                            <div>
+                                <div class="text-slate-500 text-sm font-medium mb-1">הכנסות (<span class="curr-year"></span>)</div>
+                                <div class="text-3xl font-bold text-emerald-600" id="dash-income">...</div>
+                            </div>
+                            <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl"><i class="fas fa-arrow-down"></i></div>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between hover:shadow-md transition">
+                            <div>
+                                <div class="text-slate-500 text-sm font-medium mb-1">הוצאות (<span class="curr-year"></span>)</div>
+                                <div class="text-3xl font-bold text-rose-600" id="dash-expense">...</div>
+                            </div>
+                            <div class="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-xl"><i class="fas fa-arrow-up"></i></div>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between hover:shadow-md transition">
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="text-slate-500 text-sm font-medium">יעד שנתי</div>
+                                <div class="text-amber-600 font-bold" id="dash-goal-progress">0%</div>
+                            </div>
+                            <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                                <div id="dash-bar" class="bg-amber-500 h-full rounded-full transition-all duration-1000" style="width:0%"></div>
+                            </div>
+                            <div class="mt-2 text-xs text-slate-400">הנתונים מתעדכנים בזמן אמת</div>
+                        </div>
+                    </div>
+
+                    <!-- אזור פעילות -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 h-96">
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col overflow-hidden">
+                            <div class="p-4 border-b bg-slate-50 flex justify-between items-center">
+                                <h3 class="font-bold text-slate-700"><i class="fas fa-history text-indigo-500 ml-2"></i>עדכונים אחרונים</h3>
+                                <span class="bg-indigo-100 text-indigo-700 text-xs px-2 py-1 rounded-full">לייב</span>
+                            </div>
+                            <div id="dash-logs" class="p-4 overflow-y-auto flex-1 custom-scroll">
+                                <p class="text-center text-gray-400 mt-4">טוען תנועות אחרונות...</p>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-6">
+                            <div class="bg-gradient-to-br from-indigo-500 to-blue-600 rounded-2xl shadow-lg p-6 text-white flex flex-col items-center justify-center relative overflow-hidden">
+                                <i class="fas fa-user-graduate absolute -bottom-4 -right-4 text-8xl text-white/10"></i>
+                                <div class="text-5xl font-bold mb-2 z-10" id="dash-stat-students">...</div>
+                                <div class="text-indigo-100 z-10">בחורים רשומים</div>
+                            </div>
+                            <div class="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl shadow-lg p-6 text-white flex flex-col items-center justify-center relative overflow-hidden">
+                                <i class="fas fa-hand-holding-heart absolute -bottom-4 -right-4 text-8xl text-white/10"></i>
+                                <div class="text-5xl font-bold mb-2 z-10" id="dash-stat-donors">...</div>
+                                <div class="text-emerald-100 z-10">תורמים במערכת</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. STUDENTS -->
+                <div id="view-students" class="view-section flex flex-col hidden fade-in bg-white h-full overflow-hidden">
+                    <div class="p-4 border-b bg-slate-50 flex gap-3 items-center justify-between shrink-0">
+                        <div class="flex gap-3">
+                            <button onclick="Students.openAddModal()" class="btn-primary bg-indigo-600"><i class="fas fa-plus ml-2"></i> הוסף בחור</button>
+                            <button onclick="Students.openQuickAdd()" class="btn-secondary"><i class="fas fa-layer-group ml-2 text-indigo-500"></i> הוספה מהירה</button>
+                            <button onclick="Importer.init('students')" class="btn-secondary"><i class="fas fa-file-excel ml-2 text-green-600"></i> יבוא מאקסל</button>
+                        </div>
+                        <div class="relative w-96">
+                            <input type="text" id="student-search" oninput="Students.handleSearch(this.value)" placeholder="חיפוש לפי שם, שיעור או טלפון..." class="input-field w-full pl-4 pr-10">
+                            <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                        </div>
+                    </div>
+                    <div class="flex-1 overflow-y-auto p-4 custom-scroll" id="students-container">
+                        <table class="w-full text-sm">
+                            <thead class="bg-slate-50 text-slate-600 sticky top-0 shadow-sm z-10">
                                 <tr>
-                                    <th class="p-3">תאריך</th>
-                                    <th class="p-3">סוג</th>
-                                    <th class="p-3">קטגוריה</th>
-                                    <th class="p-3">תיאור / משוייך ל...</th>
-                                    <th class="p-3">סכום</th>
-                                    <th class="p-3">פעולות</th>
+                                    <th class="p-3 text-right rounded-r-lg bg-slate-50">שם מלא</th>
+                                    <th class="p-3 text-right bg-slate-50">שיעור</th>
+                                    <th class="p-3 text-right bg-slate-50">שנת כניסה</th>
+                                    <th class="p-3 text-right bg-slate-50">יעד אישי (<span class="curr-year"></span>)</th>
+                                    <th class="p-3 text-center rounded-l-lg bg-slate-50">פעולות</th>
                                 </tr>
                             </thead>
-                            <tbody id="finance-tbody" class="divide-y"></tbody>
+                            <tbody id="students-tbody" class="divide-y divide-slate-100"></tbody>
                         </table>
+                        <div id="students-loader-more" class="p-6 text-center mt-2 hidden">
+                            <button onclick="Students.loadMore()" class="bg-slate-100 text-slate-600 hover:bg-slate-200 px-6 py-2 rounded-full text-sm font-bold transition shadow-sm">
+                                <i class="fas fa-chevron-down ml-2"></i> טען עוד בחורים
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- 6. REPORTS -->
-            <div id="view-reports" class="view-section p-8 hidden fade-in financial-data">
-                <h2 class="text-2xl font-bold mb-6 text-slate-800">מחולל דוחות מתקדם</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    
-                    <!-- דוח סטנדרטי -->
-                    <div class="bg-white p-6 rounded-xl shadow border border-gray-200">
-                        <h3 class="font-bold text-lg mb-4 text-indigo-700 border-b pb-2">דוח פעילות כספית</h3>
-                        <div class="space-y-4">
-                            <div>
-                                <label class="text-sm font-bold">סינון:</label>
-                                <select id="rep-type" class="w-full border p-2 rounded mt-1">
-                                    <option value="all">הכל (הכנסות והוצאות)</option>
-                                    <option value="income">רק הכנסות</option>
-                                    <option value="expense">רק הוצאות</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="text-sm font-bold">ישות (אופציונלי):</label>
-                                <select id="rep-entity" class="w-full border p-2 rounded mt-1">
-                                    <option value="">כללי</option>
-                                    <option value="student">לפי בחור</option>
-                                    <option value="donor">לפי תורם</option>
-                                    <option value="group">לפי קבוצה</option>
-                                </select>
-                            </div>
-                            <button onclick="Reports.generateStandard()" class="w-full bg-indigo-600 text-white py-2 rounded font-bold hover:bg-indigo-700">הורד לאקסל</button>
+                <!-- 3. DONORS -->
+                <div id="view-donors" class="view-section flex flex-col hidden fade-in h-full overflow-hidden">
+                    <!-- תפריט עליון -->
+                    <div class="p-4 bg-white rounded-t-2xl shadow-sm border-b flex gap-3 items-center justify-between mb-0 shrink-0">
+                        <div class="flex gap-3">
+                            <button onclick="Donors.openAddModal()" class="btn-primary bg-emerald-600"><i class="fas fa-plus ml-2"></i> הוסף תורם</button>
+                            <button onclick="Donors.toggleQuickManager()" class="btn-secondary border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100">
+                                <i class="fas fa-th ml-2"></i> ניהול שיבוץ מהיר לקבוצות
+                            </button>
+                            <button onclick="Importer.init('donors')" class="btn-secondary"><i class="fas fa-file-excel text-green-600"></i> יבוא מאקסל</button>
+                        </div>
+                        <div class="relative w-80">
+                            <input type="text" oninput="Donors.handleSearch(this.value)" placeholder="חפש תורם..." class="input-field w-full pl-4 pr-10">
+                            <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
                         </div>
                     </div>
 
-                    <!-- דוח פורים מיוחד -->
-                    <div class="bg-white p-6 rounded-xl shadow border border-purple-200">
-                        <h3 class="font-bold text-lg mb-4 text-purple-700 border-b pb-2"><i class="fas fa-mask"></i> דוח פורים שנתי</h3>
-                        <p class="text-sm text-gray-500 mb-4">הפקת דוח סיכום פעילות פורים לשנה הנוכחית.</p>
+                    <!-- מסך רגיל: רשימת תורמים -->
+                    <div id="donors-list-view" class="flex-1 overflow-y-auto p-4 custom-scroll">
+                        <div id="donors-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pb-4"></div>
+                        <div id="donors-loader-more" class="p-4 text-center hidden">
+                            <button onclick="Donors.loadMore()" class="bg-slate-200 text-slate-600 px-6 py-2 rounded-full font-bold text-sm">טען עוד...</button>
+                        </div>
+                    </div>
+
+                    <!-- מסך ניהול מהיר (Kanban) -->
+                    <div id="donors-quick-manager" class="hidden flex-1 flex gap-4 overflow-hidden h-full pb-2 p-4">
+                        <!-- עמודה 1: מאגר תורמים לא משובצים -->
+                        <div class="w-1/4 bg-white rounded-xl shadow border flex flex-col h-full">
+                            <div class="p-3 border-b bg-gray-50 font-bold text-gray-700 flex justify-between">
+                                <span>מאגר לא משובצים</span>
+                                <span id="pool-count" class="bg-gray-200 text-xs px-2 py-0.5 rounded-full">0</span>
+                            </div>
+                            <div class="p-2 border-b"><input type="text" placeholder="סנן..." oninput="Donors.filterPool(this.value)" class="w-full text-xs p-1 border rounded"></div>
+                            <div id="donor-pool-list" class="flex-1 overflow-y-auto p-2 space-y-2 bg-gray-50/50 custom-scroll"></div>
+                        </div>
+
+                        <!-- אזור קבוצות (גרירה) -->
+                        <div class="flex-1 bg-white rounded-xl shadow border flex flex-col">
+                            <div class="p-3 border-b bg-indigo-50 font-bold text-indigo-800 flex justify-between items-center">
+                                <span>קבוצות השנה (<span class="curr-year"></span>)</span>
+                                <div class="text-xs font-normal">גרור תורמים מהמאגר לקבוצות</div>
+                            </div>
+                            <div class="flex-1 overflow-x-auto overflow-y-hidden p-4 whitespace-nowrap bg-slate-100 custom-scroll" id="groups-kanban-container">
+                                <!-- קבוצות ייווצרו כאן דינמית כעמודות -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. GROUPS -->
+                <div id="view-groups" class="view-section flex flex-col hidden fade-in bg-white h-full overflow-hidden">
+                    <div class="px-4 pt-3 border-b bg-slate-50 flex gap-2 shrink-0">
+                        <button onclick="Groups.setDay('night14')" class="group-tab active" data-day="night14">ליל י"ד</button>
+                        <button onclick="Groups.setDay('day14')" class="group-tab" data-day="day14">יום י"ד</button>
+                        <button onclick="Groups.setDay('day15')" class="group-tab" data-day="day15">יום ט"ו</button>
+                    </div>
+
+                    <div class="flex flex-1 overflow-hidden">
+                        <!-- רשימת קבוצות בצד -->
+                        <div class="w-72 border-l flex flex-col bg-white">
+                            <div class="p-4 border-b flex justify-between items-center bg-gray-50/50">
+                                <span class="font-bold text-sm text-slate-700">רשימת קבוצות</span>
+                                <button onclick="Groups.addNewGroup()" class="bg-indigo-100 text-indigo-600 hover:bg-indigo-200 p-1.5 rounded-lg transition"><i class="fas fa-plus"></i></button>
+                            </div>
+                            <div id="groups-list" class="flex-1 overflow-y-auto custom-scroll"></div>
+                        </div>
+
+                        <!-- אזור עבודה -->
+                        <div class="flex-1 flex flex-col bg-slate-50 relative" id="group-workspace">
+                            <div id="group-placeholder" class="absolute inset-0 flex items-center justify-center text-gray-400 flex-col">
+                                <i class="fas fa-layer-group text-6xl mb-4 text-slate-200"></i>
+                                <p>בחר קבוצה לעריכה</p>
+                            </div>
+
+                            <div id="group-editor" class="hidden flex flex-col h-full">
+                                <div class="bg-white p-4 border-b flex justify-between items-center shadow-sm z-10">
+                                    <div class="flex gap-3 items-center">
+                                        <h3 id="active-group-name" class="font-bold text-xl text-slate-800 cursor-pointer hover:bg-gray-100 px-2 rounded" onclick="Groups.renameGroup()" title="לחץ לשינוי שם"></h3>
+                                        <span id="active-group-details" class="text-xs bg-slate-100 text-slate-600 px-3 py-1 rounded-full border"></span>
+                                        <button onclick="Groups.deleteGroup()" class="text-red-500 bg-red-50 hover:bg-red-100 px-2 py-1 rounded border border-red-100 text-xs font-bold mr-2">מחק קבוצה</button>
+                                    </div>
+                                    <div class="flex gap-2 text-sm">
+                                        <button onclick="Groups.printSheet('members')" class="btn-secondary text-xs"><i class="fas fa-list"></i> דף שמי</button>
+                                        <button onclick="Groups.printSheet('route')" class="btn-secondary text-xs"><i class="fas fa-route"></i> דף מסלול</button>
+                                        <!-- כפתור יצוא תמונה -->
+                                        <button onclick="Groups.exportAsImage()" class="btn-secondary text-xs bg-slate-800 text-white border-none"><i class="fas fa-camera"></i> שמור כתמונה</button>
+                                    </div>
+                                </div>
+
+                                <div class="flex flex-1 overflow-hidden">
+                                    <!-- עמודה 1: מסלול תורמים -->
+                                    <div class="w-1/2 flex flex-col border-l bg-white">
+                                        <div class="p-3 bg-emerald-50 text-emerald-900 font-bold text-sm border-b flex justify-between">
+                                            <span><i class="fas fa-map-signs"></i> מסלול תורמים</span>
+                                            <span class="text-xs font-normal opacity-70">סדר את המסלול בגרירה</span>
+                                        </div>
+                                        <div id="group-route-list" class="flex-1 overflow-y-auto p-3 space-y-2 bg-slate-50/50 custom-scroll"></div>
+                                    </div>
+
+                                    <!-- עמודה 2: שיבוץ בחורים -->
+                                    <div class="w-1/2 flex flex-col bg-white">
+                                        <div class="p-3 bg-indigo-50 text-indigo-900 font-bold text-sm border-b"><i class="fas fa-user-friends"></i> שיבוץ בחורים</div>
+                                        <div class="flex-1 flex flex-col overflow-hidden">
+                                            <!-- רשימת בחורים בקבוצה -->
+                                            <div id="group-members-list" class="flex-1 overflow-y-auto p-3 space-y-2 h-1/2 border-b custom-scroll"></div>
+                                            <!-- הוספת בחור -->
+                                            <div class="h-1/2 flex flex-col bg-slate-50">
+                                                <div class="p-2 border-b bg-white relative">
+                                                    <input type="text" placeholder="חפש בחור להוספה..." oninput="Groups.filterStudents(this.value)" class="w-full text-sm p-2 border rounded pl-8">
+                                                    <i class="fas fa-search absolute left-4 top-4 text-gray-300 text-xs"></i>
+                                                </div>
+                                                <div id="pool-students" class="flex-1 overflow-y-auto p-2 space-y-1 custom-scroll"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. FINANCE -->
+                <div id="view-finance" class="view-section flex flex-col hidden fade-in financial-data bg-white h-full overflow-hidden">
+                    <div class="p-4 border-b flex justify-between items-center bg-slate-50 shrink-0">
+                        <div class="flex gap-3">
+                             <button onclick="Finance.openTransactionModal('income')" class="btn-primary bg-emerald-600 hover:bg-emerald-700"><i class="fas fa-plus-circle ml-2"></i> הכנסה</button>
+                             <button onclick="Finance.openTransactionModal('expense')" class="btn-primary bg-rose-600 hover:bg-rose-700"><i class="fas fa-minus-circle ml-2"></i> הוצאה</button>
+                        </div>
+                        <div class="flex bg-white rounded-lg p-1 border shadow-sm">
+                            <button onclick="Finance.setFilter('all')" class="px-4 py-1.5 rounded-md text-sm font-medium transition finance-filter active" data-f="all">הכל</button>
+                            <button onclick="Finance.setFilter('income')" class="px-4 py-1.5 rounded-md text-sm font-medium transition finance-filter hover:bg-gray-50 text-gray-600" data-f="income">הכנסות</button>
+                            <button onclick="Finance.setFilter('expense')" class="px-4 py-1.5 rounded-md text-sm font-medium transition finance-filter hover:bg-gray-50 text-gray-600" data-f="expense">הוצאות</button>
+                            <button onclick="Finance.setFilter('purim')" class="px-4 py-1.5 rounded-md text-sm font-medium transition finance-filter hover:bg-purple-50 text-purple-600" data-f="purim"><i class="fas fa-mask ml-1"></i> פורים</button>
+                        </div>
+                    </div>
+                    
+                    <div class="flex-1 overflow-hidden flex flex-col">
+                        <div class="overflow-y-auto flex-1 p-4 custom-scroll" id="finance-scroll-container">
+                            <table class="w-full text-sm text-right border-collapse">
+                                <thead class="bg-slate-100 text-slate-600 sticky top-0 shadow-sm z-10">
+                                    <tr>
+                                        <th class="p-3 rounded-r-lg bg-slate-100">תאריך</th>
+                                        <th class="p-3 bg-slate-100">סוג</th>
+                                        <th class="p-3 bg-slate-100">קטגוריה</th>
+                                        <th class="p-3 bg-slate-100">תיאור / משוייך ל...</th>
+                                        <th class="p-3 bg-slate-100">סכום</th>
+                                        <th class="p-3 rounded-l-lg bg-slate-100">פעולות</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="finance-tbody" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                            <div id="finance-loader-more" class="p-4 text-center mt-2 hidden">
+                                <button onclick="Finance.loadMore()" class="text-indigo-600 hover:underline font-bold">טען היסטוריה ישנה יותר...</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6. REPORTS -->
+                <div id="view-reports" class="view-section hidden fade-in financial-data p-6">
+                    <h2 class="text-3xl font-bold mb-8 text-slate-800">דוחות והדפסות</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                         
-                        <div class="flex gap-2">
-                            <button onclick="Reports.generatePurim('real')" class="flex-1 bg-green-600 text-white py-3 rounded font-bold hover:bg-green-700">
-                                דוח אמיתי
-                                <span class="block text-xs font-normal opacity-75">סכומים בפועל בקופה</span>
-                            </button>
-                            <button onclick="Reports.generatePurim('display')" class="flex-1 bg-yellow-600 text-white py-3 rounded font-bold hover:bg-yellow-700">
-                                דוח לתצוגה (פיקטיבי)
-                                <span class="block text-xs font-normal opacity-75">כולל קיזוזים והנחות יעד</span>
-                            </button>
+                        <!-- דוח כללי -->
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border hover:shadow-md transition">
+                            <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-4"><i class="fas fa-file-invoice-dollar text-xl"></i></div>
+                            <h3 class="font-bold text-lg mb-2">דוח תנועות כספיות</h3>
+                            <p class="text-sm text-gray-500 mb-4">ייצוא כל ההכנסות וההוצאות לאקסל עם אפשרויות סינון.</p>
+                            <div class="space-y-3">
+                                <select id="rep-type" class="input-field w-full text-sm"><option value="all">הכל</option><option value="income">רק הכנסות</option><option value="expense">רק הוצאות</option></select>
+                                <!-- חיפוש חכם לישות -->
+                                <div class="relative group">
+                                    <input type="text" id="rep-entity-search" placeholder="חפש בחור/תורם לסינון..." oninput="Reports.searchEntity(this.value)" class="input-field w-full text-sm">
+                                    <input type="hidden" id="rep-entity-id">
+                                    <div id="rep-entity-results" class="absolute top-full right-0 w-full bg-white border shadow-lg rounded-b max-h-40 overflow-y-auto hidden z-20 custom-scroll"></div>
+                                </div>
+                                <button onclick="Reports.generateStandard()" class="w-full bg-slate-800 text-white py-2 rounded-lg font-bold hover:bg-slate-700 text-sm">הורד לאקסל</button>
+                            </div>
+                        </div>
+
+                        <!-- דוח תצוגה פורים -->
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border hover:shadow-md transition">
+                            <div class="w-12 h-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center mb-4"><i class="fas fa-magic text-xl"></i></div>
+                            <h3 class="font-bold text-lg mb-2">דוח תצוגה (אחרי פורים)</h3>
+                            <p class="text-sm text-gray-500 mb-4">נתונים משוקללים הכוללים: תרומות בפועל + הנחות קבוצה + הכנסת תורמים (לפי מדרגות יעד).</p>
+                            <button onclick="Reports.generateDisplayReport()" class="w-full bg-purple-600 text-white py-2 rounded-lg font-bold hover:bg-purple-700 text-sm">צור דוח תצוגה</button>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- 7. SETTINGS & ADMIN -->
-            <div id="view-settings" class="view-section p-8 hidden fade-in admin-only">
-                <div class="max-w-4xl mx-auto space-y-6">
-                    
-                    <!-- הגדרת חוקים -->
-                    <div class="bg-white p-6 rounded-xl shadow">
-                        <h3 class="font-bold text-lg mb-4">חוקים וזכאות (הנחות יעד)</h3>
-                        <div class="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                                <label>יעד כללי למערכת (ש"ח)</label>
-                                <input type="number" id="conf-global-goal" class="input-field w-full mt-1" onchange="Settings.save('globalGoal', this.value)">
-                            </div>
-                            <div>
-                                <label>הנחת חבר קבוצה (ש"ח מהיעד)</label>
-                                <input type="number" id="conf-group-disc" class="input-field w-full mt-1" onchange="Settings.save('groupDiscount', this.value)">
+                <!-- 7. SETTINGS & ADMIN -->
+                <div id="view-settings" class="view-section p-6 hidden fade-in admin-only">
+                    <div class="max-w-5xl mx-auto space-y-8 pb-10">
+                        <h2 class="text-3xl font-bold text-slate-800">הגדרות מערכת</h2>
+
+                        <!-- סנכרון שנתי -->
+                        <div class="bg-white p-8 rounded-2xl shadow-sm border border-orange-100 bg-orange-50/30">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <h3 class="font-bold text-xl text-orange-800">תחזוקה שנתית</h3>
+                                    <p class="text-sm text-gray-500">קידום שיעורים וסנכרון לשנה העברית החדשה. בוגרי "קיבוץ ח" יועברו לרשימת תורמים.</p>
+                                </div>
+                                <button onclick="Settings.syncYears()" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-6 rounded-xl shadow-lg transition">בצע סנכרון שנתי</button>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- משתמשים -->
-                    <div class="bg-white p-6 rounded-xl shadow">
-                        <h3 class="font-bold text-lg mb-4">ניהול משתמשים</h3>
-                        <div class="flex gap-2 mb-2">
-                            <input id="new-user-email" type="email" placeholder="אימייל משתמש" class="input-field flex-1">
-                            <select id="new-user-role" class="input-field w-32">
-                                <option value="user">משתמש</option>
-                                <option value="admin">מנהל</option>
-                            </select>
-                            <button onclick="Settings.addUser()" class="btn-primary">הוסף</button>
+                        <!-- הוספת משתמשים -->
+                        <div class="bg-white p-8 rounded-2xl shadow-sm border">
+                            <h3 class="font-bold text-xl mb-6 text-slate-700 border-b pb-2">ניהול משתמשים והרשאות</h3>
+                            <div class="grid grid-cols-1 gap-4">
+                                <div class="p-4 bg-gray-50 rounded-xl border">
+                                    <h4 class="font-bold mb-3 text-sm">הוספת משתמש / מנהל חדש</h4>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <input type="email" id="new-user-email" placeholder="אימייל" class="input-field text-sm">
+                                        <input type="password" id="new-user-pass" placeholder="סיסמה" class="input-field text-sm">
+                                        <select id="new-user-role" class="input-field text-sm">
+                                            <option value="user">משתמש (עריכה בלבד, ללא כספים)</option>
+                                            <option value="admin">מנהל (הרשאה מלאה)</option>
+                                        </select>
+                                        <button onclick="Settings.createUser()" class="bg-slate-800 text-white rounded-lg font-bold text-sm">צור משתמש</button>
+                                    </div>
+                                    <div class="mt-2 text-xs text-red-500 font-bold">* אזהרה: יצירת משתמש תנתק אותך ותחבר אותך כמשתמש החדש.</div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="text-xs text-gray-500 mb-4">* משתמש רגיל יכול להזין נתונים אך לא רואה סיכומי כספים.</div>
-                        <ul id="users-list" class="divide-y text-sm"></ul>
+
+                        <!-- ניהול שדות מותאמים -->
+                        <div class="bg-white p-8 rounded-2xl shadow-sm border">
+                            <h3 class="font-bold text-xl mb-6 text-slate-700 border-b pb-2">ניהול שדות מידע</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div>
+                                    <label class="block text-sm font-bold mb-2">בחר סוג רשימה:</label>
+                                    <select id="settings-field-type" onchange="Settings.renderFieldsEditor()" class="input-field w-full mb-4">
+                                        <option value="students">שדות בחור</option>
+                                        <option value="donors">שדות תורם</option>
+                                        <option value="finance">שדות כספים</option>
+                                    </select>
+                                    
+                                    <div class="bg-gray-50 p-4 rounded-xl border">
+                                        <div class="text-sm font-bold mb-2">הוסף שדה מהרשימה:</div>
+                                        <div class="flex gap-2 mb-4">
+                                            <select id="settings-predefined-field" class="input-field flex-1 text-sm"></select>
+                                            <button onclick="Settings.addField()" class="btn-primary bg-indigo-600 text-sm px-4">הוסף</button>
+                                        </div>
+                                        <div id="settings-active-fields" class="space-y-2"></div>
+                                    </div>
+                                </div>
+                                <div class="text-sm text-gray-500 bg-blue-50 p-4 rounded-xl">
+                                    <h4 class="font-bold text-blue-800 mb-2"><i class="fas fa-info-circle"></i> מידע</h4>
+                                    <p class="mb-2">שינוי שדות כאן ישפיע על:</p>
+                                    <ul class="list-disc list-inside space-y-1">
+                                        <li>טפסי הוספה/עריכה</li>
+                                        <li>עמודות ביבוא ויצוא אקסל</li>
+                                        <li>תצוגת הנתונים בטבלאות</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- חוקים, יעדים ומתנות -->
+                        <div class="bg-white p-8 rounded-2xl shadow-sm border">
+                            <h3 class="font-bold text-xl mb-6 text-slate-700 border-b pb-2">יעדים ותמריצים</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="lbl">יעד גיוס כללי למערכת (ש"ח)</label>
+                                    <input type="number" id="conf-global-goal" class="input-field w-full" onchange="Settings.save('globalGoal', this.value)">
+                                </div>
+                                <div>
+                                    <label class="lbl">הנחת חבר קבוצה (שווי ש"ח)</label>
+                                    <input type="number" id="conf-group-disc" class="input-field w-full" onchange="Settings.save('groupDiscount', this.value)">
+                                </div>
+                            </div>
+
+                            <div class="mt-6 border-t pt-4">
+                                <h4 class="font-bold text-sm mb-3">מדרגות יעדים לזיכוי בחור (בהבאת תורם)</h4>
+                                <p class="text-xs text-gray-500 mb-2">לדוגמה: אם תורם תרם 500, הבחור יקבל זיכוי של 50 ליעד שלו.</p>
+                                <div id="settings-goals-tiers" class="space-y-2"></div>
+                                <button onclick="Settings.addGoalTier()" class="text-indigo-600 text-sm font-bold mt-2 hover:underline">+ הוסף מדרגה</button>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
-            </div>
 
-        </div>
-    </main>
+            </div>
+        </main>
+    </div>
 
     <!-- Modal: Generic Form -->
-    <div id="modal-form" class="fixed inset-0 z-50 bg-black/60 hidden-screen flex items-center justify-center backdrop-blur-sm">
-        <div class="bg-white rounded-2xl shadow-2xl w-[500px] max-w-[90vw] overflow-hidden flex flex-col max-h-[90vh]">
-            <div class="p-4 bg-indigo-900 text-white flex justify-between items-center">
-                <h3 id="modal-title" class="font-bold text-lg">כותרת</h3>
-                <button onclick="Modal.close()" class="hover:text-red-300"><i class="fas fa-times"></i></button>
+    <div id="modal-form" class="fixed inset-0 z-50 bg-black/60 hidden-screen flex items-center justify-center backdrop-blur-sm transition-all duration-300">
+        <div class="bg-white rounded-2xl shadow-2xl w-[550px] max-w-[90vw] overflow-hidden flex flex-col max-h-[90vh] scale-100 transition-transform">
+            <div class="p-5 bg-gradient-to-r from-slate-800 to-slate-900 text-white flex justify-between items-center shrink-0">
+                <h3 id="modal-title" class="font-bold text-xl tracking-wide">כותרת</h3>
+                <button onclick="Modal.close()" class="hover:text-red-300 hover:rotate-90 transition transform"><i class="fas fa-times text-xl"></i></button>
             </div>
-            <div id="modal-body" class="p-6 overflow-y-auto space-y-4"></div>
-            <div class="p-4 bg-gray-50 flex gap-3 border-t">
-                <button id="modal-save-btn" class="flex-1 btn-primary">שמור</button>
-                <button onclick="Modal.close()" class="flex-1 btn-secondary">ביטול</button>
+            <div id="modal-body" class="p-8 overflow-y-auto space-y-5 custom-scroll"></div>
+            <div class="p-5 bg-gray-50 flex gap-4 border-t shrink-0">
+                <button id="modal-save-btn" class="flex-1 btn-primary py-3 text-lg shadow-md">שמור</button>
+                <button onclick="Modal.close()" class="flex-1 btn-secondary py-3 text-lg">ביטול</button>
             </div>
         </div>
     </div>
 
     <!-- Scripts -->
-   <script>
-        // --- 1. CONFIGURATION ---
-        // עליך לוודא שהפרטים כאן נכונים מה-Firebase Console שלך
+    <script>
+        // --- 1. CONFIGURATION & PREDEFINED DATA ---
         const firebaseConfig = {
             apiKey: "AIzaSyBRunXdWIFiP8-vZao0WZ6WxItMAUt-ORY",
             authDomain: "ezer--project.firebaseapp.com",
@@ -483,194 +667,325 @@
             messagingSenderId: "838086109276",
             appId: "1:838086109276:web:201babf8b31c39a0cc9e99"
         };
-        
-        // אתחול בטוח
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
+        firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         const auth = firebase.auth();
 
+        // ביטול שמירת סשן בדפדפן - אבטחה
+        auth.setPersistence(firebase.auth.Auth.Persistence.NONE);
+
         const SHIURIM_ORDER = ['שיעור א', 'שיעור ב', 'שיעור ג', 'קיבוץ א', 'קיבוץ ב', 'קיבוץ ג', 'קיבוץ ד', 'קיבוץ ה', 'קיבוץ ו', 'קיבוץ ז', 'קיבוץ ח'];
+        
+        // רשימת שדות קבועה לבחירה בהגדרות
+        const PREDEFINED_FIELDS = {
+            students: [
+                {k:'name', l:'שם מלא', t:'text', r:true},
+                {k:'phone', l:'טלפון', t:'text'},
+                {k:'grade', l:'שיעור', t:'select', opts:SHIURIM_ORDER},
+                {k:'entryYear', l:'שנת כניסה', t:'number'},
+                {k:'idNum', l:'תעודת זהות', t:'text'},
+                {k:'city', l:'עיר מגורים', t:'text'},
+                {k:'fatherName', l:'שם האב', t:'text'},
+                {k:'room', l:'מספר חדר', t:'text'}
+            ],
+            donors: [
+                {k:'name', l:'שם תורם', t:'text', r:true},
+                {k:'address', l:'כתובת', t:'text'},
+                {k:'phone', l:'טלפון', t:'text'},
+                {k:'email', l:'אימייל', t:'email'},
+                {k:'referrerId', l:'בחור מביא', t:'referrer_select'},
+                {k:'notes', l:'הערות', t:'textarea'},
+                {k:'vip', l:'VIP', t:'checkbox'}
+            ]
+        };
+        
+        const DEFAULT_ACTIVE_FIELDS = {
+            students: ['name','phone','grade','entryYear'],
+            donors: ['name','address','referrerId']
+        };
 
         const getHebrewYear = () => {
             const d = new Date();
-            return d.getMonth() > 8 ? 'תשפ״ו' : 'תשפ״ה'; // חישוב פשוט להדגמה
+            const y = d.getFullYear();
+            const hYear = d.getMonth() > 8 ? y + 3761 : y + 3760; 
+            const map = {5783:'תשפ״ג', 5784:'תשפ״ד', 5785:'תשפ״ה', 5786:'תשפ״ו'};
+            return map[hYear] || 'תשפ״ה';
         };
 
-        // --- 2. STORE ---
+        // --- 0. UTILS: Notifications & Offline ---
+        const Notify = {
+            show(msg, type = 'info') {
+                const con = document.getElementById('toast-container');
+                const el = document.createElement('div');
+                el.className = `toast ${type}`;
+                const icon = type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle';
+                el.innerHTML = `<i class="fas ${icon} toast-icon"></i><span class="font-medium text-slate-800 text-sm">${msg}</span>`;
+                con.appendChild(el);
+                setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 3000);
+            }
+        };
+
+        const OfflineManager = {
+            isOnline: navigator.onLine,
+            queue: JSON.parse(localStorage.getItem('offlineQueue') || '[]'),
+            
+            init() {
+                window.addEventListener('online', () => this.updateStatus(true));
+                window.addEventListener('offline', () => this.updateStatus(false));
+                this.updateStatus(this.isOnline);
+            },
+            
+            updateStatus(online) {
+                this.isOnline = online;
+                const ind = document.getElementById('connection-status');
+                const txt = document.getElementById('conn-text');
+                if(online) {
+                    if(this.queue.length > 0) {
+                        ind.className = 'status-syncing';
+                        txt.innerText = `מסנכרן ${this.queue.length} פעולות...`;
+                        this.processQueue();
+                    } else {
+                        ind.style.display = 'none';
+                    }
+                } else {
+                    ind.className = 'status-offline';
+                    txt.innerText = 'מנותק - שומר מקומית';
+                }
+            },
+            
+            // עטיפה לפעולות כתיבה
+            write(path, data, type = 'set') {
+                if(this.isOnline) {
+                    if(type === 'set') return db.ref(path).set(data);
+                    if(type === 'update') return db.ref(path).update(data);
+                    if(type === 'remove') return db.ref(path).remove();
+                    if(type === 'transaction') return db.ref(path).transaction(data); // data is updateFunction
+                } else {
+                    if(type === 'transaction') {
+                        Notify.show('לא ניתן לבצע חישובים מורכבים במצב אופליין', 'error');
+                        return;
+                    }
+                    this.queue.push({path, data, type, ts: Date.now()});
+                    localStorage.setItem('offlineQueue', JSON.stringify(this.queue));
+                    Notify.show('נשמר בתור לסינכרון', 'info');
+                    this.updateStatus(false);
+                    return Promise.resolve(); // Fake promise
+                }
+            },
+            
+            processQueue() {
+                const q = [...this.queue];
+                this.queue = [];
+                localStorage.setItem('offlineQueue', '[]');
+                
+                q.forEach(item => {
+                    if(item.type === 'set') db.ref(item.path).set(item.data);
+                    if(item.type === 'update') db.ref(item.path).update(item.data);
+                    if(item.type === 'remove') db.ref(item.path).remove();
+                });
+                
+                setTimeout(() => {
+                    Notify.show('כל הנתונים סונכרנו בהצלחה', 'success');
+                    this.updateStatus(true);
+                }, 1000);
+            }
+        };
+        OfflineManager.init();
+
+
+        // --- 2. SYSTEM STATE ---
         const Store = {
             currentYear: getHebrewYear(),
             user: null,
             role: 'user',
-            data: { students: {}, donors: {}, yearData: {}, config: {} },
-            loaded: { students: false, donors: false, year: {} },
+            data: {
+                students: {}, // חלקי (pagination)
+                donors: {},   // חלקי
+                yearData: {}, // חלקי
+                config: { fields: {}, goals: [] },
+                donorGroupMap: {},
+                stats: { income: 0, expense: 0 } // נתונים מצטברים
+            },
+            // ניהול עמודים לטעינה חלקית
+            cursors: { students: null, donors: null, finance: null },
+            loadedAll: { students: false, donors: false },
 
             init() {
-                // טעינת הגדרות בסיס
                 this.loadConfig();
-                this.loadYearData(this.currentYear);
+                this.loadStats();
                 
-                // האזנה לנתונים גלובליים (פעם אחת בלבד)
-                if(!this.loaded.students) {
-                    db.ref('global/students').limitToLast(100).on('child_added', s => { 
-                        this.data.students[s.key] = s.val(); 
-                        UI.updateIfVisible('students'); 
-                    });
-                    this.loaded.students = true;
-                }
-                if(!this.loaded.donors) {
-                    db.ref('global/donors').limitToLast(100).on('child_added', s => { 
-                        this.data.donors[s.key] = s.val(); 
-                        UI.updateIfVisible('donors'); 
-                    });
-                    this.loaded.donors = true;
-                }
+                // טעינה ראשונית מוגבלת
+                Students.loadMore(true); 
+                // Groups ו-Dashboard תלויים במידע בסיסי, נטען מה שצריך
+                this.loadGroups();
+                // טעינת כל התורמים לרקע לצורך חיפוש מהיר בקופה
+                db.ref('global/donors').once('value', s => Object.assign(this.data.donors, s.val()));
+                db.ref('global/students').once('value', s => Object.assign(this.data.students, s.val()));
             },
 
-            loadYearData(y) {
-                if(this.loaded.year[y]) return;
-                console.log("Loading data for year:", y);
-                
-                const yearRef = db.ref(`years/${y}`);
-                yearRef.child('finance').on('value', snap => {
-                    if(!this.data.yearData[y]) this.data.yearData[y] = {};
-                    this.data.yearData[y].finance = snap.val() || {};
-                    UI.updateIfVisible('finance');
-                    if(Router.current === 'dashboard') Dashboard.render();
+            loadStats() {
+                if (Store.role === 'user') return; // משתמשים לא רואים כספים
+                db.ref(`years/${this.currentYear}/stats`).on('value', s => {
+                    this.data.stats = s.val() || { income: 0, expense: 0 };
+                    Dashboard.render();
                 });
-                yearRef.child('groups').on('value', snap => {
-                    if(!this.data.yearData[y]) this.data.yearData[y] = {};
-                    this.data.yearData[y].groups = snap.val() || {};
+            },
+            
+            loadGroups() {
+                db.ref(`years/${this.currentYear}/groups`).on('value', snap => {
+                    if(!this.data.yearData[this.currentYear]) this.data.yearData[this.currentYear] = {};
+                    const groupsData = snap.val() || {};
+                    this.data.yearData[this.currentYear].groups = groupsData;
+                    
+                    this.data.donorGroupMap = {};
+                    Object.values(groupsData).forEach(dayGroups => {
+                        Object.values(dayGroups).forEach(g => {
+                            if(g.route) g.route.forEach(did => this.data.donorGroupMap[did] = g.name);
+                        });
+                    });
+                    
                     UI.updateIfVisible('groups');
+                    if(Router.current === 'donors') Donors.render(); 
                 });
-                yearRef.child('studentData').on('value', snap => {
-                    if(!this.data.yearData[y]) this.data.yearData[y] = {};
-                    this.data.yearData[y].students = snap.val() || {};
-                    UI.updateIfVisible('students');
-                });
-                this.loaded.year[y] = true;
             },
 
             loadConfig() {
-                db.ref('settings').on('value', s => this.data.config = s.val() || {});
+                db.ref('settings').on('value', s => {
+                    this.data.config = s.val() || {};
+                    if(!this.data.config.fields) this.data.config.fields = JSON.parse(JSON.stringify(DEFAULT_ACTIVE_FIELDS));
+                    if(!this.data.config.tiers) this.data.config.tiers = [];
+                });
             }
         };
 
-        // --- 3. AUTH & ROUTER (THE FIX) ---
+        // --- 3. INACTIVITY TIMER ---
+        const InactivityTimer = {
+            timer: null,
+            warningTimer: null,
+            LIMIT: 30 * 60 * 1000, 
+            WARNING: 60,
+            
+            init() {
+                ['mousemove', 'keydown', 'click', 'scroll'].forEach(ev => document.addEventListener(ev, () => this.reset()));
+                this.reset();
+            },
+            
+            reset() {
+                if(!Store.user) return;
+                clearTimeout(this.timer);
+                clearInterval(this.warningTimer);
+                document.getElementById('timeout-modal').classList.add('hidden-screen');
+                this.timer = setTimeout(() => this.showWarning(), this.LIMIT);
+            },
+            
+            showWarning() {
+                const modal = document.getElementById('timeout-modal');
+                const countEl = document.getElementById('timeout-countdown');
+                modal.classList.remove('hidden-screen');
+                
+                let left = this.WARNING;
+                countEl.innerText = left;
+                
+                this.warningTimer = setInterval(() => {
+                    left--;
+                    countEl.innerText = left;
+                    if(left <= 0) {
+                        clearInterval(this.warningTimer);
+                        Auth.logout();
+                    }
+                }, 1000);
+            },
+            
+            stayLoggedIn() { this.reset(); }
+        };
+
+        // --- 4. AUTH ---
         const Auth = {
             login(e) {
                 e.preventDefault();
                 const em = document.getElementById('email').value;
                 const pw = document.getElementById('password').value;
-                document.getElementById('login-msg').classList.add('hidden');
+                const remember = document.getElementById('remember-email').checked;
                 
+                if(remember) localStorage.setItem('remember_email', em);
+                else localStorage.removeItem('remember_email');
+
                 auth.signInWithEmailAndPassword(em, pw).catch(err => {
                     const msg = document.getElementById('login-msg');
-                    msg.innerText = "שגיאה: " + err.message;
+                    msg.innerText = "שגיאה: פרטים שגויים";
                     msg.classList.remove('hidden');
                 });
             },
-            logout() { auth.signOut(); },
-            
+            logout() { auth.signOut(); location.reload(); },
             onStateChange(u) {
-                const loader = document.getElementById('loader');
-                const loginScreen = document.getElementById('login-screen');
-                const sidebar = document.getElementById('sidebar');
-                const mainContent = document.getElementById('main-content');
-
-                if (u) {
-                    // 1. משתמש מחובר - מיד מציגים ממשק
-                    console.log("User logged in:", u.email);
+                document.getElementById('loader').classList.add('hidden-screen');
+                if(u) {
                     Store.user = u;
-                    
                     document.getElementById('user-email-display').innerText = u.email;
+                    document.getElementById('login-screen').classList.add('hidden-screen');
+                    document.getElementById('sidebar').classList.remove('hidden-screen');
+                    document.getElementById('main-content').classList.remove('hidden-screen');
                     
-                    // הסתרת מסכי כניסה וטעינה
-                    loader.classList.add('hidden-screen');
-                    loginScreen.classList.add('hidden-screen');
-                    
-                    // הצגת ממשק ראשי
-                    sidebar.classList.remove('hidden-screen');
-                    mainContent.classList.remove('hidden-screen');
-
-                    // 2. הפעלת המערכת מיד (ברירת מחדל: משתמש רגיל)
-                    Store.init();
-                    System.initUI();
-                    
-                    // אם אנחנו עדיין לא בדף ספציפי, לך לדשבורד
-                    if (!Router.current) {
+                    db.ref(`users/${u.uid}`).once('value', s => {
+                        const val = s.val() || {};
+                        Store.role = val.role || 'user';
+                        document.getElementById('user-role-display').innerText = Store.role === 'admin' ? 'מנהל מערכת' : 'משתמש';
+                        document.body.className = `role-${Store.role}`;
+                        Store.init();
+                        System.initUI();
                         Router.go('dashboard');
-                    }
-
-                    // 3. בדיקת הרשאות מנהל ברקע
-                    db.ref(`users/${u.uid}`).once('value')
-                        .then(s => {
-                            const val = s.val() || {};
-                            Store.role = val.role || 'user';
-                            document.getElementById('user-role-display').innerText = Store.role === 'admin' ? 'מנהל מערכת' : 'משתמש';
-                            document.body.className = `role-${Store.role}`;
-                            // רענון אם אנחנו בהגדרות
-                            if(Router.current === 'settings') Router.go('settings');
-                        })
-                        .catch(err => console.log("Role check skipped or failed", err));
-
+                        InactivityTimer.init();
+                    });
                 } else {
-                    // משתמש מנותק
-                    console.log("No user");
-                    loader.classList.add('hidden-screen'); // מסתירים טעינה בכל מקרה
-                    loginScreen.classList.remove('hidden-screen');
-                    sidebar.classList.add('hidden-screen');
-                    mainContent.classList.add('hidden-screen');
-                    Router.current = null;
+                    document.getElementById('login-screen').classList.remove('hidden-screen');
+                    document.getElementById('sidebar').classList.add('hidden-screen');
+                    document.getElementById('main-content').classList.add('hidden-screen');
+                    
+                    // מילוי אימייל אם נשמר
+                    const savedEmail = localStorage.getItem('remember_email');
+                    if(savedEmail) {
+                        document.getElementById('email').value = savedEmail;
+                        document.getElementById('remember-email').checked = true;
+                    }
+                    clearTimeout(InactivityTimer.timer);
                 }
             }
         };
+        auth.onAuthStateChanged(Auth.onStateChange);
 
+        // --- 5. ROUTER & UI ---
         const Router = {
             current: null,
             go(view) {
-                console.log("Navigating to:", view);
-                this.current = view;
-                
-                // הסתרת כל התצוגות
-                document.querySelectorAll('.view-section').forEach(el => {
-                    el.classList.add('hidden');
-                    el.classList.remove('fade-in');
-                    el.style.display = 'none'; // ווידוא CSS חזק
-                });
+                // הרשאות
+                if (view === 'finance' && Store.role === 'user') return Notify.show('אין לך הרשאה לצפות בנתונים כספיים', 'error');
+                if (view === 'settings' && Store.role === 'user') return Notify.show('אין לך הרשאה להגדרות', 'error');
 
-                // הצגת התצוגה הרלוונטית
+                this.current = view;
+                document.querySelectorAll('.view-section').forEach(el => { el.classList.add('hidden'); el.classList.remove('fade-in'); });
                 const el = document.getElementById('view-' + view);
-                if (el) {
-                    el.classList.remove('hidden');
-                    el.style.display = 'block'; // ווידוא CSS חזק
-                    setTimeout(() => el.classList.add('fade-in'), 10);
-                } else {
-                    console.error("View not found:", view);
-                }
+                el.classList.remove('hidden');
+                setTimeout(() => el.classList.add('fade-in'), 10);
                 
-                // עדכון סרגל צד
-                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('border-indigo-500', 'bg-slate-800'));
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                document.getElementById('nav-' + view).classList.add('active');
                 
-                // עדכון כותרת
-                const titles = {dashboard:'דף הבית', students:'ניהול בחורים', donors:'ניהול תורמים', groups:'קבוצות', finance:'כספים', reports:'דוחות', settings:'הגדרות'};
+                const titles = {dashboard:'לוח מחוונים', students:'ניהול בחורים', donors:'ניהול תורמים', groups:'קבוצות ומסלולים', finance:'ניהול קופה', reports:'דוחות', settings:'הגדרות'};
                 document.getElementById('page-title').innerText = titles[view] || view;
 
-                // טעינת נתונים
-                if(view === 'students') Students.render();
-                if(view === 'donors') Donors.render();
-                if(view === 'groups') Groups.render();
-                if(view === 'finance') Finance.render();
+                if(view === 'students' && Object.keys(Store.data.students).length === 0) Students.loadMore(true);
+                if(view === 'donors' && Object.keys(Store.data.donors).length === 0) Donors.loadMore(true);
+                if(view === 'finance') Finance.loadMore(true);
                 if(view === 'dashboard') Dashboard.render();
+                if(view === 'settings') Settings.init();
             }
         };
 
         const UI = {
             updateIfVisible(module) {
                 if(Router.current === module) {
-                    if(module === 'students') Students.render(true);
-                    if(module === 'donors') Donors.render(true);
+                    if(module === 'students') Students.render();
+                    if(module === 'donors') Donors.render();
                     if(module === 'groups') Groups.render();
                     if(module === 'finance') Finance.render();
                 }
@@ -681,337 +996,1332 @@
         const System = {
             initUI() {
                 const sel = document.getElementById('year-selector');
-                if(sel.options.length === 0) { // מניעת כפילויות
-                    ['תשפ״ד','תשפ״ה','תשפ״ו'].forEach(y => {
-                        const op = document.createElement('option');
-                        op.value = y; op.innerText = y;
-                        if(y === Store.currentYear) op.selected = true;
-                        sel.appendChild(op);
-                    });
-                }
+                sel.innerHTML = '';
+                ['תשפ״ג','תשפ״ד','תשפ״ה','תשפ״ו'].forEach(y => {
+                    const op = document.createElement('option');
+                    op.value = y; op.innerText = y;
+                    if(y === Store.currentYear) op.selected = true;
+                    sel.appendChild(op);
+                });
                 document.querySelectorAll('.curr-year').forEach(s => s.innerText = Store.currentYear);
             },
             changeYear(y) {
                 Store.currentYear = y;
-                Store.loadYearData(y);
+                // איפוס נתונים תלויי שנה
+                Store.data.yearData = {};
+                Store.data.stats = { income: 0, expense: 0 };
+                Store.loadStats();
+                Store.loadGroups();
+                // טעינה מחדש של הפיננסים לשנה החדשה
+                Finance.reset();
+                
                 document.querySelectorAll('.curr-year').forEach(s => s.innerText = y);
-                if(Router.current) Router.go(Router.current);
+                Router.go('dashboard'); // חזרה ללוח המחוונים
             }
         };
 
-        // --- MODULES ---
-
+        // --- 6. STUDENTS LOGIC ---
         const Students = {
-            currentLimit: 20,
-            render(keepScroll = false) {
-                const term = document.getElementById('student-search')?.value.trim() || '';
-                const tbody = document.getElementById('students-tbody');
-                if(!tbody) return;
-                
-                if(!keepScroll) tbody.innerHTML = '';
+            limit: 30,
+            
+            loadMore(reset = false) {
+                if(reset) { Store.data.students = {}; Store.cursors.students = null; Store.loadedAll.students = false; }
+                if(Store.loadedAll.students) return;
 
-                let list = Object.values(Store.data.students).map(s => {
+                let q = db.ref('global/students').orderByKey().limitToFirst(this.limit);
+                if(Store.cursors.students) q = q.startAfter(Store.cursors.students);
+
+                q.once('value', snap => {
+                    const data = snap.val();
+                    if(!data) {
+                        Store.loadedAll.students = true;
+                        document.getElementById('students-loader-more').style.display = 'none';
+                        return;
+                    }
+                    const keys = Object.keys(data);
+                    if(keys.length < this.limit) {
+                         Store.loadedAll.students = true;
+                         document.getElementById('students-loader-more').style.display = 'none';
+                    } else {
+                         Store.cursors.students = keys[keys.length-1];
+                         document.getElementById('students-loader-more').style.display = 'block';
+                    }
+                    Object.assign(Store.data.students, data);
+                    this.render();
+                });
+            },
+
+            render() {
+                const term = document.getElementById('student-search').value.trim();
+                const tbody = document.getElementById('students-tbody');
+                tbody.innerHTML = '';
+
+                let list = Object.values(Store.data.students);
+                list = list.map(s => {
                     const yData = (Store.data.yearData[Store.currentYear]?.students || {})[s.id] || {};
-                    return { ...s, ...yData };
+                    return { ...s, ...yData }; 
                 });
 
                 if(term) list = list.filter(s => s.name.includes(term) || s.phone.includes(term));
-                
-                const toShow = list.slice(0, this.currentLimit);
-                tbody.innerHTML = toShow.map(s => `
-                    <tr class="hover:bg-slate-50 transition cursor-pointer" onclick="Students.openEdit('${s.id}')">
-                        <td class="p-3 text-right font-medium text-indigo-900">${s.name}</td>
-                        <td class="p-3 text-right">${s.grade || '-'}</td>
-                        <td class="p-3 text-right text-gray-500">${s.entryYear || '-'}</td>
-                        <td class="p-3 text-right font-bold text-gray-700">₪${(s.personalGoal || 0).toLocaleString()}</td>
-                        <td class="p-3 text-center"><i class="fas fa-pen text-indigo-400"></i></td>
-                    </tr>
-                `).join('');
 
-                const btn = document.getElementById('students-loader-more');
-                if(btn) btn.style.display = list.length > this.currentLimit ? 'block' : 'none';
-                if(document.getElementById('dash-stat-students')) document.getElementById('dash-stat-students').innerText = list.length;
+                list.forEach(s => {
+                    const row = document.createElement('tr');
+                    row.className = "hover:bg-slate-50 border-b border-slate-50 transition cursor-pointer group";
+                    row.onclick = (e) => { if(!e.target.closest('button')) this.openEdit(s.id); };
+                    
+                    row.innerHTML = `
+                        <td class="p-3 text-right font-medium text-slate-700 group-hover:text-indigo-600 transition">${s.name}</td>
+                        <td class="p-3 text-right text-gray-500">${s.grade || '-'}</td>
+                        <td class="p-3 text-right text-gray-400">${s.entryYear || '-'}</td>
+                        <td class="p-3 text-right font-bold text-slate-800">₪${(s.personalGoal || 0).toLocaleString()}</td>
+                        <td class="p-3 text-center flex items-center justify-center gap-2">
+                            <button onclick="Students.openEdit('${s.id}')" class="text-indigo-400 hover:text-indigo-600 transition p-2 hover:bg-indigo-50 rounded-full"><i class="fas fa-pen"></i></button>
+                            <button onclick="Students.delete('${s.id}')" class="text-red-400 hover:text-red-600 transition p-2 hover:bg-red-50 rounded-full"><i class="fas fa-trash"></i></button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+                
+                document.getElementById('dash-stat-students').innerText = Object.keys(Store.data.students).length + (Store.loadedAll.students ? '' : '+');
             },
-            loadMore() { this.currentLimit += 20; this.render(true); },
-            handleSearch() { this.currentLimit = 20; this.render(); },
+            
+            handleSearch(term) { this.render(); },
+
+            getFormFields() {
+                const activeKeys = Store.data.config.fields.students || DEFAULT_ACTIVE_FIELDS.students;
+                const fields = [];
+                activeKeys.forEach(k => {
+                    const def = PREDEFINED_FIELDS.students.find(p => p.k === k);
+                    if(def) fields.push({id:k, l:def.l, t:def.t, opts:def.opts, r:def.r});
+                });
+                fields.push({id:'goal', l:`יעד אישי לשנת ${Store.currentYear}`, t:'number'});
+                return fields;
+            },
+
             openAddModal() {
-                Modal.render('הוספת בחור', [{id:'name',l:'שם',r:true},{id:'phone',l:'טלפון'},{id:'grade',l:'שיעור',t:'select',opts:SHIURIM_ORDER},{id:'goal',l:'יעד אישי',t:'number'}], d => {
+                Modal.render('הוספת בחור חדש', this.getFormFields(), (data) => {
                     const id = db.ref('global/students').push().key;
-                    db.ref(`global/students/${id}`).set({id, name:d.name, phone:d.phone, grade:d.grade, entryYear:Store.currentYear});
-                    if(d.goal) db.ref(`years/${Store.currentYear}/studentData/${id}/personalGoal`).set(parseInt(d.goal));
+                    const studentData = { id, lastUpdatedYear: Store.currentYear };
+                    Object.keys(data).forEach(k => { if(k !== 'goal') studentData[k] = data[k]; });
+                    
+                    OfflineManager.write(`global/students/${id}`, studentData);
+                    if(data.goal) OfflineManager.write(`years/${Store.currentYear}/studentData/${id}/personalGoal`, parseInt(data.goal));
+                    
+                    Notify.show('בחור נוסף בהצלחה', 'success');
                 });
             },
+
+            openQuickAdd() {
+                const html = `
+                    <div class="mb-4">
+                        <label class="block text-sm font-bold text-slate-700 mb-1">הדבק רשימת שמות (כל בחור בשורה נפרדת)</label>
+                        <textarea id="quick-add-list" class="w-full border p-2 rounded h-40 text-sm" placeholder="משה כהן\nדוד לוי\n..."></textarea>
+                    </div>
+                `;
+                Modal.renderRaw('הוספה מהירה', html, () => {
+                    const txt = document.getElementById('quick-add-list').value;
+                    const lines = txt.split('\n').map(l => l.trim()).filter(l => l);
+                    
+                    if(lines.length === 0) return;
+                    
+                    const batch = {};
+                    lines.forEach(name => {
+                        const id = db.ref('global/students').push().key;
+                        batch[id] = { id, name, lastUpdatedYear: Store.currentYear, grade: 'שיעור א' };
+                    });
+                    
+                    db.ref('global/students').update(batch);
+                    Notify.show(`${lines.length} בחורים נוספו בהצלחה`, 'success');
+                    Modal.close();
+                });
+            },
+
             openEdit(id) {
                 const s = Store.data.students[id];
-                const y = (Store.data.yearData[Store.currentYear]?.students||{})[id] || {};
-                const extra = `<div class="mt-4 pt-4 border-t flex gap-2"><button onclick="Finance.quickAdd('income','${id}','student')" class="btn-secondary w-full text-green-700">הוסף תרומה</button></div>`;
-                Modal.render('עריכה', [{id:'name',l:'שם',v:s.name},{id:'phone',l:'טלפון',v:s.phone},{id:'grade',l:'שיעור',t:'select',opts:SHIURIM_ORDER,v:s.grade},{id:'goal',l:'יעד',t:'number',v:y.personalGoal||0}], d => {
-                    db.ref(`global/students/${id}`).update({name:d.name, phone:d.phone, grade:d.grade});
-                    db.ref(`years/${Store.currentYear}/studentData/${id}/personalGoal`).set(parseInt(d.goal));
-                }, extra);
+                const yData = (Store.data.yearData[Store.currentYear]?.students || {})[id] || {};
+                
+                const fields = this.getFormFields().map(f => {
+                    let val = s[f.id] || '';
+                    if(f.id === 'goal') val = yData.personalGoal || 0;
+                    return { ...f, v: val };
+                });
+
+                const extraHtml = `
+                    <div class="mt-6 pt-6 border-t border-dashed flex gap-3">
+                         <button onclick="Finance.quickAdd('income', '${id}', 'student')" class="flex-1 bg-emerald-50 text-emerald-700 py-3 rounded-xl hover:bg-emerald-100 text-sm font-bold border border-emerald-100 transition"><i class="fas fa-plus"></i> הוסף תרומה</button>
+                    </div>
+                `;
+
+                Modal.render('עריכת פרטי בחור', fields, (data) => {
+                    const updates = {};
+                    Object.keys(data).forEach(k => { if(k !== 'goal') updates[k] = data[k]; });
+                    OfflineManager.write(`global/students/${id}`, updates, 'update');
+                    OfflineManager.write(`years/${Store.currentYear}/studentData/${id}/personalGoal`, parseInt(data.goal));
+                    Notify.show('פרטים עודכנו', 'success');
+                }, extraHtml);
+            },
+            
+            delete(id) {
+                if(confirm('האם אתה בטוח שברצונך למחוק בחור זה? לא ניתן לשחזר.')) {
+                    OfflineManager.write(`global/students/${id}`, null, 'remove');
+                    delete Store.data.students[id];
+                    this.render();
+                    Notify.show('הבחור נמחק', 'info');
+                }
             }
         };
 
+        // --- 7. DONORS LOGIC ---
         const Donors = {
-            currentLimit: 30,
-            render(keep = false) {
+            limit: 40,
+            viewMode: 'list', 
+            
+            loadMore(reset = false) {
+                if(reset) { Store.data.donors = {}; Store.cursors.donors = null; Store.loadedAll.donors = false; }
+                if(Store.loadedAll.donors) return;
+
+                let q = db.ref('global/donors').orderByKey().limitToFirst(this.limit);
+                if(Store.cursors.donors) q = q.startAfter(Store.cursors.donors);
+
+                q.once('value', snap => {
+                    const data = snap.val();
+                    if(!data) {
+                        Store.loadedAll.donors = true;
+                        document.getElementById('donors-loader-more').style.display = 'none';
+                        return;
+                    }
+                    const keys = Object.keys(data);
+                    if(keys.length < this.limit) {
+                        Store.loadedAll.donors = true;
+                        document.getElementById('donors-loader-more').style.display = 'none';
+                    } else {
+                        Store.cursors.donors = keys[keys.length-1];
+                        document.getElementById('donors-loader-more').style.display = 'block';
+                    }
+                    Object.assign(Store.data.donors, data);
+                    this.render();
+                });
+            },
+
+            render() {
+                document.getElementById('dash-stat-donors').innerText = Object.keys(Store.data.donors).length + (Store.loadedAll.donors ? '' : '+');
+
+                if(this.viewMode === 'list') {
+                    document.getElementById('donors-list-view').style.display = 'block';
+                    document.getElementById('donors-quick-manager').style.display = 'none';
+                    document.getElementById('donors-quick-manager').classList.add('hidden');
+                    this.renderGrid();
+                } else {
+                    document.getElementById('donors-list-view').style.display = 'none';
+                    document.getElementById('donors-quick-manager').style.display = 'flex';
+                    document.getElementById('donors-quick-manager').classList.remove('hidden');
+                    this.renderManager();
+                }
+            },
+            
+            toggleQuickManager() {
+                this.viewMode = this.viewMode === 'list' ? 'manager' : 'list';
+                this.render();
+            },
+
+            renderGrid() {
+                const term = (document.querySelector('#view-donors input')?.value || '').trim();
                 const grid = document.getElementById('donors-grid');
-                if(!grid) return;
-                if(!keep) grid.innerHTML = '';
+                grid.innerHTML = '';
                 
-                const term = document.querySelector('#view-donors input')?.value || '';
                 let list = Object.values(Store.data.donors);
-                if(term) list = list.filter(d => d.name.includes(term));
+                if(term) list = list.filter(d => d.name.includes(term) || (d.address||'').includes(term));
                 
-                grid.innerHTML = list.slice(0, this.currentLimit).map(d => `
-                    <div class="bg-white p-4 rounded shadow-sm border hover:border-indigo-400 cursor-pointer relative group">
-                        <div class="font-bold flex justify-between"><span>${d.name}</span> <i onclick="Donors.openEdit('${d.id}')" class="fas fa-pen text-gray-300 hover:text-indigo-600"></i></div>
-                        <div class="text-sm text-gray-500">${d.address||''}</div>
-                        <button onclick="Finance.quickAdd('income','${d.id}','donor')" class="absolute bottom-2 left-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition">תרומה</button>
-                    </div>
-                `).join('');
-                const btn = document.getElementById('donors-loader-more');
-                if(btn) btn.style.display = list.length > this.currentLimit ? 'block' : 'none';
-                if(document.getElementById('dash-stat-donors')) document.getElementById('dash-stat-donors').innerText = list.length;
+                list.forEach(d => {
+                    const groupName = Store.data.donorGroupMap[d.id];
+                    
+                    grid.innerHTML += `
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition relative group hover:-translate-y-1 duration-200">
+                        <div class="flex justify-between items-start mb-2">
+                            <h4 class="font-bold text-slate-800 text-lg">${d.name}</h4>
+                            <button onclick="Donors.openEdit('${d.id}')" class="text-gray-300 hover:text-indigo-600 bg-gray-50 p-1 rounded-lg"><i class="fas fa-pen"></i></button>
+                        </div>
+                        <div class="text-sm text-gray-500 mb-2 flex items-center gap-2"><i class="fas fa-map-marker-alt text-gray-300"></i> ${d.address || '-'}</div>
+                        
+                        <div class="flex flex-wrap gap-2 mt-3">
+                            ${groupName ? `<span class="text-xs bg-amber-50 text-amber-700 px-2 py-1 rounded font-bold border border-amber-100"><i class="fas fa-users"></i> ${groupName}</span>` : ''}
+                            ${d.vip ? '<span class="text-xs bg-purple-50 text-purple-700 px-2 py-1 rounded border border-purple-100">VIP</span>' : ''}
+                        </div>
+                        
+                        <div class="mt-4 pt-3 border-t border-dashed flex justify-between items-center financial-data">
+                            <button onclick="Finance.quickAdd('income', '${d.id}', 'donor')" class="text-emerald-600 text-sm font-bold hover:bg-emerald-50 px-3 py-1.5 rounded-lg transition w-full text-center">+ תרומה חדשה</button>
+                        </div>
+                    </div>`;
+                });
             },
-            loadMore() { this.currentLimit += 30; this.render(true); },
-            handleSearch() { this.currentLimit = 30; this.render(); },
+
+            renderManager() {
+                const poolEl = document.getElementById('donor-pool-list');
+                poolEl.innerHTML = '';
+                
+                const allGroups = [];
+                const groupsData = Store.data.yearData[Store.currentYear]?.groups || {};
+                Object.entries(groupsData).forEach(([dayKey, dayGroups]) => {
+                    Object.entries(dayGroups).forEach(([gid, g]) => {
+                        allGroups.push({id: gid, day: dayKey, ...g});
+                    });
+                });
+
+                const unassigned = Object.values(Store.data.donors).filter(d => !Store.data.donorGroupMap[d.id]);
+                document.getElementById('pool-count').innerText = unassigned.length;
+                
+                unassigned.sort((a,b) => a.name.localeCompare(b.name)).forEach(d => {
+                    const el = document.createElement('div');
+                    el.className = "bg-white p-2 border rounded shadow-sm text-sm cursor-grab hover:bg-gray-50 flex justify-between";
+                    el.dataset.id = d.id;
+                    el.innerHTML = `<span class="font-medium">${d.name}</span><span class="text-xs text-gray-400">${d.address||''}</span>`;
+                    poolEl.appendChild(el);
+                });
+
+                new Sortable(poolEl, { group: { name: 'donors', pull: true, put: true }, sort: false, animation: 150 });
+
+                const container = document.getElementById('groups-kanban-container');
+                container.innerHTML = '';
+                
+                allGroups.forEach(g => {
+                    const col = document.createElement('div');
+                    col.className = "inline-block w-72 h-full align-top bg-white rounded-lg shadow-sm border mx-2 flex flex-col";
+                    const displayDay = g.day.replace('night','ליל ').replace('day','יום ');
+                    
+                    col.innerHTML = `
+                        <div class="p-2 border-b bg-indigo-50 font-bold text-sm text-indigo-900 flex justify-between shrink-0">
+                            <span>${g.name}</span>
+                            <span class="text-xs font-normal opacity-70">${displayDay}</span>
+                        </div>
+                        <div class="flex-1 overflow-y-auto p-2 space-y-2 bg-slate-50 kanban-group-list custom-scroll" data-gid="${g.id}" data-day="${g.day}"></div>
+                    `;
+                    
+                    const listEl = col.querySelector('.kanban-group-list');
+                    (g.route || []).forEach(did => {
+                        const d = Store.data.donors[did];
+                        if(d) {
+                            const item = document.createElement('div');
+                            item.className = "bg-white p-2 border rounded shadow-sm text-sm cursor-grab flex justify-between items-center group";
+                            item.dataset.id = did;
+                            item.innerHTML = `<span class="truncate w-40">${d.name}</span><button onclick="Groups.removeFromRoute('${g.day}','${g.id}','${did}')" class="text-red-300 hover:text-red-500 hidden group-hover:block"><i class="fas fa-times"></i></button>`;
+                            listEl.appendChild(item);
+                        }
+                    });
+                    
+                    container.appendChild(col);
+
+                    new Sortable(listEl, {
+                        group: 'donors',
+                        animation: 150,
+                        onAdd: (evt) => {
+                            const newOrder = Array.from(listEl.children).map(c => c.dataset.id);
+                            OfflineManager.write(`years/${Store.currentYear}/groups/${g.day}/${g.id}/route`, newOrder);
+                        },
+                        onUpdate: (evt) => {
+                             const newOrder = Array.from(listEl.children).map(c => c.dataset.id);
+                             OfflineManager.write(`years/${Store.currentYear}/groups/${g.day}/${g.id}/route`, newOrder);
+                        }
+                    });
+                });
+            },
+
+            filterPool(v) {
+                const list = document.getElementById('donor-pool-list');
+                Array.from(list.children).forEach(el => {
+                    el.style.display = el.innerText.includes(v) ? 'flex' : 'none';
+                });
+            },
+
+            getFormFields() {
+                const activeKeys = Store.data.config.fields.donors || DEFAULT_ACTIVE_FIELDS.donors;
+                const fields = [];
+                activeKeys.forEach(k => {
+                    const def = PREDEFINED_FIELDS.donors.find(p => p.k === k);
+                    if(def) fields.push({id:k, l:def.l, t:def.t, opts:def.opts, r:def.r});
+                });
+                return fields;
+            },
+
             openAddModal() {
-                 const sOpts = Object.values(Store.data.students).map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
-                 Modal.renderRaw('הוספת תורם', `<div><label class="lbl">שם</label><input id="f-n" class="input-field w-full"></div><div><label class="lbl">כתובת</label><input id="f-a" class="input-field w-full"></div><div><label class="lbl">מביא</label><select id="f-r" class="input-field w-full"><option value="">--</option>${sOpts}</select></div>`, ()=>{
-                     const id = db.ref('global/donors').push().key;
-                     db.ref(`global/donors/${id}`).set({id, name:document.getElementById('f-n').value, address:document.getElementById('f-a').value, referrerId:document.getElementById('f-r').value});
-                 });
+                const allGroups = [];
+                const gData = Store.data.yearData[Store.currentYear]?.groups || {};
+                Object.entries(gData).forEach(([d, dayG]) => Object.entries(dayG).forEach(([gid, g]) => allGroups.push({id: gid, day:d, name: g.name})));
+                
+                const groupSelectHtml = `
+                    <div class="mb-3 p-3 bg-amber-50 rounded border border-amber-100">
+                        <label class="block text-sm font-bold text-amber-800 mb-1">שיוך לקבוצה (אופציונלי)</label>
+                        <select id="new-donor-group" class="w-full border p-2 rounded bg-white text-sm">
+                            <option value="">-- ללא שיוך --</option>
+                            ${allGroups.map(g => `<option value="${g.day}|${g.id}">${g.name} (${g.day})</option>`).join('')}
+                        </select>
+                    </div>
+                `;
+
+                Modal.render('הוספת תורם חדש', this.getFormFields(), (data) => {
+                    const id = db.ref('global/donors').push().key;
+                    OfflineManager.write(`global/donors/${id}`, { id, joinYear: Store.currentYear, ...data });
+                    
+                    // תיקון שמירה במידה והשדה לא נמצא
+                    const groupEl = document.getElementById('new-donor-group');
+                    const groupVal = groupEl ? groupEl.value : null;
+                    
+                    if(groupVal) {
+                        const [day, gid] = groupVal.split('|');
+                        const ref = db.ref(`years/${Store.currentYear}/groups/${day}/${gid}/route`);
+                        ref.once('value', s => {
+                            const list = s.val() || [];
+                            list.push(id);
+                            OfflineManager.write(`years/${Store.currentYear}/groups/${day}/${gid}/route`, list);
+                        });
+                    }
+                    Notify.show('תורם נוסף בהצלחה', 'success');
+                }, groupSelectHtml);
             },
+            
             openEdit(id) {
                 const d = Store.data.donors[id];
-                const sOpts = Object.values(Store.data.students).map(s=>`<option value="${s.id}" ${s.id===d.referrerId?'selected':''}>${s.name}</option>`).join('');
-                 Modal.renderRaw('עריכת תורם', `<div><label class="lbl">שם</label><input id="f-n" value="${d.name}" class="input-field w-full"></div><div><label class="lbl">כתובת</label><input id="f-a" value="${d.address||''}" class="input-field w-full"></div><div><label class="lbl">מביא</label><select id="f-r" class="input-field w-full"><option value="">--</option>${sOpts}</select></div>`, ()=>{
-                     db.ref(`global/donors/${id}`).update({name:document.getElementById('f-n').value, address:document.getElementById('f-a').value, referrerId:document.getElementById('f-r').value});
-                 });
-            }
+                const fields = this.getFormFields().map(f => ({ ...f, v: d[f.id] }));
+                Modal.render('עריכת תורם', fields, (data) => {
+                    OfflineManager.write(`global/donors/${id}`, data, 'update');
+                    Notify.show('פרטי תורם עודכנו', 'success');
+                });
+            },
+            
+            handleSearch() { this.limit = 40; this.render(); }
         };
 
+        // --- 8. GROUPS LOGIC ---
         const Groups = {
-            currentDay: 'night14', activeGroupId: null,
+            currentDay: 'night14',
+            activeGroupId: null,
+            
             setDay(d) {
                 this.currentDay = d;
-                document.querySelectorAll('.group-tab').forEach(b => {
-                    b.classList.toggle('active', b.dataset.day === d);
-                    b.classList.toggle('bg-white', b.dataset.day === d);
-                    b.classList.toggle('border-t-2', b.dataset.day === d);
-                    b.classList.toggle('border-indigo-600', b.dataset.day === d);
-                });
+                document.querySelectorAll('.group-tab').forEach(b => b.classList.toggle('active', b.dataset.day === d));
                 this.activeGroupId = null;
                 this.render();
             },
+
             render() {
                 const listEl = document.getElementById('groups-list');
-                if(!listEl) return;
                 listEl.innerHTML = '';
                 const groups = (Store.data.yearData[Store.currentYear]?.groups || {})[this.currentDay] || {};
-                
+
                 Object.entries(groups).forEach(([gid, g]) => {
+                    const isActive = gid === this.activeGroupId;
                     const el = document.createElement('div');
-                    el.className = `p-3 border-b cursor-pointer hover:bg-indigo-50 ${gid===this.activeGroupId?'bg-indigo-100 border-l-4 border-l-indigo-600':''}`;
-                    el.innerHTML = `<div class="font-bold text-sm">${g.name}</div><div class="text-xs text-gray-500">${(g.members||[]).length} בחורים</div>`;
-                    el.onclick = () => {
-                        this.activeGroupId = gid;
-                        document.getElementById('active-group-name').innerText = g.name;
-                        document.getElementById('active-group-count').innerText = (g.members||[]).length + ' בחורים';
-                        this.render(); 
-                        this.renderEditor(g);
-                    };
+                    el.className = `p-4 border-b cursor-pointer transition flex justify-between items-center group ${isActive ? 'bg-indigo-50 border-r-4 border-r-indigo-600' : 'hover:bg-slate-50'}`;
+                    el.onclick = () => this.selectGroup(gid, g);
+                    el.innerHTML = `
+                        <div>
+                            <div class="font-bold text-slate-700 text-sm group-hover:text-indigo-700">${g.name}</div>
+                            <div class="text-xs text-gray-400 mt-1">${(g.members||[]).length} בחורים | ${(g.route||[]).length} תורמים</div>
+                        </div>
+                        <i class="fas fa-chevron-left text-xs text-gray-300 ${isActive?'text-indigo-500':''}"></i>
+                    `;
                     listEl.appendChild(el);
                 });
 
+                const ph = document.getElementById('group-placeholder');
+                const editor = document.getElementById('group-editor');
+
                 if(this.activeGroupId && groups[this.activeGroupId]) {
-                    document.getElementById('group-placeholder').classList.add('hidden');
-                    document.getElementById('group-editor').classList.remove('hidden');
+                    ph.classList.add('hidden');
+                    editor.classList.remove('hidden');
                     this.renderEditor(groups[this.activeGroupId]);
                 } else {
-                    document.getElementById('group-placeholder').classList.remove('hidden');
-                    document.getElementById('group-editor').classList.add('hidden');
+                    ph.classList.remove('hidden');
+                    editor.classList.add('hidden');
                 }
             },
-            renderEditor(g) {
+
+            selectGroup(gid, g) {
+                this.activeGroupId = gid;
+                document.getElementById('active-group-name').innerText = g.name;
+                const dayText = document.querySelector(`.group-tab[data-day="${this.currentDay}"]`).innerText;
+                document.getElementById('active-group-details').innerText = `${dayText} | ${(g.members||[]).length} בחורים`;
+                this.render(); 
+                this.renderEditor(g);
+            },
+
+            renderEditor(group) {
                 const memList = document.getElementById('group-members-list');
-                memList.innerHTML = (g.members||[]).map((m,i) => {
+                memList.innerHTML = '';
+                (group.members || []).forEach((m, idx) => {
                     const s = Store.data.students[m.id];
-                    return s ? `<div class="bg-white p-2 border mb-1 flex justify-between text-sm"><span>${s.name} (${m.role})</span><button onclick="Groups.removeMember(${i})" class="text-red-500">x</button></div>` : '';
-                }).join('');
-                
+                    if(!s) return;
+                    memList.innerHTML += `
+                        <div class="bg-white p-2 border rounded shadow-sm text-sm flex justify-between items-center mb-1">
+                            <div><span class="font-bold text-slate-700">${s.name}</span> <span class="text-xs text-gray-400">(${m.role})</span></div>
+                            <button onclick="Groups.removeMember(${idx})" class="text-red-300 hover:text-red-500"><i class="fas fa-times"></i></button>
+                        </div>`;
+                });
+
                 const routeList = document.getElementById('group-route-list');
                 routeList.innerHTML = '';
-                (g.route||[]).forEach(did => {
+                (group.route || []).forEach((did, i) => {
                     const d = Store.data.donors[did];
-                    if(d) {
-                        const el = document.createElement('div');
-                        el.className = "bg-white p-2 border mb-1 cursor-grab text-sm";
-                        el.dataset.id = did;
-                        el.innerText = d.name + " - " + d.address;
-                        routeList.appendChild(el);
+                    if(!d) return;
+                    const el = document.createElement('div');
+                    el.className = "bg-white p-3 border rounded-lg shadow-sm text-sm mb-2 flex justify-between items-center cursor-grab active:cursor-grabbing hover:border-emerald-200 transition";
+                    el.dataset.id = did;
+                    el.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <span class="bg-emerald-100 text-emerald-700 w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold">${i+1}</span>
+                            <div>
+                                <div class="font-bold text-slate-800">${d.name}</div>
+                                <div class="text-xs text-gray-500">${d.address}</div>
+                            </div>
+                        </div>
+                        <i class="fas fa-grip-lines text-gray-300"></i>
+                    `;
+                    routeList.appendChild(el);
+                });
+
+                if(this.sortableInstance) this.sortableInstance.destroy();
+                this.sortableInstance = new Sortable(routeList, {
+                    animation: 150,
+                    ghostClass: 'bg-emerald-50',
+                    onEnd: () => {
+                        const newOrder = Array.from(routeList.children).map(c => c.dataset.id);
+                        OfflineManager.write(`years/${Store.currentYear}/groups/${this.currentDay}/${this.activeGroupId}/route`, newOrder);
                     }
                 });
-                new Sortable(routeList, { animation:150, onEnd: () => {
-                    const ids = Array.from(routeList.children).map(c => c.dataset.id);
-                    db.ref(`years/${Store.currentYear}/groups/${this.currentDay}/${this.activeGroupId}/route`).set(ids);
-                }});
             },
+
             addNewGroup() {
-                const n = prompt('שם הקבוצה:');
-                if(n) db.ref(`years/${Store.currentYear}/groups/${this.currentDay}`).push({name:n, members:[], route:[]});
+                const n = prompt("שם הקבוצה:");
+                if(n) {
+                    const newRef = db.ref(`years/${Store.currentYear}/groups/${this.currentDay}`).push();
+                    OfflineManager.write(`years/${Store.currentYear}/groups/${this.currentDay}/${newRef.key}`, {name: n, members: [], route: []});
+                }
             },
-            filterStudents(t) {
-                const p = document.getElementById('pool-students');
-                p.innerHTML = '';
-                if(!t) return;
-                Object.values(Store.data.students).filter(s=>s.name.includes(t)).slice(0,10).forEach(s => {
-                    p.innerHTML += `<div onclick="Groups.addMember('${s.id}')" class="p-2 border-b cursor-pointer hover:bg-green-50 text-sm flex justify-between"><span>${s.name}</span><span>+</span></div>`;
+            
+            renameGroup() {
+                const old = document.getElementById('active-group-name').innerText;
+                const n = prompt("שם חדש לקבוצה:", old);
+                if(n && n !== old) OfflineManager.write(`years/${Store.currentYear}/groups/${this.currentDay}/${this.activeGroupId}/name`, n);
+            },
+            
+            deleteGroup() {
+                 if(confirm('האם אתה בטוח שברצונך למחוק קבוצה זו?')) {
+                     OfflineManager.write(`years/${Store.currentYear}/groups/${this.currentDay}/${this.activeGroupId}`, null, 'remove');
+                     this.activeGroupId = null;
+                     this.render();
+                 }
+            },
+            
+            filterStudents(term) {
+                const pool = document.getElementById('pool-students');
+                pool.innerHTML = '';
+                if(!term) return;
+                
+                Object.values(Store.data.students).filter(s => s.name.includes(term)).slice(0, 10).forEach(s => {
+                    pool.innerHTML += `<div onclick="Groups.addMember('${s.id}')" class="p-2 border-b cursor-pointer hover:bg-indigo-50 flex justify-between text-sm"><span class="font-medium">${s.name}</span><i class="fas fa-plus text-indigo-500"></i></div>`;
                 });
             },
+
             addMember(sid) {
-                const ref = db.ref(`years/${Store.currentYear}/groups/${this.currentDay}/${this.activeGroupId}/members`);
-                ref.once('value', s => {
-                    const l = s.val() || [];
-                    if(!l.some(x=>x.id===sid)) { l.push({id:sid, role:'חבר'}); ref.set(l); }
+                const path = `years/${Store.currentYear}/groups/${this.currentDay}/${this.activeGroupId}/members`;
+                db.ref(path).once('value', snap => {
+                    const list = snap.val() || [];
+                    if(!list.some(x => x.id === sid)) {
+                        list.push({id: sid, role: 'חבר'});
+                        OfflineManager.write(path, list);
+                    }
                 });
             },
+
             removeMember(idx) {
-                const ref = db.ref(`years/${Store.currentYear}/groups/${this.currentDay}/${this.activeGroupId}/members`);
-                ref.once('value', s => { const l=s.val(); l.splice(idx,1); ref.set(l); });
-            },
-            filterDonors(t) {
-                const p = document.getElementById('pool-donors');
-                p.innerHTML = '';
-                if(!t) return;
-                Object.values(Store.data.donors).filter(d=>d.name.includes(t)).slice(0,10).forEach(d => {
-                    p.innerHTML += `<div onclick="Groups.addToRoute('${d.id}')" class="p-2 border-b cursor-pointer hover:bg-green-50 text-sm">${d.name}</div>`;
+                const path = `years/${Store.currentYear}/groups/${this.currentDay}/${this.activeGroupId}/members`;
+                db.ref(path).once('value', s => {
+                    const l = s.val(); l.splice(idx,1); 
+                    OfflineManager.write(path, l);
                 });
             },
-            addToRoute(did) {
-                const ref = db.ref(`years/${Store.currentYear}/groups/${this.currentDay}/${this.activeGroupId}/route`);
-                ref.once('value', s => { const l=s.val()||[]; if(!l.includes(did)) { l.push(did); ref.set(l); } });
+
+            removeFromRoute(day, gid, did) {
+                const path = `years/${Store.currentYear}/groups/${day}/${gid}/route`;
+                db.ref(path).once('value', s => {
+                    let l = s.val() || [];
+                    l = l.filter(x => x !== did);
+                    OfflineManager.write(path, l);
+                });
             },
+
             printSheet(type) {
-                const g = Store.data.yearData[Store.currentYear].groups[this.currentDay][this.activeGroupId];
-                let h = `<div class="print-header"><h1>${g.name} - ${type}</h1></div><table class="print-table"><tbody>`;
-                if(type==='members') (g.members||[]).forEach(m => h += `<tr><td>${Store.data.students[m.id]?.name}</td><td>${m.role}</td></tr>`);
-                else (g.route||[]).forEach((did,i) => h += `<tr><td>${i+1}</td><td>${Store.data.donors[did]?.name}</td><td>${Store.data.donors[did]?.address}</td><td></td></tr>`);
-                h += `</tbody></table>`;
-                document.getElementById('print-area').innerHTML = h;
-                window.print();
+                const g = (Store.data.yearData[Store.currentYear].groups[this.currentDay] || {})[this.activeGroupId];
+                if(!g) return;
+                
+                const dayMap = {'night14': 'ליל י"ד', 'day14': 'יום י"ד', 'day15': 'יום ט"ו'};
+                const dayName = dayMap[this.currentDay] || this.currentDay;
+                
+                let html = `
+                    <div class="print-header">
+                        <h1>${type==='route'?'דף מסלול':'רשימת בחורים'} - ${g.name}</h1>
+                        <h3>שנה: ${Store.currentYear} | זמן: ${dayName}</h3>
+                    </div>
+                `;
+                
+                if(type === 'members') {
+                    html += `<table class="print-table"><thead><tr><th width="5%">#</th><th width="30%">שם הבחור</th><th width="20%">תפקיד</th><th width="20%">טלפון</th><th width="25%">חתימה</th></tr></thead><tbody>`;
+                    (g.members||[]).forEach((m, idx) => {
+                        const s = Store.data.students[m.id];
+                        if(s) html += `<tr><td>${idx+1}</td><td><b>${s.name}</b></td><td>${m.role}</td><td>${s.phone}</td><td></td></tr>`;
+                    });
+                } else {
+                    html += `<table class="print-table"><thead><tr><th width="5%">#</th><th width="25%">שם תורם</th><th width="25%">כתובת</th><th width="15%">${Store.currentYear}</th><th width="30%">הערות</th></tr></thead><tbody>`;
+                    (g.route||[]).forEach((did, i) => {
+                        const d = Store.data.donors[did];
+                        if(d) html += `<tr><td>${i+1}</td><td><b>${d.name}</b></td><td>${d.address}</td><td></td><td>${d.notes||''}</td></tr>`;
+                    });
+                }
+                html += `</tbody></table>`;
+                
+                const pa = document.getElementById('print-area');
+                pa.innerHTML = html;
+                window.print(); 
+            },
+
+            // --- חדש: יצוא כתמונה/PDF מושלם ---
+            exportAsImage() {
+                Notify.show('מכין צילום מסך, אנא המתן...', 'info');
+                const g = (Store.data.yearData[Store.currentYear].groups[this.currentDay] || {})[this.activeGroupId];
+                const elementToCapture = document.getElementById('group-editor'); 
+
+                html2canvas(elementToCapture).then(canvas => {
+                    const link = document.createElement('a');
+                    link.download = `Group_${g.name}.png`;
+                    link.href = canvas.toDataURL();
+                    link.click();
+                    Notify.show('הקובץ הורד בהצלחה', 'success');
+                });
             }
         };
 
+        // --- 9. FINANCE LOGIC ---
         const Finance = {
             currentFilter: 'all',
-            render() {
-                const tb = document.getElementById('finance-tbody');
-                if(!tb) return;
-                tb.innerHTML = '';
-                let d = Object.values(Store.data.yearData[Store.currentYear]?.finance || {});
-                if(this.currentFilter!=='all') {
-                    if(this.currentFilter==='purim') d = d.filter(x=>x.isPurim);
-                    else d = d.filter(x=>x.type===this.currentFilter);
-                }
-                d.sort((a,b)=>b.date-a.date);
-                tb.innerHTML = d.map(x => `
-                    <tr class="border-b">
-                        <td class="p-2 text-gray-500 text-xs">${new Date(x.date).toLocaleDateString('he')}</td>
-                        <td class="p-2"><span class="px-2 py-0.5 rounded text-xs ${x.type==='income'?'bg-green-100 text-green-800':'bg-red-100 text-red-800'}">${x.type==='income'?'הכנסה':'הוצאה'}</span></td>
-                        <td class="p-2 text-sm">${x.category}</td>
-                        <td class="p-2 text-sm">${x.desc||''}</td>
-                        <td class="p-2 font-bold dir-ltr text-right">₪${parseInt(x.amount).toLocaleString()}</td>
-                        <td class="p-2"><button onclick="Finance.deleteTx('${x.id}')" class="text-red-300 hover:text-red-500">x</button></td>
-                    </tr>
-                `).join('');
+            limit: 30,
+            financeData: {},
+            
+            reset() { 
+                this.financeData = {}; Store.cursors.finance = null; 
+                document.getElementById('finance-tbody').innerHTML = '';
+                this.loadMore(); 
             },
+
+            loadMore(reset = false) {
+                if(reset) this.reset();
+                
+                // טעינה מהסוף להתחלה (הכי חדש קודם)
+                let q = db.ref(`years/${Store.currentYear}/finance`).orderByChild('date').limitToLast(this.limit);
+                if(Store.cursors.finance) q = q.endBefore(Store.cursors.finance);
+
+                q.once('value', snap => {
+                    const data = snap.val();
+                    if(!data) {
+                        document.getElementById('finance-loader-more').style.display = 'none';
+                        return;
+                    }
+                    
+                    const arr = [];
+                    Object.keys(data).forEach(k => arr.push(data[k]));
+                    arr.sort((a,b) => b.date - a.date); // מיון יורד
+                    
+                    // עדכון הסמן לפעם הבאה
+                    Store.cursors.finance = arr[arr.length-1].date;
+                    
+                    document.getElementById('finance-loader-more').style.display = 'block';
+                    
+                    // הוספה לנתונים הקיימים
+                    Object.assign(this.financeData, data);
+                    this.render();
+                });
+            },
+
+            render() {
+                const tbody = document.getElementById('finance-tbody');
+                // לא מוחקים הכל, אלא אם זה רינדור ראשוני. כרגע נרנדר הכל מחדש מהמערך המקומי
+                tbody.innerHTML = ''; 
+
+                let raw = Object.values(this.financeData);
+                
+                if(this.currentFilter !== 'all') {
+                    if(this.currentFilter === 'purim') raw = raw.filter(tx => tx.isPurim);
+                    else raw = raw.filter(tx => tx.type === this.currentFilter);
+                }
+                raw.sort((a,b) => b.date - a.date);
+
+                tbody.innerHTML = raw.map(tx => {
+                    const entityName = tx.studentId ? (Store.data.students[tx.studentId]?.name || 'לא ידוע') :
+                                     tx.donorId ? (Store.data.donors[tx.donorId]?.name || 'לא ידוע') : '-';
+                    
+                    return `
+                    <tr class="hover:bg-slate-50 border-b border-slate-50 transition">
+                        <td class="p-3 text-gray-500">${new Date(tx.date).toLocaleDateString('he-IL')}</td>
+                        <td class="p-3"><span class="px-2 py-1 rounded text-xs font-bold ${tx.type==='income'?'bg-emerald-50 text-emerald-700':'bg-rose-50 text-rose-700'}">${tx.type==='income'?'הכנסה':'הוצאה'}</span></td>
+                        <td class="p-3 font-medium text-slate-700">${tx.category}</td>
+                        <td class="p-3">
+                            <div class="text-sm">${tx.desc || ''}</div>
+                            ${entityName !== '-' ? `<div class="text-xs text-gray-400"><i class="fas fa-user-tag"></i> ${entityName}</div>` : ''}
+                        </td>
+                        <td class="p-3 font-bold ${tx.type==='income'?'text-emerald-600':'text-rose-600'}" dir="ltr">₪${parseInt(tx.amount).toLocaleString()}</td>
+                        <td class="p-3">
+                            <button onclick="Finance.deleteTx('${tx.id}', '${tx.type}', ${tx.amount})" class="text-gray-300 hover:text-red-500 transition"><i class="fas fa-trash-alt"></i></button>
+                        </td>
+                    </tr>`;
+                }).join('');
+            },
+
             setFilter(f) {
-                this.currentFilter=f;
-                document.querySelectorAll('.finance-filter').forEach(b=>b.classList.remove('active','bg-white','shadow','font-bold'));
-                document.querySelector(`.finance-filter[data-f="${f}"]`).classList.add('active','bg-white','shadow','font-bold');
+                this.currentFilter = f;
+                document.querySelectorAll('.finance-filter').forEach(b => {
+                    const active = b.dataset.f === f;
+                    b.classList.toggle('active', active);
+                    b.classList.toggle('bg-slate-800', active);
+                    b.classList.toggle('text-white', active);
+                    b.classList.toggle('shadow-md', active);
+                });
                 this.render();
             },
+
             openTransactionModal(type) {
-                Modal.render(type==='income'?'הכנסה':'הוצאה', [{id:'amount',l:'סכום',t:'number'},{id:'category',l:'קטגוריה',t:'select',opts:['תרומה','מזומן','צק','אשראי','הוצאות פורים']},{id:'desc',l:'תיאור'},{id:'isPurim',l:'פורים?',t:'checkbox'}], d => {
-                    const id = 'tx'+Date.now();
-                    db.ref(`years/${Store.currentYear}/finance/${id}`).set({id, date:Date.now(), type, amount:parseInt(d.amount), category:d.category, desc:d.desc, isPurim:!!d.isPurim});
+                // יצירת טופס מותאם עם רשימת בחירה חכמה
+                const cats = type==='income' ? ['תרומה כללית','מזומן','צק','אשראי'] : ['אוכל','ציוד','שיווק','אחר'];
+                
+                // יצירת רשימת אפשרויות לחיפוש (DataList) כדי לא להעמיס קריאות
+                const studentsOpts = Object.values(Store.data.students).map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+                const donorsOpts = Object.values(Store.data.donors).map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+
+                const html = `
+                    <div class="space-y-4">
+                        <div>
+                            <label class="lbl">סכום (ספרות בלבד)</label>
+                            <input type="text" id="tx-amount" oninput="this.value=this.value.replace(/[^0-9]/g,'')" class="input-field w-full text-lg font-bold" required>
+                        </div>
+                        <div>
+                            <label class="lbl">קטגוריה</label>
+                            <select id="tx-category" class="input-field w-full">
+                                ${cats.map(c => `<option>${c}</option>`).join('')}
+                            </select>
+                        </div>
+                        
+                        <div class="bg-slate-50 p-3 rounded border">
+                            <label class="lbl">מקור ${type==='income'?'הכנסה':'הוצאה'}</label>
+                            <div class="flex gap-4 mb-2">
+                                <label><input type="radio" name="tx-src" value="none" checked onclick="document.getElementById('src-select-area').classList.add('hidden')"> כללי</label>
+                                <label><input type="radio" name="tx-src" value="student" onclick="document.getElementById('src-select-area').classList.remove('hidden'); document.getElementById('sel-student').classList.remove('hidden'); document.getElementById('sel-donor').classList.add('hidden');"> בחור</label>
+                                <label><input type="radio" name="tx-src" value="donor" onclick="document.getElementById('src-select-area').classList.remove('hidden'); document.getElementById('sel-student').classList.add('hidden'); document.getElementById('sel-donor').classList.remove('hidden');"> תורם</label>
+                            </div>
+                            <div id="src-select-area" class="hidden">
+                                <select id="sel-student" class="input-field w-full hidden"><option value="">-- בחר בחור --</option>${studentsOpts}</select>
+                                <select id="sel-donor" class="input-field w-full hidden"><option value="">-- בחר תורם --</option>${donorsOpts}</select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="lbl">תיאור / הערות</label>
+                            <textarea id="tx-desc" class="input-field w-full h-20"></textarea>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="tx-purim" class="h-5 w-5 rounded text-indigo-600" ${this.currentFilter==='purim'?'checked':''}>
+                            <span class="text-sm font-bold">שייך לפורים?</span>
+                        </div>
+                    </div>
+                `;
+
+                Modal.renderRaw(type === 'income' ? 'הוספת הכנסה' : 'הוספת הוצאה', html, () => {
+                    const amount = parseInt(document.getElementById('tx-amount').value);
+                    if(!amount) return alert('חובה להזין סכום');
+
+                    const srcType = document.querySelector('input[name="tx-src"]:checked').value;
+                    let studentId = null, donorId = null;
+                    
+                    if(srcType === 'student') studentId = document.getElementById('sel-student').value;
+                    if(srcType === 'donor') donorId = document.getElementById('sel-donor').value;
+
+                    const id = 'tx' + Date.now();
+                    
+                    OfflineManager.write(`years/${Store.currentYear}/finance/${id}`, {
+                        id, date: Date.now(), type,
+                        amount: amount,
+                        category: document.getElementById('tx-category').value,
+                        desc: document.getElementById('tx-desc').value,
+                        isPurim: document.getElementById('tx-purim').checked,
+                        studentId, donorId
+                    });
+                    
+                    if(OfflineManager.isOnline) {
+                        db.ref(`years/${Store.currentYear}/stats/${type}`).transaction(curr => (curr || 0) + amount);
+                    }
+                    
+                    Notify.show('פעולה נרשמה בהצלחה', 'success');
+                    Modal.close();
+                    
+                    // רענון מקומי
+                    setTimeout(() => Finance.loadMore(true), 500);
                 });
             },
-            quickAdd(type, entId, entType) {
-                Modal.render('הוספה מהירה', [{id:'amt',l:'סכום',t:'number'}], d => {
-                    const id = 'tx'+Date.now();
-                    db.ref(`years/${Store.currentYear}/finance/${id}`).set({id, date:Date.now(), type, amount:parseInt(d.amt), category:'תרומה מהירה', isPurim:true, [entType==='student'?'studentId':'donorId']:entId});
+
+            quickAdd(type, entityId, entityType) {
+                Modal.render('הוספה מהירה', [{id:'amt',l:'סכום',t:'number',r:true}], (v) => {
+                    const id = 'tx' + Date.now();
+                    const amount = parseInt(v.amt);
+                    OfflineManager.write(`years/${Store.currentYear}/finance/${id}`, {
+                        id, date: Date.now(), type, amount: amount,
+                        category: 'תרומה מהירה',
+                        [entityType === 'student' ? 'studentId' : 'donorId']: entityId,
+                        isPurim: true 
+                    });
+                    
+                    if(OfflineManager.isOnline) db.ref(`years/${Store.currentYear}/stats/${type}`).transaction(curr => (curr || 0) + amount);
+                    Notify.show('תרומה נקלטה', 'success');
                 });
             },
-            deleteTx(id) { if(confirm('למחוק?')) db.ref(`years/${Store.currentYear}/finance/${id}`).remove(); }
+            
+            deleteTx(id, type, amount) {
+                if(confirm('למחוק תנועה זו?')) {
+                    OfflineManager.write(`years/${Store.currentYear}/finance/${id}`, null, 'remove');
+                    if(OfflineManager.isOnline) db.ref(`years/${Store.currentYear}/stats/${type}`).transaction(curr => (curr || 0) - amount);
+                    delete this.financeData[id];
+                    this.render();
+                    Notify.show('תנועה נמחקה', 'info');
+                }
+            }
+        };
+
+        // --- 10. REPORTS & EXPORT ---
+        const Reports = {
+            searchEntity(v) {
+                const res = document.getElementById('rep-entity-results');
+                res.innerHTML = '';
+                if(v.length < 2) { res.classList.add('hidden'); return; }
+                
+                res.classList.remove('hidden');
+                // כיוון שאין לנו את כל הדאטה, נחפש במה שיש בזיכרון
+                const students = Object.values(Store.data.students).filter(s => s.name.includes(v)).slice(0,5);
+                const donors = Object.values(Store.data.donors).filter(d => d.name.includes(v)).slice(0,5);
+                
+                students.forEach(s => {
+                    res.innerHTML += `<div class="p-2 hover:bg-gray-100 cursor-pointer text-sm" onclick="Reports.selectEntity('${s.id}','${s.name}','student')"><i class="fas fa-user-graduate text-blue-500"></i> ${s.name}</div>`;
+                });
+                donors.forEach(d => {
+                    res.innerHTML += `<div class="p-2 hover:bg-gray-100 cursor-pointer text-sm" onclick="Reports.selectEntity('${d.id}','${d.name}','donor')"><i class="fas fa-hand-holding-heart text-emerald-500"></i> ${d.name}</div>`;
+                });
+            },
+            
+            selectEntity(id, name, type) {
+                document.getElementById('rep-entity-search').value = name;
+                document.getElementById('rep-entity-id').value = id + '|' + type;
+                document.getElementById('rep-entity-results').classList.add('hidden');
+            },
+
+            generateStandard() {
+                Notify.show('מייצא נתונים...', 'info');
+                db.ref(`years/${Store.currentYear}/finance`).once('value', snap => {
+                    const type = document.getElementById('rep-type').value;
+                    const entVal = document.getElementById('rep-entity-id').value;
+                    let data = Object.values(snap.val() || {});
+                    
+                    if(type !== 'all') data = data.filter(t => t.type === type);
+                    if(entVal) {
+                        const [eid, etype] = entVal.split('|');
+                        data = data.filter(t => (etype === 'student' ? t.studentId : t.donorId) === eid);
+                    }
+
+                    const rows = data.map(t => ({
+                        "תאריך": new Date(t.date).toLocaleDateString('he-IL'),
+                        "סוג תנועה": t.type === 'income' ? 'הכנסה' : 'הוצאה',
+                        "קטגוריה": t.category,
+                        "תיאור / הערות": t.desc,
+                        "סכום בש״ח": t.amount
+                    }));
+
+                    const ws = XLSX.utils.json_to_sheet(rows);
+                    if(!ws['!views']) ws['!views'] = [];
+                    ws['!views'].push({ rightToLeft: true });
+
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, "דוח כספי");
+                    wb.Workbook = { Views: [{ RTL: true }] };
+
+                    XLSX.writeFile(wb, `Report_${Store.currentYear}.xlsx`);
+                    Notify.show('הקובץ מוכן!', 'success');
+                });
+            },
+
+            // --- דוח תצוגה מיוחד (פיקטיבי/משוקלל) ---
+            generateDisplayReport() {
+                Notify.show('מחשב נתונים לתצוגה...', 'info');
+                
+                // שלב 1: הבאת כל הנתונים הנדרשים (כספים, קבוצות, תורמים)
+                Promise.all([
+                    db.ref(`years/${Store.currentYear}/finance`).once('value'),
+                    db.ref(`years/${Store.currentYear}/groups`).once('value')
+                ]).then(([finSnap, grpSnap]) => {
+                    const finances = Object.values(finSnap.val() || {});
+                    const groupsData = grpSnap.val() || {};
+                    const config = Store.data.config;
+                    const groupDiscount = config.groupDiscount || 0;
+                    const tiers = config.tiers || [];
+
+                    // מיפוי בחורים
+                    const reportData = [];
+                    
+                    Object.values(Store.data.students).forEach(student => {
+                        let actual = 0;
+                        let extra = 0; // תוספות פיקטיביות
+                        
+                        // 1. סכום בפועל
+                        finances.filter(f => f.studentId === student.id && f.type === 'income').forEach(f => actual += f.amount);
+
+                        // 2. בדיקת זכאות קבוצתית
+                        let inGroup = false;
+                        Object.values(groupsData).forEach(dayGroups => {
+                            Object.values(dayGroups).forEach(g => {
+                                if((g.members||[]).some(m => m.id === student.id)) inGroup = true;
+                            });
+                        });
+                        if(inGroup) extra += groupDiscount;
+
+                        // 3. זיכוי בגין הבאת תורמים
+                        // מחפשים את כל התורמים שהבחור הזה רשום אצלם כ-referrerId
+                        const donorsBrought = Object.values(Store.data.donors).filter(d => d.referrerId === student.id);
+                        donorsBrought.forEach(d => {
+                            // כמה התורם תרם השנה?
+                            let donorTotal = 0;
+                            finances.filter(f => f.donorId === d.id && f.type === 'income').forEach(f => donorTotal += f.amount);
+                            
+                            // חישוב מדרגה
+                            // ממיינים מהגבוה לנמוך כדי לתפוס את המדרגה הגבוהה ביותר
+                            tiers.sort((a,b) => b.amount - a.amount);
+                            const tier = tiers.find(t => donorTotal >= t.amount);
+                            if(tier && tier.gift) {
+                                // אם ה"מתנה" היא מספר, נוסיף אותה כזיכוי ליעד. אם טקסט, נתעלם בדוח הכספי הזה
+                                const bonus = parseInt(tier.gift);
+                                if(!isNaN(bonus)) extra += bonus;
+                            }
+                        });
+
+                        const yData = (Store.data.yearData[Store.currentYear]?.students || {})[student.id] || {};
+                        const goal = yData.personalGoal || 0;
+
+                        if(actual > 0 || extra > 0) {
+                            reportData.push({
+                                "שם הבחור": student.name,
+                                "יעד אישי": goal,
+                                "גויס בפועל": actual,
+                                "זיכויים (קבוצה/תורמים)": extra,
+                                "סה״כ לתצוגה": actual + extra,
+                                "אחוז מיעד": goal > 0 ? Math.round(((actual+extra)/goal)*100) + '%' : '0%'
+                            });
+                        }
+                    });
+
+                    // יצוא לאקסל
+                    const ws = XLSX.utils.json_to_sheet(reportData);
+                    if(!ws['!views']) ws['!views'] = [];
+                    ws['!views'].push({ rightToLeft: true });
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, "דוח תצוגה");
+                    XLSX.writeFile(wb, `DisplayReport_${Store.currentYear}.xlsx`);
+                    Notify.show('דוח תצוגה נוצר בהצלחה', 'success');
+                });
+            }
+        };
+        
+        // --- 11. ROBUST EXCEL IMPORT MANAGER ---
+        const Importer = {
+            currentType: null,
+            fileData: null,
+            
+            init(type) {
+                this.currentType = type;
+                const input = document.getElementById('excel-upload-input');
+                input.value = '';
+                input.click();
+            },
+
+            handleFileSelect(input) {
+                const file = input.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    this.fileData = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
+                    
+                    if (this.fileData.length === 0) { Notify.show('הקובץ ריק', 'error'); return; }
+                    this.openMappingModal();
+                };
+                reader.readAsArrayBuffer(file);
+            },
+
+            openMappingModal() {
+                const excelHeaders = Object.keys(this.fileData[0]);
+                const systemFields = PREDEFINED_FIELDS[this.currentType];
+                
+                let html = `<div class="bg-blue-50 p-4 rounded mb-4 text-sm text-blue-800">נמצאו ${this.fileData.length} רשומות. אנא התאם את עמודות האקסל לשדות המערכת:</div>`;
+                html += `<div class="grid grid-cols-2 gap-4 font-bold border-b pb-2 mb-2"><div>שדה במערכת</div><div>עמודה באקסל</div></div>`;
+                
+                systemFields.forEach(field => {
+                    let options = `<option value="">-- אל תייבא --</option>`;
+                    excelHeaders.forEach(header => {
+                        const isMatch = header.includes(field.l) || field.l.includes(header);
+                        options += `<option value="${header}" ${isMatch ? 'selected' : ''}>${header}</option>`;
+                    });
+                    
+                    html += `
+                    <div class="grid grid-cols-2 gap-4 items-center mb-2">
+                        <div class="text-sm">${field.l} ${field.r ? '*' : ''}</div>
+                        <select id="map-${field.k}" class="border rounded p-1 w-full text-sm bg-white">${options}</select>
+                    </div>`;
+                });
+
+                const customBtn = `<button onclick="Importer.executeImport()" class="w-full bg-green-600 text-white py-3 rounded-xl font-bold mt-4 shadow-lg hover:bg-green-700">בצע יבוא</button>`;
+                
+                Modal.renderRaw(`יבוא ${this.currentType === 'students' ? 'בחורים' : 'תורמים'} מאקסל`, html + customBtn, () => {});
+                document.querySelector('#modal-form .btn-primary').parentElement.style.display = 'none';
+            },
+
+            executeImport() {
+                const systemFields = PREDEFINED_FIELDS[this.currentType];
+                const mapping = {};
+                
+                systemFields.forEach(f => {
+                    const val = document.getElementById(`map-${f.k}`).value;
+                    if(val) mapping[f.k] = val;
+                });
+
+                const missingRequired = systemFields.filter(f => f.r && !mapping[f.k]);
+                if (missingRequired.length > 0) {
+                    Notify.show('חובה למפות את השדות: ' + missingRequired.map(f => f.l).join(', '), 'error');
+                    return;
+                }
+
+                let count = 0;
+                const dbPath = this.currentType === 'students' ? 'global/students' : 'global/donors';
+                
+                // יבוא באצווה (Batch) כדי לא לתקוע את הדפדפן
+                const batchSize = 100;
+                let i = 0;
+                
+                const processBatch = () => {
+                   const batch = {}; 
+                   for(let j=0; j<batchSize && i<this.fileData.length; j++, i++) {
+                       const row = this.fileData[i];
+                       const newId = db.ref(dbPath).push().key;
+                       const newObj = { id: newId };
+                       if (this.currentType === 'students') newObj.lastUpdatedYear = Store.currentYear;
+                       else newObj.joinYear = Store.currentYear;
+
+                       Object.keys(mapping).forEach(sysKey => {
+                           newObj[sysKey] = row[mapping[sysKey]];
+                       });
+                       batch[newId] = newObj;
+                   }
+                   
+                   db.ref(dbPath).update(batch, (error) => {
+                       if(error) Notify.show('שגיאה ביבוא', 'error');
+                       else {
+                           if(i < this.fileData.length) {
+                               setTimeout(processBatch, 50); // המשך למנה הבאה
+                           } else {
+                               Modal.close();
+                               document.querySelector('#modal-form .btn-primary').parentElement.style.display = 'flex';
+                               Notify.show(`יבוא ${this.fileData.length} רשומות הושלם!`, 'success');
+                           }
+                       }
+                   });
+                };
+                
+                Notify.show('מתחיל יבוא...', 'info');
+                processBatch();
+            }
+        };
+
+        const Settings = {
+            init() {
+                this.renderFieldsEditor();
+                this.renderGoals();
+                
+                if(Store.data.config) {
+                    document.getElementById('conf-global-goal').value = Store.data.config.globalGoal || '';
+                    document.getElementById('conf-group-disc').value = Store.data.config.groupDiscount || '';
+                }
+            },
+            
+            save(key, val) { OfflineManager.write(`settings/${key}`, parseInt(val)); Notify.show('הגדרה נשמרה', 'success'); },
+
+            // יצירת משתמש חדש
+            createUser() {
+                const email = document.getElementById('new-user-email').value;
+                const pass = document.getElementById('new-user-pass').value;
+                const role = document.getElementById('new-user-role').value;
+                
+                if(!email || !pass) return alert('נא למלא אימייל וסיסמה');
+                
+                if(confirm('פעולה זו תנתק אותך ותחבר את המשתמש החדש שיצרת. האם להמשיך?')) {
+                    auth.createUserWithEmailAndPassword(email, pass).then(cred => {
+                        // שמירת התפקיד ב-DB
+                        db.ref(`users/${cred.user.uid}`).set({
+                            email: email,
+                            role: role
+                        });
+                        Notify.show('משתמש נוצר בהצלחה', 'success');
+                    }).catch(err => {
+                        alert("שגיאה ביצירת משתמש: " + err.message);
+                    });
+                }
+            },
+
+            // סנכרון שנתי
+            syncYears() {
+                if(!confirm('פעולה זו תקדם את כל הבחורים בשיעור אחד. בוגרי קיבוץ ח\' יועברו לרשימת התורמים. האם להמשיך?')) return;
+                
+                Notify.show('מבצע סנכרון...', 'info');
+                
+                // טוען את כל התלמידים כדי לוודא שאין פספוסים
+                db.ref('global/students').once('value', s => {
+                    const allStudents = s.val() || {};
+                    const updates = {};
+                    const newDonors = {};
+                    let movedCount = 0;
+                    
+                    Object.values(allStudents).forEach(st => {
+                        const currentGrade = st.grade;
+                        if(!currentGrade) return;
+                        
+                        const idx = SHIURIM_ORDER.indexOf(currentGrade);
+                        if(idx === -1) return; // לא ברשימה
+                        
+                        if(idx < SHIURIM_ORDER.length - 1) {
+                            // קידום רגיל
+                            updates[`global/students/${st.id}/grade`] = SHIURIM_ORDER[idx + 1];
+                        } else {
+                            // סיום מסלול (קיבוץ ח ומעלה) -> העברה לתורמים
+                            movedCount++;
+                            updates[`global/students/${st.id}`] = null; // מחיקה מהסטודנטים
+                            
+                            newDonors[`global/donors/${st.id}`] = {
+                                id: st.id,
+                                name: st.name,
+                                phone: st.phone,
+                                address: st.city || '',
+                                joinYear: Store.currentYear,
+                                notes: 'בוגר (הועבר אוטומטית)',
+                                isAlumni: true
+                            };
+                        }
+                    });
+                    
+                    // ביצוע העדכונים
+                    db.ref().update(updates).then(() => {
+                         if(movedCount > 0) db.ref().update(newDonors);
+                         Notify.show(`סנכרון הושלם. ${movedCount} בוגרים הועברו לתורמים.`, 'success');
+                         setTimeout(() => location.reload(), 2000);
+                    });
+                });
+            },
+            
+            renderFieldsEditor() {
+                const type = document.getElementById('settings-field-type').value;
+                const list = document.getElementById('settings-active-fields');
+                const select = document.getElementById('settings-predefined-field');
+                
+                const defs = PREDEFINED_FIELDS[type] || [];
+                select.innerHTML = '';
+                defs.forEach(d => select.innerHTML += `<option value="${d.k}">${d.l}</option>`);
+                
+                const active = (Store.data.config.fields || {})[type] || DEFAULT_ACTIVE_FIELDS[type];
+                list.innerHTML = '';
+                active.forEach(k => {
+                    const def = defs.find(d => d.k === k);
+                    const label = def ? def.l : k;
+                    list.innerHTML += `
+                        <div class="flex justify-between items-center bg-gray-50 p-2 rounded border text-sm">
+                            <span>${label}</span>
+                            <button onclick="Settings.removeField('${type}','${k}')" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
+                        </div>
+                    `;
+                });
+            },
+            
+            addField() {
+                const type = document.getElementById('settings-field-type').value;
+                const key = document.getElementById('settings-predefined-field').value;
+                const active = (Store.data.config.fields || {})[type] || [];
+                
+                if(!active.includes(key)) {
+                    active.push(key);
+                    OfflineManager.write(`settings/fields/${type}`, active);
+                    // עדכון מקומי מהיר
+                    if(!Store.data.config.fields) Store.data.config.fields = {};
+                    Store.data.config.fields[type] = active;
+                    this.renderFieldsEditor();
+                }
+            },
+            
+            removeField(type, key) {
+                let active = (Store.data.config.fields || {})[type] || [];
+                active = active.filter(k => k !== key);
+                OfflineManager.write(`settings/fields/${type}`, active);
+                Store.data.config.fields[type] = active;
+                this.renderFieldsEditor();
+            },
+
+            renderGoals() {
+                const div = document.getElementById('settings-goals-tiers');
+                const tiers = Store.data.config.tiers || [];
+                div.innerHTML = tiers.map((t, i) => `
+                    <div class="flex gap-2 items-center mb-2">
+                        <span class="text-sm font-bold w-6">#${i+1}</span>
+                        <input type="number" placeholder="סכום תרומה" value="${t.amount}" onchange="Settings.updateTier(${i}, 'amount', this.value)" class="input-field w-24 p-1 text-sm">
+                        <input type="text" placeholder="סכום זיכוי (מספר) או מתנה" value="${t.gift}" onchange="Settings.updateTier(${i}, 'gift', this.value)" class="input-field flex-1 p-1 text-sm">
+                        <button onclick="Settings.removeTier(${i})" class="text-red-500"><i class="fas fa-times"></i></button>
+                    </div>
+                `).join('');
+            },
+            addGoalTier() {
+                const tiers = Store.data.config.tiers || [];
+                tiers.push({amount: 0, gift: ''});
+                OfflineManager.write('settings/tiers', tiers);
+                Store.data.config.tiers = tiers;
+                this.renderGoals();
+            },
+            updateTier(i, k, v) {
+                const tiers = [...Store.data.config.tiers];
+                tiers[i][k] = v;
+                OfflineManager.write('settings/tiers', tiers);
+            },
+            removeTier(i) {
+                const tiers = Store.data.config.tiers || [];
+                tiers.splice(i, 1);
+                OfflineManager.write('settings/tiers', tiers);
+                Store.data.config.tiers = tiers;
+                this.renderGoals();
+            }
+        };
+
+        // --- 12. SHARED MODAL & HELPERS ---
+        const Modal = {
+            render(title, fields, onSave, extraHtml='') {
+                let html = '';
+                fields.forEach(f => {
+                    html += `<div class="mb-4">
+                        <label class="block text-sm font-bold text-slate-700 mb-1">${f.l} ${f.r?'<span class="text-red-500">*</span>':''}</label>`;
+                    
+                    if(f.t === 'select') {
+                        html += `<select id="field-${f.id}" class="w-full border border-slate-300 p-2.5 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition">`;
+                        f.opts.forEach(o => html += `<option value="${o}" ${f.v===o?'selected':''}>${o}</option>`);
+                        html += `</select>`;
+                    } else if(f.t === 'checkbox') {
+                         html += `<div class="flex items-center gap-2"><input type="checkbox" id="field-${f.id}" ${f.v?'checked':''} class="h-5 w-5 rounded text-indigo-600"> <span class="text-sm">פעיל</span></div>`;
+                    } else if(f.t === 'textarea') {
+                        html += `<textarea id="field-${f.id}" class="w-full border border-slate-300 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition h-24">${f.v||''}</textarea>`;
+                    } else if(f.t === 'referrer_select') {
+                        const opts = Object.values(Store.data.students).map(s => `<option value="${s.id}" ${f.v===s.id?'selected':''}>${s.name}</option>`).join('');
+                        html += `<select id="field-${f.id}" class="w-full border border-slate-300 p-2.5 rounded-lg bg-white"><option value="">-- בחר --</option>${opts}</select>`;
+                    } else {
+                        html += `<input id="field-${f.id}" type="${f.t||'text'}" value="${f.v||''}" class="w-full border border-slate-300 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition" ${f.r?'required':''}>`;
+                    }
+                    html += `</div>`;
+                });
+                
+                html += extraHtml;
+                this.renderRaw(title, html, () => {
+                    const data = {};
+                    fields.forEach(f => {
+                        const el = document.getElementById(`field-${f.id}`);
+                        data[f.id] = f.t === 'checkbox' ? el.checked : el.value;
+                    });
+                    onSave(data);
+                    this.close();
+                });
+            },
+            
+            renderRaw(title, bodyHtml, onSaveAction) {
+                document.getElementById('modal-title').innerText = title;
+                document.getElementById('modal-body').innerHTML = bodyHtml;
+                document.getElementById('modal-form').classList.remove('hidden-screen');
+                // אנימציה
+                setTimeout(() => document.querySelector('#modal-form > div').classList.remove('scale-95', 'opacity-0'), 10);
+                
+                const btn = document.getElementById('modal-save-btn');
+                const newBtn = btn.cloneNode(true);
+                btn.parentNode.replaceChild(newBtn, btn);
+                newBtn.onclick = onSaveAction;
+            },
+            
+            close() { 
+                const el = document.querySelector('#modal-form > div');
+                el.classList.add('scale-95'); // יציאה
+                setTimeout(() => document.getElementById('modal-form').classList.add('hidden-screen'), 150); 
+            }
         };
 
         const Dashboard = {
             render() {
-                const d = Object.values(Store.data.yearData[Store.currentYear]?.finance || {});
-                let inc=0, exp=0;
-                d.forEach(x => x.type==='income' ? inc+=parseInt(x.amount) : exp+=parseInt(x.amount));
-                document.getElementById('dash-income').innerText = '₪'+inc.toLocaleString();
-                document.getElementById('dash-expense').innerText = '₪'+exp.toLocaleString();
-                document.getElementById('dash-total-balance').innerText = '₪'+(inc-exp).toLocaleString();
-                document.getElementById('dash-logs').innerHTML = d.slice(0,5).map(x=>`<div class="p-2 border-b text-xs flex justify-between"><span>${x.category}</span><b>${x.amount}</b></div>`).join('');
+                // שימוש בנתונים מסונכרנים (stats) במקום לחשב הכל מחדש
+                const stats = Store.data.stats || { income: 0, expense: 0 };
+                const inc = stats.income || 0;
+                const exp = stats.expense || 0;
+                
+                document.getElementById('dash-income').innerText = `₪${inc.toLocaleString()}`;
+                document.getElementById('dash-expense').innerText = `₪${exp.toLocaleString()}`;
+                document.getElementById('dash-total-balance').innerText = `₪${(inc - exp).toLocaleString()}`;
+                
+                const goal = Store.data.config.globalGoal || 100000;
+                const pct = Math.min(100, Math.round((inc / goal) * 100));
+                
+                setTimeout(() => { document.getElementById('dash-bar').style.width = pct + '%'; }, 100);
+                document.getElementById('dash-goal-progress').innerText = pct + '%';
+
+                // טעינת לוגים אחרונים (רק 5 האחרונים) בנפרד כדי לא להעמיס
+                if (Store.role !== 'user') {
+                    db.ref(`years/${Store.currentYear}/finance`).orderByChild('date').limitToLast(5).once('value', s => {
+                        const logs = document.getElementById('dash-logs');
+                        const val = s.val();
+                        if(!val) { logs.innerHTML = '<div class="text-center text-gray-400 mt-4">אין תנועות אחרונות</div>'; return; }
+                        
+                        const arr = Object.values(val).sort((a,b)=>b.date-a.date);
+                        logs.innerHTML = arr.map(t => {
+                            const icon = t.type==='income' ? 'fa-arrow-down text-emerald-500' : 'fa-arrow-up text-rose-500';
+                            return `
+                            <div class="p-3 border-b flex justify-between items-center text-sm hover:bg-slate-50">
+                                <div class="flex items-center gap-2">
+                                    <i class="fas ${icon}"></i>
+                                    <span class="font-medium">${t.category}</span>
+                                    <span class="text-xs text-gray-400">${t.desc||''}</span>
+                                </div>
+                                <span class="font-bold">₪${t.amount}</span>
+                            </div>`;
+                        }).join('');
+                    });
+                } else {
+                     document.getElementById('dash-logs').innerHTML = '<div class="text-center text-gray-400 mt-4">אין גישה לנתונים כספיים</div>';
+                }
             }
         };
 
-        const Reports = {
-            generateStandard() {
-                const d = Object.values(Store.data.yearData[Store.currentYear].finance||{});
-                const ws = XLSX.utils.json_to_sheet(d);
-                const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, "Data");
-                XLSX.writeFile(wb, "Report.xlsx");
-            },
-            generatePurim(mode) { alert('דוח פורים ' + mode + ' יופק כעת'); }
-        };
-
-        const Settings = {
-            save(k,v) { db.ref(`settings/${k}`).set(parseInt(v)); },
-            addUser() { alert('יש להוסיף משתמשים דרך המסוף של Firebase'); }
-        };
-
-        const Modal = {
-            render(t, f, onSave, ex='') {
-                let h = '';
-                f.forEach(x => {
-                    h += `<div class="mb-2"><label class="lbl">${x.l}</label>`;
-                    if(x.t==='select') h+=`<select id="mf-${x.id}" class="input-field w-full">${x.opts.map(o=>`<option ${x.v===o?'selected':''} value="${o}">${o}</option>`).join('')}</select>`;
-                    else if(x.t==='checkbox') h+=`<input type="checkbox" id="mf-${x.id}" ${x.v?'checked':''}>`;
-                    else h+=`<input id="mf-${x.id}" type="${x.t||'text'}" value="${x.v||''}" class="input-field w-full">`;
-                    h+=`</div>`;
-                });
-                this.renderRaw(t, h+ex, () => {
-                    const d = {}; f.forEach(x => { const e=document.getElementById(`mf-${x.id}`); d[x.id]=x.t==='checkbox'?e.checked:e.value; });
-                    onSave(d);
-                });
-            },
-            renderRaw(t, h, onSave) {
-                document.getElementById('modal-title').innerText=t;
-                document.getElementById('modal-body').innerHTML=h;
-                document.getElementById('modal-form').classList.remove('hidden-screen');
-                const btn = document.getElementById('modal-save-btn');
-                const nBtn = btn.cloneNode(true);
-                btn.parentNode.replaceChild(nBtn, btn);
-                nBtn.onclick = () => { onSave(); this.close(); };
-            },
-            close() { document.getElementById('modal-form').classList.add('hidden-screen'); }
-        };
-
-        const Importer = { init() { alert('מודול יבוא אקסל'); } };
-        
-        // אתחול Auth Listener
-        auth.onAuthStateChanged(Auth.onStateChange);
-
-        // CSS Helper
+        // הזרקת סגנונות CSS דינמיים
         const style = document.createElement('style');
-        style.innerHTML = `.btn-primary{background:#4f46e5;color:#fff;padding:.5rem 1rem;border-radius:.5rem}.input-field{border:1px solid #ccc;padding:.5rem;border-radius:.5rem;width:100%}`;
+        style.innerHTML = `
+            .btn-primary { background-color: #4f46e5; color: white; border-radius: 0.75rem; font-weight: 600; transition: all 0.2s; box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.1); }
+            .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.2); }
+            .btn-secondary { background-color: #ffffff; color: #475569; border: 1px solid #e2e8f0; padding: 0.5rem 1rem; border-radius: 0.75rem; font-weight: 600; transition: all 0.2s; }
+            .btn-secondary:hover { background-color: #f8fafc; border-color: #cbd5e1; }
+            .input-field { border: 1px solid #e2e8f0; padding: 0.6rem; border-radius: 0.75rem; outline: none; transition: 0.2s; background-color: #fff; }
+            .input-field:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
+            .lbl { font-size: 0.8rem; font-weight: 600; color: #64748b; margin-bottom: 0.25rem; display: block; text-transform: uppercase; letter-spacing: 0.025em; }
+            .animate-bounce-slight { animation: bounceSlight 2s infinite; }
+            @keyframes bounceSlight { 0%, 100% { transform: translateY(-5%); } 50% { transform: translateY(0); } }
+        `;
         document.head.appendChild(style);
+
     </script>
 </body>
 </html>
