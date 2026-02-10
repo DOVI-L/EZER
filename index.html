@@ -38,6 +38,7 @@
             height: 100%; 
             overflow-y: auto; 
             padding-bottom: 2rem;
+            /* החלת הסקרולבר המותאם */
             scrollbar-width: thin;
             scrollbar-color: #cbd5e1 transparent;
         }
@@ -50,34 +51,49 @@
 
         /* --- אזור הדפסה משודרג --- */
         @media print {
-            body * { visibility: hidden; }
-            #print-area, #print-area * { visibility: visible; }
+            /* הסתרת כל האלמנטים הרגילים */
+            body > *:not(#print-area) { display: none !important; }
+            
+            /* הגדרות לאזור ההדפסה */
             #print-area { 
-                position: absolute; left: 0; top: 0; width: 100%; min-height: 100%; 
-                background: white; z-index: 99999; direction: rtl; padding: 0; margin: 0; 
-                font-family: 'Heebo', sans-serif;
+                display: block !important; 
+                position: absolute; 
+                top: 0; 
+                left: 0; 
+                width: 100%; 
+                height: auto; 
+                z-index: 99999; 
+                background: white; 
+                direction: rtl;
+                padding: 10px;
+                color: black !important;
             }
-            @page { size: A4 landscape; margin: 5mm; } 
+
+            @page { size: A4 landscape; margin: 5mm; } /* דף לרוחב למסלולים */
             
-            /* עיצוב טבלאות הדפסה יפה */
-            .print-container { width: 100%; margin: 0 auto; }
-            .print-header-box { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-            .print-title { font-size: 24pt; font-weight: 900; color: #000; }
-            .print-subtitle { font-size: 14pt; color: #444; }
+            .print-table { width: 100%; margin: 10px auto; border-collapse: collapse; font-size: 10pt; table-layout: fixed; }
+            .print-table th { background-color: #e2e8f0 !important; border: 1px solid #000; padding: 4px; text-align: center; color: #000 !important; font-weight: 800; -webkit-print-color-adjust: exact; white-space: nowrap; overflow: hidden; }
+            .print-table td { border: 1px solid #000; padding: 4px; text-align: right; color: #000; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            .print-table tr:nth-child(even) { background-color: #f9f9f9 !important; -webkit-print-color-adjust: exact; }
             
-            .beautiful-table { width: 100%; border-collapse: collapse; font-size: 11pt; }
-            .beautiful-table th { background-color: #eef2ff !important; border: 1px solid #000; padding: 8px; text-align: right; color: #000 !important; font-weight: 800; -webkit-print-color-adjust: exact; }
-            .beautiful-table td { border: 1px solid #000; padding: 6px; text-align: right; color: #000; vertical-align: middle; }
-            .beautiful-table tr:nth-child(even) { background-color: #f9fafb !important; -webkit-print-color-adjust: exact; }
+            .print-header { text-align: center; margin-bottom: 15px; border-bottom: 2px solid #000; padding-bottom: 5px; position: relative; }
+            .print-header img { position: absolute; right: 0; top: 0; height: 60px; width: auto; }
+            .print-header h1 { font-size: 22px; font-weight: 900; margin: 0; color: #000; }
+            .print-header h3 { font-size: 14px; font-weight: normal; margin: 2px 0 0 0; color: #444; }
             
-            /* עיצוב ספציפי לדף צוות */
-            .team-card { border: 2px solid #000; border-radius: 15px; padding: 20px; margin-bottom: 20px; page-break-inside: avoid; }
-            .role-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-weight: bold; border: 1px solid #000; font-size: 0.8em; }
-            .role-leader { background-color: #dbeafe !important; -webkit-print-color-adjust: exact; }
-            .role-segan { background-color: #fef3c7 !important; -webkit-print-color-adjust: exact; }
-            
+            .role-badge { border: 1px solid #000; padding: 1px 6px; border-radius: 10px; font-size: 9pt; font-weight: bold; display: inline-block; margin-left: 5px; }
+            .role-commander { background-color: #e0f2fe !important; -webkit-print-color-adjust: exact; }
+            .role-deputy { background-color: #fef3c7 !important; -webkit-print-color-adjust: exact; }
+
+            /* התאמה לקיר - דף קבוצה */
+            .wall-mode .print-table { font-size: 14pt; }
+            .wall-mode .print-table td { padding: 8px; }
+            .wall-mode th { background-color: #334155 !important; color: white !important; }
+
             .no-print { display: none !important; }
         }
+        
+        /* הסתרת אזור ההדפסה במסך רגיל */
         #print-area { display: none; }
         
         /* הרשאות */
@@ -95,6 +111,9 @@
         .toast.error { border-right-color: #ef4444; }
         .toast.info { border-right-color: #3b82f6; }
         .toast-icon { font-size: 1.2rem; }
+        .success .toast-icon { color: #10b981; }
+        .error .toast-icon { color: #ef4444; }
+        .info .toast-icon { color: #3b82f6; }
         @keyframes slideInLeft { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
         /* Status Indicator for Offline */
@@ -133,17 +152,17 @@
     <!-- אזור הדפסה -->
     <div id="print-area"></div>
 
-    <!-- טיימר התנתקות -->
+    <!-- טיימר התנתקות (פופאפ) -->
     <div id="timeout-modal" class="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center hidden-screen backdrop-blur-sm">
         <div class="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-md border-t-8 border-red-500 animate-bounce-slight">
             <div class="text-6xl text-red-500 mb-4"><i class="fas fa-hourglass-half"></i></div>
             <h2 class="text-2xl font-bold mb-2">זיהינו חוסר פעילות</h2>
-            <p class="text-gray-600 mb-6">המערכת תתנתק באופן אוטומטי בעוד <span id="timeout-countdown" class="font-bold text-red-600 text-xl">60</span> שניות.</p>
+            <p class="text-gray-600 mb-6">המערכת תתנתק באופן אוטומטי בעוד <span id="timeout-countdown" class="font-bold text-red-600 text-xl">60</span> שניות לצורכי אבטחה.</p>
             <button onclick="InactivityTimer.stayLoggedIn()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg">השאר אותי מחובר</button>
         </div>
     </div>
 
-    <!-- Celebration Modal -->
+    <!-- Celebration Modal (New) -->
     <div id="celebration-modal" class="fixed inset-0 z-[10000] bg-black/90 flex items-center justify-center hidden-screen">
         <div class="absolute inset-0 overflow-hidden pointer-events-none" id="confetti-container"></div>
         <div class="bg-white p-10 rounded-3xl shadow-2xl text-center max-w-lg border-4 border-amber-400 relative z-10 transform scale-100 transition-transform">
@@ -179,11 +198,14 @@
             <form onsubmit="Auth.login(event)" class="space-y-4" autocomplete="off">
                 <div class="relative">
                     <i class="fas fa-envelope absolute top-3.5 right-3 text-gray-400"></i>
-                    <input type="email" id="email" placeholder="אימייל" class="w-full bg-slate-50 border border-slate-200 p-3 pr-10 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition" required>
+                    <input style="display:none" type="text" name="fakeusernameremembered"/>
+                    <input style="display:none" type="password" name="fakepasswordremembered"/>
+                    
+                    <input type="email" id="email" placeholder="אימייל" autocomplete="off" class="w-full bg-slate-50 border border-slate-200 p-3 pr-10 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition" required>
                 </div>
                 <div class="relative">
                     <i class="fas fa-lock absolute top-3.5 right-3 text-gray-400"></i>
-                    <input type="password" id="password" placeholder="סיסמה" autocomplete="current-password" class="w-full bg-slate-50 border border-slate-200 p-3 pr-10 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition" required>
+                    <input type="password" id="password" placeholder="סיסמה" autocomplete="new-password" class="w-full bg-slate-50 border border-slate-200 p-3 pr-10 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition" required>
                 </div>
                 <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold transition shadow-lg transform active:scale-95">כניסה למערכת</button>
             </form>
@@ -196,7 +218,7 @@
 
         <!-- תפריט צד -->
         <aside id="sidebar" class="w-64 bg-sidebar text-slate-300 flex flex-col hidden-screen shadow-2xl z-20 h-full border-l border-slate-700 shrink-0">
-            <!-- לוגו -->
+            <!-- לוגו מוגדל -->
             <div class="p-6 border-b border-slate-700/50 flex items-center justify-center h-32 bg-black/20">
                 <img src="1.JPG" alt="לוגו" class="logo-img-sidebar hover:scale-105 transition" onerror="this.outerHTML='<h2 class=\'font-bold text-xl text-white\'>עזר חתנים</h2>'">
             </div>
@@ -231,17 +253,23 @@
                 </button>
             </nav>
 
+            <!-- חלק תחתון מעוצב מחדש -->
             <div class="mt-auto bg-slate-900/50 backdrop-blur-md border-t border-slate-700/50 p-4">
+                <!-- כפתור יציאה -->
                 <button onclick="Auth.logout()" class="group w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-red-500/10 hover:text-red-400 transition-all duration-300 mb-4 border border-transparent hover:border-red-500/20">
-                    <div class="bg-slate-800 group-hover:bg-red-500 text-slate-400 group-hover:text-white w-8 h-8 rounded-lg flex items-center justify-center transition-colors shadow-lg">
+                    <div class="bg-slate-800 group-hover:bg-red-50 text-slate-400 group-hover:text-white w-8 h-8 rounded-lg flex items-center justify-center transition-colors shadow-lg">
                         <i class="fas fa-power-off text-xs"></i>
                     </div>
                     <div class="text-right">
                         <div class="text-xs font-bold text-slate-300 group-hover:text-red-300">התנתק מהמערכת</div>
-                        <div id="user-email-display" class="text-[10px] text-slate-500 truncate w-32"></div>
+                        <div id="user-email-display" class="text-[10px] text-slate-500 truncate w-32">user@sys</div>
                     </div>
                 </button>
+
+                <!-- קרדיט מודרני -->
                 <div class="relative overflow-hidden rounded-xl bg-gradient-to-r from-indigo-900/40 to-slate-900/40 border border-slate-700/50 p-3 text-center group">
+                    <div class="absolute inset-0 bg-indigo-500/5 opacity-0 group-hover:opacity-100 transition duration-500"></div>
+                    <p class="text-[10px] text-slate-400 font-medium tracking-wide mb-1 relative z-10">פותח ועוצב ע״י</p>
                     <h4 class="text-sm font-bold text-indigo-300 relative z-10 group-hover:text-white transition-colors">דובי לוי</h4>
                     <a href="mailto:7640421@gmail.com" class="text-[10px] text-slate-500 hover:text-indigo-400 transition relative z-10 flex items-center justify-center gap-1 mt-1">
                         <i class="fas fa-envelope"></i> 7640421@gmail.com
@@ -266,6 +294,7 @@
                         <select id="year-selector" onchange="System.changeYear(this.value)" class="bg-transparent border-none text-indigo-700 font-bold text-sm focus:ring-0 cursor-pointer py-0 outline-none">
                             <!-- שנים יטענו דינמית -->
                         </select>
+                        <button onclick="System.addCustomYear()" class="text-indigo-600 hover:text-indigo-800 text-xs bg-white border border-indigo-200 rounded px-1 ml-1 admin-only" title="הוסף שנה ידנית"><i class="fas fa-plus"></i></button>
                     </div>
                 </div>
             </header>
@@ -275,6 +304,7 @@
                 
                 <!-- 1. DASHBOARD -->
                 <div id="view-dashboard" class="view-section p-6 fade-in hidden space-y-6">
+                    <!-- כרטיסי סיכום (נטענים מ-Stats) -->
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 financial-data">
                         <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between hover:shadow-md transition">
                             <div>
@@ -305,9 +335,11 @@
                             <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
                                 <div id="dash-bar" class="bg-amber-500 h-full rounded-full transition-all duration-1000" style="width:0%"></div>
                             </div>
+                            <div class="mt-2 text-xs text-slate-400">הנתונים מתעדכנים בזמן אמת</div>
                         </div>
                     </div>
 
+                    <!-- אזור פעילות -->
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 h-96">
                         <div class="bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col overflow-hidden">
                             <div class="p-4 border-b bg-slate-50 flex justify-between items-center">
@@ -318,6 +350,7 @@
                                 <p class="text-center text-gray-400 mt-4">טוען תנועות אחרונות...</p>
                             </div>
                         </div>
+                        
                         <div class="grid grid-cols-2 gap-6">
                             <div class="bg-gradient-to-br from-indigo-500 to-blue-600 rounded-2xl shadow-lg p-6 text-white flex flex-col items-center justify-center relative overflow-hidden">
                                 <i class="fas fa-user-graduate absolute -bottom-4 -right-4 text-8xl text-white/10"></i>
@@ -342,7 +375,7 @@
                             <button onclick="Importer.init('students')" class="btn-secondary"><i class="fas fa-file-excel ml-2 text-green-600"></i> יבוא מאקסל</button>
                         </div>
                         <div class="relative w-96">
-                            <input type="text" id="student-search" oninput="Students.handleSearch(this.value)" placeholder="חיפוש..." class="input-field w-full pl-4 pr-10">
+                            <input type="text" id="student-search" oninput="Students.handleSearch(this.value)" placeholder="חיפוש לפי שם, שיעור או טלפון..." class="input-field w-full pl-4 pr-10">
                             <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
                         </div>
                     </div>
@@ -353,25 +386,28 @@
                                     <th class="p-3 text-right rounded-r-lg bg-slate-50">שם מלא</th>
                                     <th class="p-3 text-right bg-slate-50">שיעור</th>
                                     <th class="p-3 text-right bg-slate-50">שנת כניסה</th>
-                                    <th class="p-3 text-right bg-slate-50">יעד אישי</th>
+                                    <th class="p-3 text-right bg-slate-50">יעד אישי (<span class="curr-year"></span>)</th>
                                     <th class="p-3 text-center rounded-l-lg bg-slate-50">פעולות</th>
                                 </tr>
                             </thead>
                             <tbody id="students-tbody" class="divide-y divide-slate-100"></tbody>
                         </table>
                         <div id="students-loader-more" class="p-6 text-center mt-2 hidden">
-                            <button onclick="Students.loadMore()" class="bg-slate-100 text-slate-600 hover:bg-slate-200 px-6 py-2 rounded-full text-sm font-bold transition">טען עוד</button>
+                            <button onclick="Students.loadMore()" class="bg-slate-100 text-slate-600 hover:bg-slate-200 px-6 py-2 rounded-full text-sm font-bold transition shadow-sm">
+                                <i class="fas fa-chevron-down ml-2"></i> טען עוד בחורים
+                            </button>
                         </div>
                     </div>
                 </div>
 
                 <!-- 3. DONORS -->
                 <div id="view-donors" class="view-section flex flex-col hidden fade-in h-full overflow-hidden">
+                    <!-- תפריט עליון -->
                     <div class="p-4 bg-white rounded-t-2xl shadow-sm border-b flex gap-3 items-center justify-between mb-0 shrink-0">
                         <div class="flex gap-3">
                             <button onclick="Donors.openAddModal()" class="btn-primary bg-emerald-600"><i class="fas fa-plus ml-2"></i> הוסף תורם</button>
                             <button onclick="Donors.toggleQuickManager()" class="btn-secondary border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100">
-                                <i class="fas fa-th ml-2"></i> ניהול שיבוץ מהיר
+                                <i class="fas fa-th ml-2"></i> ניהול שיבוץ מהיר לקבוצות
                             </button>
                             <button onclick="Importer.init('donors')" class="btn-secondary"><i class="fas fa-file-excel text-green-600"></i> יבוא מאקסל</button>
                         </div>
@@ -381,6 +417,7 @@
                         </div>
                     </div>
 
+                    <!-- מסך רגיל: רשימת תורמים -->
                     <div id="donors-list-view" class="flex-1 overflow-y-auto p-4 custom-scroll">
                         <div id="donors-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pb-4"></div>
                         <div id="donors-loader-more" class="p-4 text-center hidden">
@@ -388,7 +425,9 @@
                         </div>
                     </div>
 
+                    <!-- מסך ניהול מהיר (Kanban) -->
                     <div id="donors-quick-manager" class="hidden flex-1 flex gap-4 overflow-hidden h-full pb-2 p-4">
+                        <!-- עמודה 1: מאגר תורמים לא משובצים -->
                         <div class="w-1/4 bg-white rounded-xl shadow border flex flex-col h-full">
                             <div class="p-3 border-b bg-gray-50 font-bold text-gray-700 flex justify-between">
                                 <span>מאגר לא משובצים</span>
@@ -397,12 +436,16 @@
                             <div class="p-2 border-b"><input type="text" placeholder="סנן..." oninput="Donors.filterPool(this.value)" class="w-full text-xs p-1 border rounded"></div>
                             <div id="donor-pool-list" class="flex-1 overflow-y-auto p-2 space-y-2 bg-gray-50/50 custom-scroll"></div>
                         </div>
+
+                        <!-- אזור קבוצות (גרירה) -->
                         <div class="flex-1 bg-white rounded-xl shadow border flex flex-col">
                             <div class="p-3 border-b bg-indigo-50 font-bold text-indigo-800 flex justify-between items-center">
                                 <span>קבוצות השנה (<span class="curr-year"></span>)</span>
                                 <div class="text-xs font-normal">גרור תורמים מהמאגר לקבוצות</div>
                             </div>
-                            <div class="flex-1 overflow-x-auto overflow-y-hidden p-4 whitespace-nowrap bg-slate-100 custom-scroll" id="groups-kanban-container"></div>
+                            <div class="flex-1 overflow-x-auto overflow-y-hidden p-4 whitespace-nowrap bg-slate-100 custom-scroll" id="groups-kanban-container">
+                                <!-- קבוצות ייווצרו כאן דינמית כעמודות -->
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -416,6 +459,7 @@
                     </div>
 
                     <div class="flex flex-1 overflow-hidden">
+                        <!-- רשימת קבוצות בצד -->
                         <div class="w-72 border-l flex flex-col bg-white">
                             <div class="p-4 border-b flex justify-between items-center bg-gray-50/50">
                                 <span class="font-bold text-sm text-slate-700">רשימת קבוצות</span>
@@ -424,6 +468,7 @@
                             <div id="groups-list" class="flex-1 overflow-y-auto custom-scroll"></div>
                         </div>
 
+                        <!-- אזור עבודה -->
                         <div class="flex-1 flex flex-col bg-slate-50 relative" id="group-workspace">
                             <div id="group-placeholder" class="absolute inset-0 flex items-center justify-center text-gray-400 flex-col">
                                 <i class="fas fa-layer-group text-6xl mb-4 text-slate-200"></i>
@@ -433,17 +478,20 @@
                             <div id="group-editor" class="hidden flex flex-col h-full">
                                 <div class="bg-white p-4 border-b flex justify-between items-center shadow-sm z-10">
                                     <div class="flex gap-3 items-center">
-                                        <h3 id="active-group-name" class="font-bold text-xl text-slate-800 cursor-pointer hover:bg-gray-100 px-2 rounded" onclick="Groups.renameGroup()"></h3>
+                                        <h3 id="active-group-name" class="font-bold text-xl text-slate-800 cursor-pointer hover:bg-gray-100 px-2 rounded" onclick="Groups.renameGroup()" title="לחץ לשינוי שם"></h3>
                                         <span id="active-group-details" class="text-xs bg-slate-100 text-slate-600 px-3 py-1 rounded-full border"></span>
                                         <button onclick="Groups.deleteGroup()" class="text-red-500 bg-red-50 hover:bg-red-100 px-2 py-1 rounded border border-red-100 text-xs font-bold mr-2">מחק קבוצה</button>
+                                        <!-- כפתור תרומה קבוצתית -->
+                                        <button onclick="Groups.openGroupDonationModal()" class="btn-secondary text-xs bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 font-bold"><i class="fas fa-hand-holding-usd"></i> תרומה קבוצתית</button>
                                     </div>
                                     <div class="flex gap-2 text-sm">
-                                        <button onclick="Groups.printSheet('team')" class="btn-secondary text-xs"><i class="fas fa-users"></i> דף צוות</button>
+                                        <button onclick="Groups.printSheet('members')" class="btn-secondary text-xs"><i class="fas fa-users"></i> דף קבוצה</button>
                                         <button onclick="Groups.printSheet('route')" class="btn-secondary text-xs"><i class="fas fa-route"></i> דף מסלול</button>
                                     </div>
                                 </div>
 
                                 <div class="flex flex-1 overflow-hidden">
+                                    <!-- עמודה 1: מסלול תורמים -->
                                     <div class="w-1/2 flex flex-col border-l bg-white">
                                         <div class="p-3 bg-emerald-50 text-emerald-900 font-bold text-sm border-b flex justify-between">
                                             <span><i class="fas fa-map-signs"></i> מסלול תורמים</span>
@@ -452,10 +500,13 @@
                                         <div id="group-route-list" class="flex-1 overflow-y-auto p-3 space-y-2 bg-slate-50/50 custom-scroll"></div>
                                     </div>
 
+                                    <!-- עמודה 2: שיבוץ בחורים -->
                                     <div class="w-1/2 flex flex-col bg-white">
                                         <div class="p-3 bg-indigo-50 text-indigo-900 font-bold text-sm border-b"><i class="fas fa-user-friends"></i> שיבוץ בחורים</div>
                                         <div class="flex-1 flex flex-col overflow-hidden">
+                                            <!-- רשימת בחורים בקבוצה -->
                                             <div id="group-members-list" class="flex-1 overflow-y-auto p-3 space-y-2 h-1/2 border-b custom-scroll"></div>
+                                            <!-- הוספת בחור -->
                                             <div class="h-1/2 flex flex-col bg-slate-50">
                                                 <div class="p-2 border-b bg-white relative">
                                                     <input type="text" placeholder="חפש בחור להוספה..." oninput="Groups.filterStudents(this.value)" class="w-full text-sm p-2 border rounded pl-8">
@@ -482,6 +533,7 @@
                             <button onclick="Finance.setFilter('all')" class="px-4 py-1.5 rounded-md text-sm font-medium transition finance-filter active" data-f="all">הכל</button>
                             <button onclick="Finance.setFilter('income')" class="px-4 py-1.5 rounded-md text-sm font-medium transition finance-filter hover:bg-gray-50 text-gray-600" data-f="income">הכנסות</button>
                             <button onclick="Finance.setFilter('expense')" class="px-4 py-1.5 rounded-md text-sm font-medium transition finance-filter hover:bg-gray-50 text-gray-600" data-f="expense">הוצאות</button>
+                            <button onclick="Finance.setFilter('purim')" class="px-4 py-1.5 rounded-md text-sm font-medium transition finance-filter hover:bg-purple-50 text-purple-600" data-f="purim"><i class="fas fa-mask ml-1"></i> פורים</button>
                         </div>
                     </div>
                     
@@ -511,39 +563,71 @@
                 <div id="view-reports" class="view-section hidden fade-in financial-data p-6">
                     <h2 class="text-3xl font-bold mb-8 text-slate-800">דוחות והדפסות</h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        
+                        <!-- דוח כללי -->
                         <div class="bg-white p-6 rounded-2xl shadow-sm border hover:shadow-md transition">
                             <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-4"><i class="fas fa-file-invoice-dollar text-xl"></i></div>
                             <h3 class="font-bold text-lg mb-2">דוח תנועות כספיות</h3>
                             <p class="text-sm text-gray-500 mb-4">ייצוא כל ההכנסות וההוצאות לאקסל עם אפשרויות סינון.</p>
                             <div class="space-y-3">
                                 <select id="rep-type" class="input-field w-full text-sm"><option value="all">הכל</option><option value="income">רק הכנסות</option><option value="expense">רק הוצאות</option></select>
+                                <!-- חיפוש חכם לישות -->
+                                <div class="relative group">
+                                    <input type="text" id="rep-entity-search" placeholder="חפש בחור/תורם לסינון..." oninput="Reports.searchEntity(this.value)" class="input-field w-full text-sm">
+                                    <input type="hidden" id="rep-entity-id">
+                                    <div id="rep-entity-results" class="absolute top-full right-0 w-full bg-white border shadow-lg rounded-b max-h-40 overflow-y-auto hidden z-20 custom-scroll"></div>
+                                </div>
                                 <button onclick="Reports.generateStandard()" class="w-full bg-slate-800 text-white py-2 rounded-lg font-bold hover:bg-slate-700 text-sm">הורד לאקסל</button>
                             </div>
+                        </div>
+
+                        <!-- דוח תצוגה פורים -->
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border hover:shadow-md transition">
+                            <div class="w-12 h-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center mb-4"><i class="fas fa-magic text-xl"></i></div>
+                            <h3 class="font-bold text-lg mb-2">דוח תצוגה (אחרי פורים)</h3>
+                            <p class="text-sm text-gray-500 mb-4">נתונים משוקללים להדפסה (כולל תוספות ובונוסים)</p>
+                            <button onclick="Reports.generateDisplayReport()" class="w-full bg-purple-600 text-white py-2 rounded-lg font-bold hover:bg-purple-700 text-sm">הפק דוח להדפסה</button>
                         </div>
                     </div>
                 </div>
 
-                <!-- 7. SETTINGS -->
+                <!-- 7. SETTINGS & ADMIN -->
                 <div id="view-settings" class="view-section p-6 hidden fade-in admin-only">
                     <div class="max-w-5xl mx-auto space-y-8 pb-10">
                         <h2 class="text-3xl font-bold text-slate-800">הגדרות מערכת</h2>
 
+                        <!-- סנכרון שנתי -->
                         <div class="bg-white p-8 rounded-2xl shadow-sm border border-orange-100 bg-orange-50/30">
                             <div class="flex justify-between items-center">
                                 <div>
                                     <h3 class="font-bold text-xl text-orange-800">תחזוקה שנתית</h3>
-                                    <p class="text-sm text-gray-500">קידום שיעורים וסנכרון לשנה העברית החדשה.</p>
+                                    <p class="text-sm text-gray-500">קידום שיעורים וסנכרון לשנה העברית החדשה. בוגרי "קיבוץ ח" יועברו לרשימת תורמים.</p>
                                 </div>
                                 <button onclick="Settings.syncYears()" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-6 rounded-xl shadow-lg transition">בצע סנכרון שנתי</button>
                             </div>
                         </div>
 
-                         <div class="bg-white p-8 rounded-2xl shadow-sm border">
-                            <h3 class="font-bold text-xl mb-4 text-slate-700 border-b pb-2">ניהול שנות פעילות</h3>
-                            <p class="text-sm text-gray-500 mb-4">המערכת פותחת שנים חדשות אוטומטית. לחץ כאן להוספת שנה היסטורית.</p>
-                            <button onclick="Settings.addHistoryYear()" class="bg-slate-700 hover:bg-slate-800 text-white font-bold py-2 px-6 rounded-xl shadow transition">הוסף שנה היסטורית</button>
+                        <!-- הוספת משתמשים -->
+                        <div class="bg-white p-8 rounded-2xl shadow-sm border">
+                            <h3 class="font-bold text-xl mb-6 text-slate-700 border-b pb-2">ניהול משתמשים והרשאות</h3>
+                            <div class="grid grid-cols-1 gap-4">
+                                <div class="p-4 bg-gray-50 rounded-xl border">
+                                    <h4 class="font-bold mb-3 text-sm">הוספת משתמש / מנהל חדש</h4>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <input type="email" id="new-user-email" placeholder="אימייל" class="input-field text-sm">
+                                        <input type="password" id="new-user-pass" placeholder="סיסמה" class="input-field text-sm">
+                                        <select id="new-user-role" class="input-field text-sm">
+                                            <option value="user">משתמש (עריכה בלבד, ללא כספים)</option>
+                                            <option value="admin">מנהל (הרשאה מלאה)</option>
+                                        </select>
+                                        <button onclick="Settings.createUser()" class="bg-slate-800 text-white rounded-lg font-bold text-sm">צור משתמש</button>
+                                    </div>
+                                    <div class="mt-2 text-xs text-red-500 font-bold">* אזהרה: יצירת משתמש תנתק אותך ותחבר אותך כמשתמש החדש.</div>
+                                </div>
+                            </div>
                         </div>
 
+                        <!-- ניהול שדות מותאמים -->
                         <div class="bg-white p-8 rounded-2xl shadow-sm border">
                             <h3 class="font-bold text-xl mb-6 text-slate-700 border-b pb-2">ניהול שדות מידע</h3>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -552,19 +636,80 @@
                                     <select id="settings-field-type" onchange="Settings.renderFieldsEditor()" class="input-field w-full mb-4">
                                         <option value="students">שדות בחור</option>
                                         <option value="donors">שדות תורם</option>
+                                        <option value="finance">שדות כספים</option>
                                     </select>
+                                    
                                     <div class="bg-gray-50 p-4 rounded-xl border">
-                                        <div class="text-sm font-bold mb-2">הוסף שדה:</div>
+                                        <div class="text-sm font-bold mb-2">הוסף שדה מהרשימה:</div>
                                         <div class="flex gap-2 mb-4">
                                             <select id="settings-predefined-field" class="input-field flex-1 text-sm"></select>
                                             <button onclick="Settings.addField()" class="btn-primary bg-indigo-600 text-sm px-4">הוסף</button>
                                         </div>
+                                        
+                                        <!-- אזור הוספת שדה מותאם אישית חדש -->
+                                        <div class="border-t pt-4 mt-4">
+                                             <div class="text-sm font-bold mb-2 text-indigo-700">+ צור שדה חדש לגמרי:</div>
+                                             <div class="grid grid-cols-2 gap-2 mb-2">
+                                                 <input type="text" id="custom-field-key" placeholder="מזהה (באנגלית)" class="input-field text-sm">
+                                                 <input type="text" id="custom-field-label" placeholder="תווית (בעברית)" class="input-field text-sm">
+                                             </div>
+                                             <button onclick="Settings.addCustomField()" class="w-full bg-indigo-100 text-indigo-700 text-sm font-bold py-2 rounded hover:bg-indigo-200">צור והוסף שדה</button>
+                                        </div>
+
                                         <div class="text-sm font-bold mt-4 mb-2">שדות פעילים:</div>
                                         <div id="settings-active-fields" class="space-y-2"></div>
                                     </div>
                                 </div>
+                                <div class="text-sm text-gray-500 bg-blue-50 p-4 rounded-xl">
+                                    <h4 class="font-bold text-blue-800 mb-2"><i class="fas fa-info-circle"></i> מידע</h4>
+                                    <p class="mb-2">שינוי שדות כאן ישפיע על:</p>
+                                    <ul class="list-disc list-inside space-y-1">
+                                        <li>טפסי הוספה/עריכה</li>
+                                        <li>עמודות ביבוא ויצוא אקסל</li>
+                                        <li>תצוגת הנתונים בטבלאות</li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
+                        
+                        <!-- חוקים, יעדים ומתנות -->
+                        <div class="bg-white p-8 rounded-2xl shadow-sm border">
+                            <h3 class="font-bold text-xl mb-6 text-slate-700 border-b pb-2">יעדים ותמריצים כלליים</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="lbl">יעד גיוס כללי למערכת (ש"ח)</label>
+                                    <input type="number" id="conf-global-goal" class="input-field w-full" onchange="Settings.save('globalGoal', this.value)">
+                                </div>
+                                <div>
+                                    <label class="lbl">הנחת חבר קבוצה (שווי ש"ח)</label>
+                                    <input type="number" id="conf-group-disc" class="input-field w-full" onchange="Settings.save('groupDiscount', this.value)">
+                                </div>
+                            </div>
+
+                            <div class="mt-6 border-t pt-4">
+                                <h4 class="font-bold text-sm mb-3">מדרגות יעדים לזיכוי בחור (בהבאת תורם)</h4>
+                                <p class="text-xs text-gray-500 mb-2">לדוגמה: אם תורם תרם 500, הבחור יקבל זיכוי של 50 ליעד שלו.</p>
+                                <div id="settings-goals-tiers" class="space-y-2"></div>
+                                <button onclick="Settings.addGoalTier()" class="text-indigo-600 text-sm font-bold mt-2 hover:underline">+ הוסף מדרגה</button>
+                            </div>
+                        </div>
+
+                        <!-- יעדים ותגמולים לבחורים (חדש) -->
+                        <div class="bg-white p-8 rounded-2xl shadow-sm border border-amber-100 bg-amber-50/20">
+                            <h3 class="font-bold text-xl mb-6 text-amber-800 border-b pb-2"><i class="fas fa-trophy mr-2"></i> יעדים ותגמולים לבחורים</h3>
+                            <div class="mb-6">
+                                <label class="lbl text-amber-900">יעד בסיס לכל בחור (מינימום)</label>
+                                <input type="number" id="conf-base-student-goal" placeholder="לדוגמה: 2000" class="input-field w-full max-w-xs" onchange="Settings.save('baseStudentGoal', this.value)">
+                                <p class="text-xs text-gray-500 mt-1">יעד זה יוצג כברירת מחדל לכל בחור שלא הוגדר לו יעד אחר.</p>
+                            </div>
+
+                            <div>
+                                <h4 class="font-bold text-sm mb-3 text-amber-800">הגדרת מדרגות יעדים ומתנות</h4>
+                                <div id="settings-student-rewards" class="space-y-3"></div>
+                                <button onclick="Settings.addStudentReward()" class="btn-secondary text-amber-700 border-amber-200 hover:bg-amber-100 mt-3 text-sm font-bold">+ הוסף יעד תגמול</button>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
 
@@ -574,7 +719,7 @@
 
     <!-- Modal: Generic Form -->
     <div id="modal-form" class="fixed inset-0 z-50 bg-black/60 hidden-screen flex items-center justify-center backdrop-blur-sm transition-all duration-300">
-        <div class="bg-white rounded-2xl shadow-2xl w-[550px] max-w-[90vw] overflow-hidden flex flex-col max-h-[90vh] scale-100 transition-transform" dir="rtl">
+        <div class="bg-white rounded-2xl shadow-2xl w-[550px] max-w-[90vw] overflow-hidden flex flex-col max-h-[90vh] scale-100 transition-transform">
             <div class="p-5 bg-gradient-to-r from-slate-800 to-slate-900 text-white flex justify-between items-center shrink-0">
                 <h3 id="modal-title" class="font-bold text-xl tracking-wide">כותרת</h3>
                 <button onclick="Modal.close()" class="hover:text-red-300 hover:rotate-90 transition transform"><i class="fas fa-times text-xl"></i></button>
@@ -589,7 +734,7 @@
 
     <!-- Scripts -->
     <script>
-        // Configuration
+        // --- 1. CONFIGURATION & PREDEFINED DATA ---
         const firebaseConfig = {
             apiKey: "AIzaSyBRunXdWIFiP8-vZao0WZ6WxItMAUt-ORY",
             authDomain: "ezer--project.firebaseapp.com",
@@ -603,35 +748,42 @@
         const db = firebase.database();
         const auth = firebase.auth();
 
-        // 1. Session Persistence: SESSION only
         auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
 
         const SHIURIM_ORDER = ['שיעור א', 'שיעור ב', 'שיעור ג', 'קיבוץ א', 'קיבוץ ב', 'קיבוץ ג', 'קיבוץ ד', 'קיבוץ ה', 'קיבוץ ו', 'קיבוץ ז', 'קיבוץ ח'];
         
+        // רשימת שדות קבועה לבחירה בהגדרות (עודכן: שדות תורם חדשים)
         const PREDEFINED_FIELDS = {
             students: [
-                {k:'name', l:'שם מלא', t:'text', r:true},
+                {k:'firstName', l:'שם פרטי', t:'text', r:true},
+                {k:'lastName', l:'שם משפחה', t:'text', r:true},
                 {k:'phone', l:'טלפון', t:'text'},
                 {k:'grade', l:'שיעור', t:'select', opts:SHIURIM_ORDER},
-                {k:'entryYear', l:'שנת כניסה', t:'text'},
+                {k:'entryYear', l:'שנת כניסה', t:'text'}, 
                 {k:'idNum', l:'תעודת זהות', t:'text'},
                 {k:'city', l:'עיר מגורים', t:'text'},
                 {k:'fatherName', l:'שם האב', t:'text'},
                 {k:'room', l:'מספר חדר', t:'text'}
             ],
             donors: [
-                {k:'name', l:'שם תורם', t:'text', r:true},
-                {k:'address', l:'כתובת', t:'text'},
+                {k:'firstName', l:'שם פרטי', t:'text', r:true},
+                {k:'lastName', l:'שם משפחה', t:'text', r:true},
+                {k:'city', l:'עיר', t:'text'},
+                {k:'neighborhood', l:'שכונה', t:'text'},
+                {k:'street', l:'רחוב', t:'text'},
+                {k:'floor', l:'קומה', t:'text'},
                 {k:'phone', l:'טלפון', t:'text'},
                 {k:'email', l:'אימייל', t:'email'},
+                {k:'referrerId', l:'בחור מביא', t:'referrer_select'},
                 {k:'notes', l:'הערות', t:'textarea'},
                 {k:'vip', l:'VIP', t:'checkbox'}
             ]
         };
         
+        // עדכון שדות פעילים ברירת מחדל
         const DEFAULT_ACTIVE_FIELDS = {
-            students: ['name','phone','grade','entryYear'],
-            donors: ['name','address','phone']
+            students: ['firstName', 'lastName', 'phone','grade','entryYear'],
+            donors: ['firstName', 'lastName', 'city', 'neighborhood', 'street', 'floor', 'phone', 'notes']
         };
 
         const getHebrewYear = () => {
@@ -642,6 +794,25 @@
             return map[hYear] || hYear.toString();
         };
 
+        // --- NEW: LISTENER MANAGER ---
+        const ListenerManager = {
+            activeListeners: [],
+            add(ref, eventType, callback) {
+                ref.on(eventType, callback);
+                this.activeListeners.push({ ref, eventType, callback });
+            },
+            remove(ref, eventType, callback) {
+                ref.off(eventType, callback);
+                this.activeListeners = this.activeListeners.filter(l => l.callback !== callback);
+            },
+            clearAll() {
+                this.activeListeners.forEach(l => l.ref.off(l.eventType, l.callback));
+                this.activeListeners = [];
+                console.log('All listeners cleared');
+            }
+        };
+
+        // --- 0. UTILS ---
         const Notify = {
             show(msg, type = 'info') {
                 const con = document.getElementById('toast-container');
@@ -656,6 +827,7 @@
 
         const OfflineManager = {
             isOnline: navigator.onLine,
+            queue: JSON.parse(localStorage.getItem('offlineQueue') || '[]'),
             
             init() {
                 window.addEventListener('online', () => this.updateStatus(true));
@@ -664,11 +836,15 @@
             },
             
             saveState(key, data) {
-                try { localStorage.setItem('cache_' + key, JSON.stringify(data)); } catch(e) {}
+                try {
+                    localStorage.setItem('cache_' + key, JSON.stringify(data));
+                } catch(e) { console.error('Cache full', e); }
             },
             
             loadState(key) {
-                try { return JSON.parse(localStorage.getItem('cache_' + key)); } catch(e) { return null; }
+                try {
+                    return JSON.parse(localStorage.getItem('cache_' + key));
+                } catch(e) { return null; }
             },
 
             updateStatus(online) {
@@ -676,44 +852,97 @@
                 const ind = document.getElementById('connection-status');
                 const txt = document.getElementById('conn-text');
                 if(online) {
-                    ind.style.display = 'none';
+                    if(this.queue.length > 0) {
+                        ind.className = 'status-syncing';
+                        txt.innerText = `מסנכרן ${this.queue.length} פעולות...`;
+                        this.processQueue();
+                    } else {
+                        ind.style.display = 'none';
+                    }
                 } else {
                     ind.className = 'status-offline';
                     txt.innerText = 'מנותק - שומר מקומית';
-                    ind.style.display = 'flex';
                 }
             },
             
             write(path, data, type = 'set') {
-                const parts = path.split('/');
-                let storeKey = null; let itemId = null;
-
-                if (path.includes('global/students')) { storeKey = 'students'; itemId = parts[2]; }
-                else if (path.includes('global/donors')) { storeKey = 'donors'; itemId = parts[2]; }
-
-                if (storeKey && itemId) {
-                    if (type === 'remove') delete Store.data[storeKey][itemId];
-                    else if (type === 'set' || type === 'update') {
-                        const existing = Store.data[storeKey][itemId] || {};
-                        Store.data[storeKey][itemId] = type === 'update' ? { ...existing, ...data } : data;
-                    }
-                    this.saveState(storeKey, Store.data[storeKey]);
-                    if (Router.current === storeKey) {
-                        if(storeKey === 'students') Students.render();
-                        else Donors.render();
-                    }
-                }
+                this.updateLocalStore(path, data, type);
 
                 if(this.isOnline) {
                     if(type === 'set') return db.ref(path).set(data);
                     if(type === 'update') return db.ref(path).update(data);
                     if(type === 'remove') return db.ref(path).remove();
                     if(type === 'transaction') return db.ref(path).transaction(data);
+                } else {
+                    if(type === 'transaction') {
+                        Notify.show('לא ניתן לבצע חישובים מורכבים במצב אופליין', 'error');
+                        return;
+                    }
+                    this.queue.push({path, data, type, ts: Date.now()});
+                    localStorage.setItem('offlineQueue', JSON.stringify(this.queue));
+                    Notify.show('נשמר בתור לסינכרון', 'info');
+                    this.updateStatus(false);
                 }
+            },
+
+            updateLocalStore(path, data, type) {
+                const parts = path.split('/');
+                let storeKey = null;
+                let itemId = null;
+
+                if (path.includes('global/students')) { storeKey = 'students'; itemId = parts[2]; }
+                else if (path.includes('global/donors')) { storeKey = 'donors'; itemId = parts[2]; }
+
+                if (storeKey && itemId) {
+                    if (type === 'remove') {
+                        delete Store.data[storeKey][itemId];
+                    } else if (type === 'set' || type === 'update') {
+                        const existing = Store.data[storeKey][itemId] || {};
+                        Store.data[storeKey][itemId] = type === 'update' ? { ...existing, ...data } : data;
+                    }
+                    this.saveState(storeKey, Store.data[storeKey]);
+                    
+                    if (Router.current === storeKey) {
+                        if(storeKey === 'students') Students.render();
+                        else Donors.render();
+                    }
+                }
+
+                if (path.includes('studentData') && path.includes('personalGoal')) {
+                    const year = parts[1];
+                    const sid = parts[3];
+                    if(!Store.data.yearData[year]) Store.data.yearData[year] = {};
+                    if(!Store.data.yearData[year].students) Store.data.yearData[year].students = {};
+                    if(!Store.data.yearData[year].students[sid]) Store.data.yearData[year].students[sid] = {};
+                    
+                    if (type === 'remove') delete Store.data.yearData[year].students[sid].personalGoal;
+                    else Store.data.yearData[year].students[sid].personalGoal = data;
+                    
+                    if(Router.current === 'students') Students.render();
+                }
+            },
+            
+            processQueue() {
+                const q = [...this.queue];
+                this.queue = [];
+                localStorage.setItem('offlineQueue', '[]');
+                
+                q.forEach(item => {
+                    if(item.type === 'set') db.ref(item.path).set(item.data);
+                    if(item.type === 'update') db.ref(item.path).update(item.data);
+                    if(item.type === 'remove') db.ref(item.path).remove();
+                });
+                
+                setTimeout(() => {
+                    Notify.show('כל הנתונים סונכרנו בהצלחה', 'success');
+                    this.updateStatus(true);
+                }, 1000);
             }
         };
         OfflineManager.init();
 
+
+        // --- 2. SYSTEM STATE ---
         const Store = {
             currentYear: getHebrewYear(),
             user: null,
@@ -722,7 +951,7 @@
                 students: {}, 
                 donors: {},   
                 yearData: {}, 
-                config: { fields: {} },
+                config: { fields: {}, goals: [], studentTiers: [], customFieldsDefs: {} },
                 donorGroupMap: {},
                 stats: { income: 0, expense: 0 } 
             },
@@ -739,27 +968,33 @@
                 this.loadConfig();
                 this.loadStats();
                 
-                if (!cachedStudents || Object.keys(cachedStudents).length === 0) Students.loadMore(true); 
-                else Students.syncNewest();
+                if (!cachedStudents || Object.keys(cachedStudents).length === 0) {
+                    Students.loadMore(true); 
+                } else {
+                    Students.syncNewest();
+                }
 
-                if (!cachedDonors || Object.keys(cachedDonors).length === 0) Donors.loadMore(true);
-                else Donors.syncNewest();
+                if (!cachedDonors || Object.keys(cachedDonors).length === 0) {
+                    Donors.loadMore(true);
+                } else {
+                    Donors.syncNewest();
+                }
 
                 this.loadGroups();
             },
 
             loadStats() {
-                // רק מנהל רואה סטטיסטיקה בזיכרון, אבל כולם צריכים לדעת שנה
-                if (Store.role === 'admin') {
-                    db.ref(`years/${this.currentYear}/stats`).on('value', s => {
-                        this.data.stats = s.val() || { income: 0, expense: 0 };
-                        if(Router.current === 'dashboard') Dashboard.render();
-                    });
-                }
+                if (Store.role === 'user') return;
+                const ref = db.ref(`years/${this.currentYear}/stats`);
+                ListenerManager.add(ref, 'value', s => {
+                    this.data.stats = s.val() || { income: 0, expense: 0 };
+                    if(Router.current === 'dashboard') Dashboard.render();
+                });
             },
             
             loadGroups() {
-                db.ref(`years/${this.currentYear}/groups`).on('value', snap => {
+                const ref = db.ref(`years/${this.currentYear}/groups`);
+                ListenerManager.add(ref, 'value', snap => {
                     if(!this.data.yearData[this.currentYear]) this.data.yearData[this.currentYear] = {};
                     const groupsData = snap.val() || {};
                     this.data.yearData[this.currentYear].groups = groupsData;
@@ -777,41 +1012,66 @@
             },
 
             loadConfig() {
-                db.ref('settings').on('value', s => {
+                const ref = db.ref('settings');
+                ListenerManager.add(ref, 'value', s => {
                     this.data.config = s.val() || {};
                     if(!this.data.config.fields) this.data.config.fields = JSON.parse(JSON.stringify(DEFAULT_ACTIVE_FIELDS));
+                    if(!this.data.config.tiers) this.data.config.tiers = [];
+                    if(!this.data.config.studentTiers) this.data.config.studentTiers = [];
+                    if(!this.data.config.customFieldsDefs) this.data.config.customFieldsDefs = {};
                 });
             }
         };
 
+        // --- 3. INACTIVITY TIMER ---
         const InactivityTimer = {
             timer: null,
+            warningTimer: null,
             LIMIT: 30 * 60 * 1000, 
+            WARNING: 60,
             
             init() {
-                ['mousemove', 'keydown', 'click'].forEach(ev => document.addEventListener(ev, () => this.reset()));
+                ['mousemove', 'keydown', 'click', 'scroll'].forEach(ev => document.addEventListener(ev, () => this.reset()));
                 this.reset();
             },
             
             reset() {
                 if(!Store.user) return;
                 clearTimeout(this.timer);
+                clearInterval(this.warningTimer);
                 document.getElementById('timeout-modal').classList.add('hidden-screen');
-                this.timer = setTimeout(() => {
-                    document.getElementById('timeout-modal').classList.remove('hidden-screen');
-                    setTimeout(() => Auth.logout(), 60000);
-                }, this.LIMIT);
+                this.timer = setTimeout(() => this.showWarning(), this.LIMIT);
+            },
+            
+            showWarning() {
+                const modal = document.getElementById('timeout-modal');
+                const countEl = document.getElementById('timeout-countdown');
+                modal.classList.remove('hidden-screen');
+                
+                let left = this.WARNING;
+                countEl.innerText = left;
+                
+                this.warningTimer = setInterval(() => {
+                    left--;
+                    countEl.innerText = left;
+                    if(left <= 0) {
+                        clearInterval(this.warningTimer);
+                        Auth.logout();
+                    }
+                }, 1000);
             },
             
             stayLoggedIn() { this.reset(); }
         };
 
+        // --- 4. AUTH ---
         const Auth = {
             login(e) {
                 e.preventDefault();
                 const em = document.getElementById('email').value;
                 const pw = document.getElementById('password').value;
-                localStorage.setItem('remember_email', em);
+                
+                localStorage.setItem('last_email_login', em);
 
                 auth.signInWithEmailAndPassword(em, pw).catch(err => {
                     const msg = document.getElementById('login-msg');
@@ -820,6 +1080,7 @@
                 });
             },
             logout() { 
+                ListenerManager.clearAll();
                 auth.signOut(); 
                 location.reload(); 
             },
@@ -846,13 +1107,17 @@
                     document.getElementById('sidebar').classList.add('hidden-screen');
                     document.getElementById('main-content').classList.add('hidden-screen');
                     
-                    const savedEmail = localStorage.getItem('remember_email');
-                    if(savedEmail) document.getElementById('email').value = savedEmail;
+                    const savedEmail = localStorage.getItem('last_email_login');
+                    if(savedEmail) {
+                        document.getElementById('email').value = savedEmail;
+                    }
+                    clearTimeout(InactivityTimer.timer);
                 }
             }
         };
         auth.onAuthStateChanged(Auth.onStateChange);
 
+        // --- 5. ROUTER & UI ---
         const Router = {
             current: null,
             go(view) {
@@ -882,66 +1147,117 @@
         const UI = {
             updateIfVisible(module) {
                 if(Router.current === module) {
+                    if(module === 'students') Students.render();
+                    if(module === 'donors') Donors.render();
                     if(module === 'groups') Groups.render();
+                    if(module === 'finance') Finance.render();
                 }
+                if(module === 'finance' && Router.current === 'dashboard') Dashboard.render();
             }
         };
 
         const System = {
-            availableYears: [],
-            
             initUI() {
-                // חישוב שנים: נוכחית + 2 קדימה, ומה שיש ב-DB
+                const sel = document.getElementById('year-selector');
+                sel.innerHTML = '';
+                
                 const d = new Date();
                 const currG = d.getFullYear();
                 const currH = d.getMonth() > 8 ? currG + 3761 : currG + 3760; 
-                
-                // המרת שנה
-                const map = {5780:'תש״פ', 5781:'תשפ״א', 5782:'תשפ״ב', 5783:'תשפ״ג', 5784:'תשפ״ד', 5785:'תשפ״ה', 5786:'תשפ״ו', 5787:'תשפ״ז', 5788:'תשפ״ח'};
-                
-                // טעינת רשימת שנים מה-DB אם הוגדרו היסטורית
-                db.ref('years').once('value', s => {
-                     const yearsInDb = Object.keys(s.val() || {});
-                     const yearsSet = new Set(yearsInDb);
-                     
-                     // הוספת שנים "קרובות" אוטומטית
-                     for(let i = 0; i <= 2; i++) yearsSet.add((currH + i).toString());
-                     
-                     this.availableYears = Array.from(yearsSet).sort().reverse();
-                     
-                     const sel = document.getElementById('year-selector');
-                     sel.innerHTML = '';
-                     this.availableYears.forEach(y => {
-                        const label = map[y] || y.toString();
-                        const op = document.createElement('option');
-                        op.value = y; op.innerText = label;
-                        if(y === Store.currentYear) op.selected = true;
-                        sel.appendChild(op);
-                     });
-                     
-                     document.querySelectorAll('.curr-year').forEach(s => s.innerText = map[Store.currentYear] || Store.currentYear);
+                const yearsList = [];
+                for(let i = -7; i <= 2; i++) {
+                    const hYear = currH + i;
+                    const map = {5780:'תש״פ', 5781:'תשפ״א', 5782:'תשפ״ב', 5783:'תשפ״ג', 5784:'תשפ״ד', 5785:'תשפ״ה', 5786:'תשפ״ו', 5787:'תשפ״ז', 5788:'תשפ״ח'};
+                    yearsList.push(map[hYear] || hYear.toString());
+                }
+
+                yearsList.forEach(y => {
+                    const op = document.createElement('option');
+                    op.value = y; op.innerText = y;
+                    if(y === Store.currentYear) op.selected = true;
+                    sel.appendChild(op);
                 });
+                document.querySelectorAll('.curr-year').forEach(s => s.innerText = Store.currentYear);
             },
-            
             changeYear(y) {
+                const currentView = Router.current;
+                ListenerManager.clearAll();
                 Store.currentYear = y;
                 Store.data.yearData = {};
                 Store.data.stats = { income: 0, expense: 0 };
+                Store.loadConfig();
                 Store.loadStats();
                 Store.loadGroups();
                 Finance.reset();
-                const map = {5780:'תש״פ', 5781:'תשפ״א', 5782:'תשפ״ב', 5783:'תשפ״ג', 5784:'תשפ״ד', 5785:'תשפ״ה', 5786:'תשפ״ו', 5787:'תשפ״ז', 5788:'תשפ״ח'};
-                document.querySelectorAll('.curr-year').forEach(s => s.innerText = map[y] || y);
-                Router.go('dashboard'); 
+                document.querySelectorAll('.curr-year').forEach(s => s.innerText = y);
+                Router.go(currentView || 'dashboard'); 
+            },
+            addCustomYear() {
+                const y = prompt("הכנס שנה חדשה (לדוגמה: תשצ״ט או 5800):");
+                if (y) {
+                    const sel = document.getElementById('year-selector');
+                    const op = document.createElement('option');
+                    op.value = y; op.innerText = y;
+                    op.selected = true;
+                    sel.appendChild(op);
+                    this.changeYear(y);
+                }
+            },
+            checkStudentProgress(studentId, addedAmount) {
+                if(!studentId) return;
+                db.ref(`years/${Store.currentYear}/finance`).orderByChild('studentId').equalTo(studentId).once('value', snap => {
+                    let total = 0;
+                    if(snap.val()) {
+                        Object.values(snap.val()).forEach(tx => {
+                            if(tx.type === 'income') total += parseFloat(tx.amount || 0);
+                        });
+                    }
+                    const tiers = (Store.data.config.studentTiers || []).sort((a,b) => b.amount - a.amount);
+                    const reachedTier = tiers.find(t => total >= t.amount);
+                    if(reachedTier) {
+                        const previousTotal = total - addedAmount;
+                        if(previousTotal < reachedTier.amount) {
+                            this.showCelebration(Store.data.students[studentId]?.name || 'הבחור', total, reachedTier.reward);
+                        }
+                    }
+                });
+            },
+            showCelebration(name, amount, reward) {
+                const modal = document.getElementById('celebration-modal');
+                document.getElementById('celebration-name').innerText = name;
+                document.getElementById('celebration-amount').innerText = amount.toLocaleString();
+                document.getElementById('celebration-reward').innerText = reward;
+                modal.classList.remove('hidden-screen');
+                const container = document.getElementById('confetti-container');
+                container.innerHTML = '';
+                const colors = ['#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#6366F1', '#8B5CF6'];
+                for(let i=0; i<100; i++) {
+                    const c = document.createElement('div');
+                    c.style.cssText = `
+                        position: absolute;
+                        width: ${Math.random()*10+5}px;
+                        height: ${Math.random()*10+5}px;
+                        background: ${colors[Math.floor(Math.random()*colors.length)]};
+                        left: ${Math.random()*100}%;
+                        top: -20px;
+                        animation: confetti-fall ${Math.random()*2+2}s linear forwards;
+                    `;
+                    container.appendChild(c);
+                }
             }
         };
 
+        // --- 6. STUDENTS LOGIC ---
         const Students = {
             limit: 30,
             loadMore(reset = false) {
-                if (reset) { Store.cursors.students = null; Store.loadedAll.students = false; }
-                
+                if (reset) {
+                    Store.cursors.students = null;
+                    Store.loadedAll.students = false;
+                }
                 document.getElementById('students-loader-more').style.display = 'block';
+                document.getElementById('students-loader-more').innerText = 'טוען נתונים...';
+
                 let query = db.ref('global/students').orderByKey().limitToLast(this.limit);
                 if (Store.cursors.students) query = query.endBefore(Store.cursors.students);
 
@@ -957,103 +1273,228 @@
                     Object.assign(Store.data.students, data);
                     OfflineManager.saveState('students', Store.data.students);
                     this.render();
-                    
                     if (keys.length < this.limit) {
                         Store.loadedAll.students = true;
                         document.getElementById('students-loader-more').style.display = 'none';
+                    } else {
+                        document.getElementById('students-loader-more').innerHTML = `
+                            <button onclick="Students.loadMore()" class="bg-slate-100 text-slate-600 hover:bg-slate-200 px-6 py-2 rounded-full text-sm font-bold transition shadow-sm">
+                                <i class="fas fa-chevron-down ml-2"></i> טען עוד בחורים
+                            </button>`;
                     }
                 });
             },
             syncNewest() {
                 db.ref('global/students').orderByKey().limitToLast(10).once('value', snap => {
-                    if(snap.val()) { Object.assign(Store.data.students, snap.val()); if(Router.current==='students') this.render(); }
+                    const data = snap.val();
+                    if(data) {
+                        Object.assign(Store.data.students, data);
+                        OfflineManager.saveState('students', Store.data.students);
+                        if(Router.current === 'students') this.render();
+                    }
                 });
             },
             render() {
                 const term = document.getElementById('student-search').value.trim();
                 const tbody = document.getElementById('students-tbody');
                 tbody.innerHTML = '';
-                let list = Object.values(Store.data.students).sort((a,b) => (a.name||'').localeCompare(b.name||''));
-                if(term) list = list.filter(s => s.name.includes(term));
-                
-                list.slice(0, 100).forEach(s => {
+                let list = Object.values(Store.data.students).map(s => {
+                    const fullName = s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : (s.name || 'ללא שם');
+                    return { ...s, displayName: fullName };
+                });
+                list.sort((a,b) => (a.displayName||'').localeCompare(b.displayName||''));
+                const baseGoal = Store.data.config.baseStudentGoal || 0;
+                list = list.map(s => {
                     const yData = (Store.data.yearData[Store.currentYear]?.students || {})[s.id] || {};
+                    return { ...s, ...yData, effectiveGoal: yData.personalGoal || baseGoal }; 
+                });
+                if(term) list = list.filter(s => s.displayName.includes(term) || s.phone.includes(term));
+                const displayList = list.slice(0, 100);
+                displayList.forEach(s => {
                     const row = document.createElement('tr');
                     row.className = "hover:bg-slate-50 border-b border-slate-50 transition cursor-pointer group";
+                    row.onclick = (e) => { if(!e.target.closest('button')) this.openEdit(s.id); };
                     row.innerHTML = `
-                        <td class="p-3 text-right font-medium text-slate-700">${s.name}</td>
+                        <td class="p-3 text-right font-medium text-slate-700 group-hover:text-indigo-600 transition">${s.displayName}</td>
                         <td class="p-3 text-right text-gray-500">${s.grade || '-'}</td>
                         <td class="p-3 text-right text-gray-400">${s.entryYear || '-'}</td>
-                        <td class="p-3 text-right font-bold text-slate-800">₪${parseInt(yData.personalGoal || 0).toLocaleString()}</td>
+                        <td class="p-3 text-right font-bold text-slate-800">₪${parseInt(s.effectiveGoal).toLocaleString()}</td>
                         <td class="p-3 text-center flex items-center justify-center gap-2">
-                            <button onclick="Students.openEdit('${s.id}')" class="text-indigo-400 hover:text-indigo-600 p-2"><i class="fas fa-pen"></i></button>
-                        </td>`;
+                            <button onclick="Students.openEdit('${s.id}')" class="text-indigo-400 hover:text-indigo-600 transition p-2 hover:bg-indigo-50 rounded-full"><i class="fas fa-pen"></i></button>
+                            <button onclick="Students.delete('${s.id}')" class="text-red-400 hover:text-red-600 transition p-2 hover:bg-red-50 rounded-full"><i class="fas fa-trash"></i></button>
+                        </td>
+                    `;
                     tbody.appendChild(row);
                 });
                 document.getElementById('dash-stat-students').innerText = Object.keys(Store.data.students).length;
+                if(!Store.loadedAll.students && list.length < 500) document.getElementById('students-loader-more').style.display = 'block';
             },
             handleSearch(term) { this.render(); },
             getFormFields() {
                 const activeKeys = Store.data.config.fields.students || DEFAULT_ACTIVE_FIELDS.students;
-                return activeKeys.map(k => PREDEFINED_FIELDS.students.find(p => p.k === k)).filter(Boolean);
+                const fields = [];
+                activeKeys.forEach(k => {
+                    let def = PREDEFINED_FIELDS.students.find(p => p.k === k);
+                    if (!def && Store.data.config.customFieldsDefs && Store.data.config.customFieldsDefs[k]) {
+                        def = { k: k, l: Store.data.config.customFieldsDefs[k].l, t: 'text' };
+                    }
+                    if(def) fields.push({id:k, l:def.l, t:def.t, opts:def.opts, r:def.r});
+                });
+                return fields;
             },
             openAddModal() {
                 Modal.render('הוספת בחור חדש', this.getFormFields(), (data) => {
                     const id = db.ref('global/students').push().key;
-                    OfflineManager.write(`global/students/${id}`, { id, lastUpdatedYear: Store.currentYear, ...data });
+                    if(data.firstName && data.lastName) data.name = `${data.firstName} ${data.lastName}`;
+                    const studentData = { id, lastUpdatedYear: Store.currentYear, ...data };
+                    OfflineManager.write(`global/students/${id}`, studentData);
                     Notify.show('בחור נוסף בהצלחה', 'success');
                 });
             },
             openQuickAdd() {
-                Modal.renderRaw('הוספה מהירה', `<textarea id="qadd" class="w-full border p-2 h-40" placeholder="שמות..."></textarea>`, () => {
-                    const lines = document.getElementById('qadd').value.split('\n').filter(l => l.trim());
+                const html = `
+                    <div class="mb-4">
+                        <label class="block text-sm font-bold text-slate-700 mb-1">הדבק רשימת שמות (כל בחור בשורה נפרדת)</label>
+                        <p class="text-xs text-gray-500 mb-2">פורמט: שם פרטי שם משפחה</p>
+                        <textarea id="quick-add-list" class="w-full border p-2 rounded h-40 text-sm" placeholder="משה כהן\nדוד לוי\n..."></textarea>
+                    </div>
+                `;
+                Modal.renderRaw('הוספה מהירה', html, () => {
+                    const txt = document.getElementById('quick-add-list').value;
+                    const lines = txt.split('\n').map(l => l.trim()).filter(l => l);
+                    if(lines.length === 0) return;
                     const batch = {};
-                    lines.forEach(name => {
+                    lines.forEach(line => {
                         const id = db.ref('global/students').push().key;
-                        batch[id] = { id, name, lastUpdatedYear: Store.currentYear, grade: 'שיעור א' };
+                        const parts = line.split(' ');
+                        const firstName = parts[0];
+                        const lastName = parts.slice(1).join(' ');
+                        batch[id] = { 
+                            id, 
+                            name: line,
+                            firstName: firstName,
+                            lastName: lastName,
+                            lastUpdatedYear: Store.currentYear, 
+                            grade: 'שיעור א' 
+                        };
                     });
                     db.ref('global/students').update(batch);
                     Object.assign(Store.data.students, batch);
+                    OfflineManager.saveState('students', Store.data.students);
                     Students.render();
+                    Notify.show(`${lines.length} בחורים נוספו בהצלחה`, 'success');
                     Modal.close();
                 });
             },
             openEdit(id) {
                 const s = Store.data.students[id];
+                if(!s) return Notify.show('שגיאה בטעינת הבחור', 'error');
                 const yData = (Store.data.yearData[Store.currentYear]?.students || {})[id] || {};
+                const currentGoal = yData.personalGoal; 
+                const baseGoal = Store.data.config.baseStudentGoal || 0;
                 const fields = this.getFormFields().map(f => ({ ...f, v: s[f.id] || '' }));
-                const extra = `<div class="mb-4 bg-amber-50 p-3 rounded"><label class="lbl">יעד אישי</label><input type="number" id="s-goal" value="${yData.personalGoal||''}" class="input-field w-full"></div>`;
-                
-                Modal.render('עריכה', fields, (data) => {
-                    OfflineManager.write(`global/students/${id}`, data, 'update');
-                    const g = document.getElementById('s-goal').value;
-                    if(g) OfflineManager.write(`years/${Store.currentYear}/studentData/${id}/personalGoal`, parseInt(g));
-                    Notify.show('עודכן', 'success');
-                }, extra);
+                const tiers = (Store.data.config.studentTiers || []).sort((a,b) => a.amount - b.amount);
+                let goalOptions = `<option value="">יעד מערכת בסיסי (${baseGoal})</option>`;
+                tiers.forEach(t => {
+                     goalOptions += `<option value="${t.amount}" ${currentGoal == t.amount ? 'selected' : ''}>${t.amount} (${t.reward})</option>`;
+                });
+                const isCustom = currentGoal && currentGoal != baseGoal && !tiers.find(t => t.amount == currentGoal);
+                const extraHtml = `
+                    <div class="mb-4 bg-amber-50 p-3 rounded border border-amber-200">
+                        <label class="block text-sm font-bold text-amber-900 mb-1">יעד אישי לשנת ${Store.currentYear}</label>
+                        <select id="student-goal-select" class="w-full border border-amber-300 p-2 rounded mb-2 bg-white" onchange="document.getElementById('custom-goal-wrap').style.display = this.value === 'custom' ? 'block' : 'none'">
+                            ${goalOptions}
+                            <option value="custom" ${isCustom ? 'selected' : ''}>יעד מותאם אישית...</option>
+                        </select>
+                        <div id="custom-goal-wrap" style="display: ${isCustom ? 'block' : 'none'}">
+                            <input type="number" id="student-custom-goal" value="${currentGoal || ''}" placeholder="הכנס סכום יעד..." class="w-full border border-amber-300 p-2 rounded">
+                        </div>
+                    </div>
+                    <div class="mt-6 pt-6 border-t border-dashed flex gap-3">
+                         <button onclick="Finance.quickAdd('income', '${id}', 'student')" class="flex-1 bg-emerald-50 text-emerald-700 py-3 rounded-xl hover:bg-emerald-100 text-sm font-bold border border-emerald-100 transition"><i class="fas fa-plus"></i> הוסף תרומה</button>
+                    </div>
+                `;
+                Modal.render('עריכת פרטי בחור', fields, (data) => {
+                    const updates = {};
+                    Object.keys(data).forEach(k => { updates[k] = data[k]; });
+                    if(data.firstName || data.lastName) updates.name = `${data.firstName || ''} ${data.lastName || ''}`.trim();
+                    OfflineManager.write(`global/students/${id}`, updates, 'update');
+                    const selectVal = document.getElementById('student-goal-select').value;
+                    let finalGoal = null;
+                    if(selectVal === 'custom') {
+                        const customVal = document.getElementById('student-custom-goal').value;
+                        if(customVal) finalGoal = parseInt(customVal);
+                    } else if(selectVal !== "") {
+                        finalGoal = parseInt(selectVal);
+                    }
+                    if(finalGoal !== null) {
+                        OfflineManager.write(`years/${Store.currentYear}/studentData/${id}/personalGoal`, finalGoal);
+                    } else {
+                        OfflineManager.write(`years/${Store.currentYear}/studentData/${id}/personalGoal`, null, 'remove');
+                    }
+                    Notify.show('פרטים עודכנו', 'success');
+                }, extraHtml);
+            },
+            delete(id) {
+                if(confirm('האם אתה בטוח שברצונך למחוק בחור זה? פעולה זו תסיר אותו מהקבוצות בשנה הנוכחית.')) {
+                    OfflineManager.write(`global/students/${id}`, null, 'remove');
+                    const groups = Store.data.yearData[Store.currentYear]?.groups || {};
+                    Object.keys(groups).forEach(day => {
+                        Object.keys(groups[day]).forEach(gid => {
+                            const members = groups[day][gid].members || [];
+                            const newMembers = members.filter(m => m.id !== id);
+                            if(members.length !== newMembers.length) {
+                                OfflineManager.write(`years/${Store.currentYear}/groups/${day}/${gid}/members`, newMembers);
+                            }
+                        });
+                    });
+                    delete Store.data.students[id];
+                    this.render();
+                    Notify.show('הבחור נמחק והוסר מהקבוצות', 'info');
+                }
             }
         };
 
+        // --- 7. DONORS LOGIC ---
         const Donors = {
-            limit: 40, viewMode: 'list',
+            limit: 40,
+            viewMode: 'list', 
             loadMore(reset = false) {
                 if(reset) { Store.cursors.donors = null; Store.loadedAll.donors = false; }
                 document.getElementById('donors-loader-more').style.display = 'block';
+                document.getElementById('donors-loader-more').querySelector('button').innerText = 'טוען...';
                 let query = db.ref('global/donors').orderByKey().limitToLast(this.limit);
                 if(Store.cursors.donors) query = query.endBefore(Store.cursors.donors);
-
                 query.once('value', snap => {
                     const data = snap.val();
-                    if(!data) { Store.loadedAll.donors = true; document.getElementById('donors-loader-more').style.display = 'none'; return; }
-                    Store.cursors.donors = Object.keys(data).sort()[0];
+                    if(!data) {
+                        Store.loadedAll.donors = true;
+                        document.getElementById('donors-loader-more').style.display = 'none';
+                        return;
+                    }
+                    const keys = Object.keys(data).sort();
+                    Store.cursors.donors = keys[0];
                     Object.assign(Store.data.donors, data);
                     OfflineManager.saveState('donors', Store.data.donors);
                     this.render();
-                    if(Object.keys(data).length < this.limit) document.getElementById('donors-loader-more').style.display = 'none';
+                    if (keys.length < this.limit) {
+                        Store.loadedAll.donors = true;
+                        document.getElementById('donors-loader-more').style.display = 'none';
+                    } else {
+                        document.getElementById('donors-loader-more').innerHTML = `
+                            <button onclick="Donors.loadMore()" class="bg-slate-200 text-slate-600 px-6 py-2 rounded-full font-bold text-sm">טען עוד...</button>
+                        `;
+                    }
                 });
             },
             syncNewest() {
                 db.ref('global/donors').orderByKey().limitToLast(10).once('value', snap => {
-                    if(snap.val()) { Object.assign(Store.data.donors, snap.val()); if(Router.current==='donors') this.render(); }
+                    const data = snap.val();
+                    if(data) {
+                        Object.assign(Store.data.donors, data);
+                        OfflineManager.saveState('donors', Store.data.donors);
+                        if(Router.current === 'donors') this.render();
+                    }
                 });
             },
             render() {
@@ -1070,29 +1511,34 @@
                     this.renderManager();
                 }
             },
-            toggleQuickManager() { this.viewMode = this.viewMode === 'list' ? 'manager' : 'list'; this.render(); },
+            toggleQuickManager() {
+                this.viewMode = this.viewMode === 'list' ? 'manager' : 'list';
+                this.render();
+            },
             renderGrid() {
                 const term = (document.querySelector('#view-donors input')?.value || '').trim();
                 const grid = document.getElementById('donors-grid');
                 grid.innerHTML = '';
                 let list = Object.values(Store.data.donors).sort((a,b) => (a.name||'').localeCompare(b.name||''));
-                if(term) list = list.filter(d => d.name.includes(term) || (d.address||'').includes(term));
-                
-                list.slice(0, 50).forEach(d => {
+                if(term) list = list.filter(d => d.name.includes(term) || (d.address||'').includes(term) || (d.city||'').includes(term));
+                const displayList = list.slice(0, 50);
+                displayList.forEach(d => {
                     const groupName = Store.data.donorGroupMap[d.id];
                     grid.innerHTML += `
-                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition relative group">
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition relative group hover:-translate-y-1 duration-200">
                         <div class="flex justify-between items-start mb-2">
                             <h4 class="font-bold text-slate-800 text-lg">${d.name}</h4>
-                            <button onclick="Donors.openEdit('${d.id}')" class="text-gray-300 hover:text-indigo-600"><i class="fas fa-pen"></i></button>
+                            <button onclick="Donors.openEdit('${d.id}')" class="text-gray-300 hover:text-indigo-600 bg-gray-50 p-1 rounded-lg"><i class="fas fa-pen"></i></button>
                         </div>
-                        <div class="text-sm text-gray-500 mb-2">${d.address || '-'}</div>
+                        <div class="text-sm text-gray-500 mb-2 flex items-center gap-2"><i class="fas fa-map-marker-alt text-gray-300"></i> ${d.city || ''} ${d.street || d.address || ''}</div>
+                        
                         <div class="flex flex-wrap gap-2 mt-3">
-                            ${groupName ? `<span class="text-xs bg-amber-50 text-amber-700 px-2 py-1 rounded font-bold border border-amber-100">${groupName}</span>` : ''}
+                            ${groupName ? `<span class="text-xs bg-amber-50 text-amber-700 px-2 py-1 rounded font-bold border border-amber-100"><i class="fas fa-users"></i> ${groupName}</span>` : ''}
                             ${d.vip ? '<span class="text-xs bg-purple-50 text-purple-700 px-2 py-1 rounded border border-purple-100">VIP</span>' : ''}
                         </div>
-                        <div class="mt-4 pt-3 border-t border-dashed financial-data">
-                            <button onclick="Finance.quickAdd('income', '${d.id}', 'donor')" class="text-emerald-600 text-sm font-bold w-full">+ תרומה חדשה</button>
+                        
+                        <div class="mt-4 pt-3 border-t border-dashed flex justify-between items-center financial-data">
+                            <button onclick="Finance.quickAdd('income', '${d.id}', 'donor')" class="text-emerald-600 text-sm font-bold hover:bg-emerald-50 px-3 py-1.5 rounded-lg transition w-full text-center">+ תרומה חדשה</button>
                         </div>
                     </div>`;
                 });
@@ -1107,18 +1553,17 @@
                         allGroups.push({id: gid, day: dayKey, ...g});
                     });
                 });
+                // סינון: רק תורמים שלא משובצים באף קבוצה השנה (גלובלי)
                 const unassigned = Object.values(Store.data.donors).filter(d => !Store.data.donorGroupMap[d.id]);
                 document.getElementById('pool-count').innerText = unassigned.length;
-                
                 unassigned.sort((a,b) => a.name.localeCompare(b.name)).forEach(d => {
                     const el = document.createElement('div');
                     el.className = "bg-white p-2 border rounded shadow-sm text-sm cursor-grab hover:bg-gray-50 flex justify-between";
                     el.dataset.id = d.id;
-                    el.innerHTML = `<span class="font-medium">${d.name}</span><span class="text-xs text-gray-400">${d.address||''}</span>`;
+                    el.innerHTML = `<span class="font-medium">${d.name}</span><span class="text-xs text-gray-400">${d.city || d.address ||''}</span>`;
                     poolEl.appendChild(el);
                 });
                 new Sortable(poolEl, { group: { name: 'donors', pull: true, put: true }, sort: false, animation: 150 });
-
                 const container = document.getElementById('groups-kanban-container');
                 container.innerHTML = '';
                 allGroups.forEach(g => {
@@ -1127,7 +1572,8 @@
                     const displayDay = g.day.replace('night','ליל ').replace('day','יום ');
                     col.innerHTML = `
                         <div class="p-2 border-b bg-indigo-50 font-bold text-sm text-indigo-900 flex justify-between shrink-0">
-                            <span>${g.name}</span><span class="text-xs font-normal opacity-70">${displayDay}</span>
+                            <span>${g.name}</span>
+                            <span class="text-xs font-normal opacity-70">${displayDay}</span>
                         </div>
                         <div class="flex-1 overflow-y-auto p-2 space-y-2 bg-slate-50 kanban-group-list custom-scroll" data-gid="${g.id}" data-day="${g.day}"></div>
                     `;
@@ -1136,7 +1582,7 @@
                         const d = Store.data.donors[did];
                         if(d) {
                             const item = document.createElement('div');
-                            item.className = "bg-white p-2 border rounded shadow-sm text-sm cursor-grab flex justify-between group";
+                            item.className = "bg-white p-2 border rounded shadow-sm text-sm cursor-grab flex justify-between items-center group";
                             item.dataset.id = did;
                             item.innerHTML = `<span class="truncate w-40">${d.name}</span><button onclick="Groups.removeFromRoute('${g.day}','${g.id}','${did}')" class="text-red-300 hover:text-red-500 hidden group-hover:block"><i class="fas fa-times"></i></button>`;
                             listEl.appendChild(item);
@@ -1144,34 +1590,78 @@
                     });
                     container.appendChild(col);
                     new Sortable(listEl, {
-                        group: 'donors', animation: 150,
-                        onAdd: () => {
+                        group: 'donors',
+                        animation: 150,
+                        onAdd: (evt) => {
                             const newOrder = Array.from(listEl.children).map(c => c.dataset.id);
                             OfflineManager.write(`years/${Store.currentYear}/groups/${g.day}/${g.id}/route`, newOrder);
                         },
-                        onUpdate: () => {
+                        onUpdate: (evt) => {
                              const newOrder = Array.from(listEl.children).map(c => c.dataset.id);
                              OfflineManager.write(`years/${Store.currentYear}/groups/${g.day}/${g.id}/route`, newOrder);
                         }
                     });
                 });
             },
-            filterPool(v) { Array.from(document.getElementById('donor-pool-list').children).forEach(el => el.style.display = el.innerText.includes(v) ? 'flex' : 'none'); },
+            filterPool(v) {
+                const list = document.getElementById('donor-pool-list');
+                Array.from(list.children).forEach(el => {
+                    el.style.display = el.innerText.includes(v) ? 'flex' : 'none';
+                });
+            },
             getFormFields() {
                 const activeKeys = Store.data.config.fields.donors || DEFAULT_ACTIVE_FIELDS.donors;
-                return activeKeys.map(k => PREDEFINED_FIELDS.donors.find(p => p.k === k)).filter(Boolean);
+                const fields = [];
+                activeKeys.forEach(k => {
+                    let def = PREDEFINED_FIELDS.donors.find(p => p.k === k);
+                    if (!def && Store.data.config.customFieldsDefs && Store.data.config.customFieldsDefs[k]) {
+                        def = { k: k, l: Store.data.config.customFieldsDefs[k].l, t: 'text' };
+                    }
+                    if(def) fields.push({id:k, l:def.l, t:def.t, opts:def.opts, r:def.r});
+                });
+                return fields;
             },
             openAddModal() {
+                const allGroups = [];
+                const gData = Store.data.yearData[Store.currentYear]?.groups || {};
+                Object.entries(gData).forEach(([d, dayG]) => Object.entries(dayG).forEach(([gid, g]) => allGroups.push({id: gid, day:d, name: g.name})));
+                const groupSelectHtml = `
+                    <div class="mb-3 p-3 bg-amber-50 rounded border border-amber-100">
+                        <label class="block text-sm font-bold text-amber-800 mb-1">שיוך לקבוצה (אופציונלי)</label>
+                        <select id="new-donor-group" class="w-full border p-2 rounded bg-white text-sm">
+                            <option value="">-- ללא שיוך --</option>
+                            ${allGroups.map(g => `<option value="${g.day}|${g.id}">${g.name} (${g.day})</option>`).join('')}
+                        </select>
+                    </div>
+                `;
                 Modal.render('הוספת תורם חדש', this.getFormFields(), (data) => {
                     const id = db.ref('global/donors').push().key;
+                    // יצירת שדה name אחוד לתאימות
+                    if(data.firstName || data.lastName) data.name = `${data.firstName || ''} ${data.lastName || ''}`.trim();
+                    if(!data.name) data.name = 'ללא שם';
+                    
                     OfflineManager.write(`global/donors/${id}`, { id, joinYear: Store.currentYear, ...data });
+                    
+                    const groupEl = document.getElementById('new-donor-group');
+                    const groupVal = groupEl ? groupEl.value : null;
+                    if(groupVal) {
+                        const [day, gid] = groupVal.split('|');
+                        const ref = db.ref(`years/${Store.currentYear}/groups/${day}/${gid}/route`);
+                        ref.once('value', s => {
+                            const list = s.val() || [];
+                            list.push(id);
+                            OfflineManager.write(`years/${Store.currentYear}/groups/${day}/${gid}/route`, list);
+                        });
+                    }
                     Notify.show('תורם נוסף בהצלחה', 'success');
-                });
+                }, groupSelectHtml);
             },
             openEdit(id) {
                 const d = Store.data.donors[id];
+                if (!d) return Notify.show('תורם לא נמצא', 'error');
                 const fields = this.getFormFields().map(f => ({ ...f, v: d[f.id] }));
                 Modal.render('עריכת תורם', fields, (data) => {
+                    if(data.firstName || data.lastName) data.name = `${data.firstName || ''} ${data.lastName || ''}`.trim();
                     OfflineManager.write(`global/donors/${id}`, data, 'update');
                     Notify.show('פרטי תורם עודכנו', 'success');
                 });
@@ -1179,27 +1669,25 @@
             handleSearch() { this.limit = 40; this.render(); }
         };
 
+        // --- 8. GROUPS LOGIC ---
         const Groups = {
             currentDay: 'night14',
             activeGroupId: null,
-            
             setDay(d) {
                 this.currentDay = d;
                 document.querySelectorAll('.group-tab').forEach(b => b.classList.toggle('active', b.dataset.day === d));
                 this.activeGroupId = null;
                 this.render();
             },
-
             render() {
                 const listEl = document.getElementById('groups-list');
                 listEl.innerHTML = '';
                 const groups = (Store.data.yearData[Store.currentYear]?.groups || {})[this.currentDay] || {};
-
                 Object.entries(groups).forEach(([gid, g]) => {
                     const isActive = gid === this.activeGroupId;
                     const el = document.createElement('div');
                     el.className = `p-4 border-b cursor-pointer transition flex justify-between items-center group ${isActive ? 'bg-indigo-50 border-r-4 border-r-indigo-600' : 'hover:bg-slate-50'}`;
-                    el.onclick = () => { this.activeGroupId = gid; this.render(); this.renderEditor(g); };
+                    el.onclick = () => this.selectGroup(gid, g);
                     el.innerHTML = `
                         <div>
                             <div class="font-bold text-slate-700 text-sm group-hover:text-indigo-700">${g.name}</div>
@@ -1209,44 +1697,48 @@
                     `;
                     listEl.appendChild(el);
                 });
-
                 const ph = document.getElementById('group-placeholder');
                 const editor = document.getElementById('group-editor');
-
                 if(this.activeGroupId && groups[this.activeGroupId]) {
                     ph.classList.add('hidden');
                     editor.classList.remove('hidden');
                     this.renderEditor(groups[this.activeGroupId]);
-                    document.getElementById('active-group-name').innerText = groups[this.activeGroupId].name;
                 } else {
                     ph.classList.remove('hidden');
                     editor.classList.add('hidden');
                 }
             },
-
+            selectGroup(gid, g) {
+                this.activeGroupId = gid;
+                document.getElementById('active-group-name').innerText = g.name;
+                const dayText = document.querySelector(`.group-tab[data-day="${this.currentDay}"]`).innerText;
+                document.getElementById('active-group-details').innerText = `${dayText} | ${(g.members||[]).length} בחורים`;
+                this.render(); 
+                this.renderEditor(g);
+            },
             renderEditor(group) {
                 const memList = document.getElementById('group-members-list');
                 memList.innerHTML = '';
                 (group.members || []).forEach((m, idx) => {
                     const s = Store.data.students[m.id];
                     if(!s) return;
-                    
-                    const roleBadge = m.role === 'ראש צוות' ? 'bg-indigo-100 text-indigo-700' : m.role === 'סגן' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600';
-                    
+                    const name = s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : s.name;
+                    const roleSelect = `
+                        <select onchange="Groups.updateMemberRole(${idx}, this.value)" class="text-xs border rounded p-1 mr-2 bg-gray-50">
+                            <option value="חבר" ${m.role === 'חבר' ? 'selected' : ''}>חבר</option>
+                            <option value="ראש צוות" ${m.role === 'ראש צוות' ? 'selected' : ''}>ראש צוות</option>
+                            <option value="סגן" ${m.role === 'סגן' ? 'selected' : ''}>סגן</option>
+                        </select>
+                    `;
                     memList.innerHTML += `
                         <div class="bg-white p-2 border rounded shadow-sm text-sm flex justify-between items-center mb-1">
-                            <div class="flex items-center gap-2">
-                                <span class="font-bold text-slate-700">${s.name}</span>
-                                <select onchange="Groups.updateMemberRole(${idx}, this.value)" class="text-xs border rounded p-1 ${roleBadge}">
-                                    <option value="חבר" ${m.role==='חבר'?'selected':''}>חבר</option>
-                                    <option value="ראש צוות" ${m.role==='ראש צוות'?'selected':''}>ראש צוות</option>
-                                    <option value="סגן" ${m.role==='סגן'?'selected':''}>סגן</option>
-                                </select>
+                            <div class="flex items-center">
+                                <span class="font-bold text-slate-700 ml-2">${name}</span>
+                                ${roleSelect}
                             </div>
                             <button onclick="Groups.removeMember(${idx})" class="text-red-300 hover:text-red-500"><i class="fas fa-times"></i></button>
                         </div>`;
                 });
-
                 const routeList = document.getElementById('group-route-list');
                 routeList.innerHTML = '';
                 (group.route || []).forEach((did, i) => {
@@ -1260,14 +1752,13 @@
                             <span class="bg-emerald-100 text-emerald-700 w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold">${i+1}</span>
                             <div>
                                 <div class="font-bold text-slate-800">${d.name}</div>
-                                <div class="text-xs text-gray-500">${d.address}</div>
+                                <div class="text-xs text-gray-500">${d.city || ''} ${d.street || d.address || ''}</div>
                             </div>
                         </div>
                         <i class="fas fa-grip-lines text-gray-300"></i>
                     `;
                     routeList.appendChild(el);
                 });
-
                 if(this.sortableInstance) this.sortableInstance.destroy();
                 this.sortableInstance = new Sortable(routeList, {
                     animation: 150,
@@ -1277,23 +1768,22 @@
                         OfflineManager.write(`years/${Store.currentYear}/groups/${this.currentDay}/${this.activeGroupId}/route`, newOrder);
                     }
                 });
+                this.filterStudents('');
             },
-
-            updateMemberRole(idx, role) {
-                const path = `years/${Store.currentYear}/groups/${this.currentDay}/${this.activeGroupId}/members/${idx}/role`;
-                OfflineManager.write(path, role);
-            },
-
             addNewGroup() {
                 const n = prompt("שם הקבוצה:");
-                if(n) OfflineManager.write(`years/${Store.currentYear}/groups/${this.currentDay}/${db.ref().push().key}`, {name: n, members: [], route: []});
+                if(n) {
+                    const newRef = db.ref(`years/${Store.currentYear}/groups/${this.currentDay}`).push();
+                    OfflineManager.write(`years/${Store.currentYear}/groups/${this.currentDay}/${newRef.key}`, {name: n, members: [], route: []});
+                }
             },
             renameGroup() {
-                const n = prompt("שם חדש:", document.getElementById('active-group-name').innerText);
-                if(n) OfflineManager.write(`years/${Store.currentYear}/groups/${this.currentDay}/${this.activeGroupId}/name`, n);
+                const old = document.getElementById('active-group-name').innerText;
+                const n = prompt("שם חדש לקבוצה:", old);
+                if(n && n !== old) OfflineManager.write(`years/${Store.currentYear}/groups/${this.currentDay}/${this.activeGroupId}/name`, n);
             },
             deleteGroup() {
-                 if(confirm('למחוק קבוצה זו?')) {
+                 if(confirm('האם אתה בטוח שברצונך למחוק קבוצה זו?')) {
                      OfflineManager.write(`years/${Store.currentYear}/groups/${this.currentDay}/${this.activeGroupId}`, null, 'remove');
                      this.activeGroupId = null;
                      this.render();
@@ -1302,10 +1792,28 @@
             filterStudents(term) {
                 const pool = document.getElementById('pool-students');
                 pool.innerHTML = '';
-                if(!term) return;
-                Object.values(Store.data.students).filter(s => s.name.includes(term)).slice(0, 10).forEach(s => {
-                    pool.innerHTML += `<div onclick="Groups.addMember('${s.id}')" class="p-2 border-b cursor-pointer hover:bg-indigo-50 flex justify-between text-sm"><span class="font-medium">${s.name}</span><i class="fas fa-plus text-indigo-500"></i></div>`;
+                let list = Object.values(Store.data.students);
+                list = list.map(s => ({
+                    ...s, 
+                    fullName: s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : (s.name || '')
+                }));
+
+                // סינון בחורים שכבר משובצים באותו יום בכל הקבוצות
+                const dayGroups = Store.data.yearData[Store.currentYear].groups[this.currentDay] || {};
+                const assignedInDay = new Set();
+                Object.values(dayGroups).forEach(g => (g.members||[]).forEach(m => assignedInDay.add(m.id)));
+                list = list.filter(s => !assignedInDay.has(s.id));
+
+                if(term) {
+                    list = list.filter(s => s.fullName.includes(term));
+                }
+                
+                list.slice(0, 50).forEach(s => {
+                    pool.innerHTML += `<div onclick="Groups.addMember('${s.id}')" class="p-2 border-b cursor-pointer hover:bg-indigo-50 flex justify-between text-sm"><span class="font-medium">${s.fullName}</span><i class="fas fa-plus text-indigo-500"></i></div>`;
                 });
+                if (list.length > 50) {
+                     pool.innerHTML += `<div class="text-xs text-center p-2 text-gray-400">ישנן עוד תוצאות, דייק את החיפוש...</div>`;
+                }
             },
             addMember(sid) {
                 const path = `years/${Store.currentYear}/groups/${this.currentDay}/${this.activeGroupId}/members`;
@@ -1319,309 +1827,739 @@
             },
             removeMember(idx) {
                 const path = `years/${Store.currentYear}/groups/${this.currentDay}/${this.activeGroupId}/members`;
-                db.ref(path).once('value', s => { const l = s.val(); l.splice(idx,1); OfflineManager.write(path, l); });
+                db.ref(path).once('value', s => {
+                    const l = s.val(); l.splice(idx,1); 
+                    OfflineManager.write(path, l);
+                });
+            },
+            updateMemberRole(idx, newRole) {
+                const path = `years/${Store.currentYear}/groups/${this.currentDay}/${this.activeGroupId}/members/${idx}/role`;
+                OfflineManager.write(path, newRole);
             },
             removeFromRoute(day, gid, did) {
                 const path = `years/${Store.currentYear}/groups/${day}/${gid}/route`;
-                db.ref(path).once('value', s => { const l = (s.val()||[]).filter(x => x !== did); OfflineManager.write(path, l); });
+                db.ref(path).once('value', s => {
+                    let l = s.val() || [];
+                    l = l.filter(x => x !== did);
+                    OfflineManager.write(path, l);
+                });
             },
-
+            openGroupDonationModal() {
+                const g = (Store.data.yearData[Store.currentYear].groups[this.currentDay] || {})[this.activeGroupId];
+                if (!g || !g.members || g.members.length === 0) return Notify.show('אין חברים בקבוצה זו', 'error');
+                const html = `
+                    <div class="mb-4">
+                        <label class="block text-sm font-bold text-slate-700 mb-1">סכום תרומה כולל</label>
+                        <input type="number" id="group-total-amount" class="input-field w-full" placeholder="לדוגמה: 1000">
+                        <p class="text-xs text-gray-500 mt-1">הסכום יחולק שווה בשווה בין ${g.members.length} חברי הקבוצה.</p>
+                    </div>
+                `;
+                Modal.renderRaw('הוספת תרומה קבוצתית', html, () => {
+                    const total = parseInt(document.getElementById('group-total-amount').value);
+                    if (!total || total <= 0) return;
+                    const perPerson = Math.floor(total / g.members.length); 
+                    g.members.forEach(m => {
+                        const id = 'tx' + Date.now() + Math.random().toString(36).substr(2, 5);
+                        OfflineManager.write(`years/${Store.currentYear}/finance/${id}`, {
+                            id, date: Date.now(), type: 'income',
+                            amount: perPerson, category: 'תרומה קבוצתית',
+                            desc: `חלק מתרומה קבוצתית: ${g.name}`,
+                            studentId: m.id, isPurim: true 
+                        });
+                        if(OfflineManager.isOnline) db.ref(`years/${Store.currentYear}/stats/income`).transaction(curr => (curr || 0) + perPerson);
+                        System.checkStudentProgress(m.id, perPerson);
+                    });
+                    Notify.show(`תרומה של ${total} ש"ח חולקה בהצלחה! (${perPerson} לכ"א)`, 'success');
+                    Modal.close();
+                    setTimeout(() => Finance.loadMore(true), 1000);
+                });
+            },
             async printSheet(type) {
                 const g = (Store.data.yearData[Store.currentYear].groups[this.currentDay] || {})[this.activeGroupId];
                 if(!g) return;
                 
                 const dayMap = {'night14': 'ליל י"ד', 'day14': 'יום י"ד', 'day15': 'יום ט"ו'};
-                const mapYear = {5780:'תש״פ', 5781:'תשפ״א', 5782:'תשפ״ב', 5783:'תשפ״ג', 5784:'תשפ״ד', 5785:'תשפ״ה', 5786:'תשפ״ו', 5787:'תשפ״ז', 5788:'תשפ״ח'};
-
+                const dayName = dayMap[this.currentDay] || this.currentDay;
+                
                 let html = `
-                    <div class="print-container">
-                        <div class="print-header-box">
-                            <div style="text-align:right">
-                                <div class="print-title">עזר חתנים</div>
-                                <div class="print-subtitle">שנת ${mapYear[Store.currentYear] || Store.currentYear}</div>
-                            </div>
-                            <div style="text-align:center">
-                                <h1 style="font-size:30pt;margin:0">${type==='route'?'דף מסלול':'דף קשר - צוות'}</h1>
-                                <h2 style="font-size:20pt;margin:0">${g.name} (${dayMap[this.currentDay]})</h2>
-                            </div>
-                            <div style="text-align:left">
-                                <div>הופק בתאריך: ${new Date().toLocaleDateString('he-IL')}</div>
-                            </div>
-                        </div>
+                    <div class="print-header">
+                        <img src="1.JPG" alt="לוגו">
+                        <h1>${type==='route'?'דף מסלול':'דף קבוצה'} - ${g.name}</h1>
+                        <h3>שנה: ${Store.currentYear} | זמן: ${dayName}</h3>
+                    </div>
                 `;
                 
-                if(type === 'team') {
-                    // דף צוות מעוצב
-                    let leaders = (g.members||[]).filter(m => m.role === 'ראש צוות' || m.role === 'סגן');
-                    let members = (g.members||[]).filter(m => m.role === 'חבר');
-                    
-                    html += `<div class="team-card bg-indigo-50 border-indigo-200">
-                        <h3 style="font-size:18pt;border-bottom:2px solid #000;margin-bottom:10px">הנהלת הצוות</h3>
-                        <table class="beautiful-table" style="font-size:14pt">
-                            <thead><tr><th width="30%">תפקיד</th><th width="40%">שם</th><th width="30%">טלפון</th></tr></thead><tbody>`;
-                    
-                    leaders.forEach(m => {
+                if(type === 'members') {
+                    document.body.classList.add('wall-mode');
+                    const members = g.members || [];
+                    const commanders = members.filter(m => m.role === 'ראש צוות');
+                    const deputies = members.filter(m => m.role === 'סגן');
+                    const regulars = members.filter(m => m.role !== 'ראש צוות' && m.role !== 'סגן');
+
+                    const renderMemberRow = (m, idx) => {
                         const s = Store.data.students[m.id];
-                        html += `<tr>
-                            <td><span class="role-badge ${m.role==='ראש צוות'?'role-leader':'role-segan'}">${m.role}</span></td>
-                            <td><b>${s.name}</b></td>
-                            <td>${s.phone}</td>
+                        if (!s) return '';
+                        const name = s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : s.name;
+                        
+                        let roleBadge = '';
+                        let rowClass = '';
+                        if (m.role === 'ראש צוות') { roleBadge = '<span class="role-badge role-commander">ראש צוות</span>'; rowClass = 'font-bold bg-blue-50'; }
+                        else if (m.role === 'סגן') { roleBadge = '<span class="role-badge role-deputy">סגן</span>'; rowClass = 'bg-yellow-50'; }
+                        
+                        return `<tr class="${rowClass}">
+                            <td width="5%">${idx+1}</td>
+                            <td width="35%"><b>${name}</b> ${roleBadge}</td>
+                            <td width="30%">${s.phone}</td>
+                            <td width="30%">${s.grade || ''}</td>
                         </tr>`;
-                    });
-                    html += `</tbody></table></div>`;
-                    
-                    html += `<div class="team-card">
-                        <h3 style="font-size:18pt;border-bottom:2px solid #000;margin-bottom:10px">חברי הצוות</h3>
-                        <table class="beautiful-table">
-                            <thead><tr><th width="5%">#</th><th width="40%">שם הבחור</th><th width="25%">טלפון</th><th width="30%">הערות / חתימה</th></tr></thead><tbody>`;
-                    
-                    members.forEach((m, idx) => {
-                        const s = Store.data.students[m.id];
-                        html += `<tr><td>${idx+1}</td><td><b>${s.name}</b></td><td>${s.phone}</td><td></td></tr>`;
-                    });
-                    html += `</tbody></table></div>`;
+                    };
 
+                    html += `<table class="print-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>שם הבחור</th>
+                                <th>טלפון</th>
+                                <th>שיעור</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+                    
+                    let count = 0;
+                    commanders.forEach(m => html += renderMemberRow(m, count++));
+                    deputies.forEach(m => html += renderMemberRow(m, count++));
+                    regulars.forEach(m => html += renderMemberRow(m, count++));
+                    html += `</tbody></table>`;
+                    
                 } else {
-                    // דף מסלול עם היסטוריה
-                    Notify.show('טוען נתונים היסטוריים...', 'info');
+                    document.body.classList.remove('wall-mode');
+                    Notify.show('מכין נתונים להדפסה...', 'info');
                     
-                    const yearsBack = [parseInt(Store.currentYear)-1, parseInt(Store.currentYear)-2, parseInt(Store.currentYear)-3];
-                    const donorsData = [];
-
-                    // שליפת נתונים - זה עלול לקחת רגע, לכן ה-Notify
-                    // כדי לא להעמיס, נשלוף את כל ה-Finance של 3 שנים אלו (אם המשתמש לא מנהל - נשלוף רק עבור הדפסה)
-                    // בגלל מגבלת ה"בלי שינוי" לא נוסיף פונקציות עזר מורכבות, אלא נשתמש ב-once פשוט
+                    const yearMapRev = {'תשפ״ח':5788, 'תשפ״ז':5787, 'תשפ״ו':5786, 'תשפ״ה':5785, 'תשפ״ד':5784, 'תשפ״ג':5783, 'תשפ״ב':5782, 'תשפ״א':5781, 'תש״פ':5780};
+                    const yearMap = {5788:'תשפ״ח', 5787:'תשפ״ז', 5786:'תשפ״ו', 5785:'תשפ״ה', 5784:'תשפ״ד', 5783:'תשפ״ג', 5782:'תשפ״ב', 5781:'תשפ״א', 5780:'תש״פ'};
                     
-                    const historyPromises = yearsBack.map(y => db.ref(`years/${y}/finance`).once('value').then(s => ({y, data: Object.values(s.val()||{})})));
-                    const histories = await Promise.all(historyPromises);
+                    let currNum = yearMapRev[Store.currentYear] || 5785;
+                    const prev1 = yearMap[currNum-1] || (currNum-1).toString();
+                    const prev2 = yearMap[currNum-2] || (currNum-2).toString();
+                    const prev3 = yearMap[currNum-3] || (currNum-3).toString();
 
-                    html += `<table class="beautiful-table">
+                    const getHistory = async (year) => {
+                        const snap = await db.ref(`years/${year}/finance`).once('value');
+                        const val = snap.val() || {};
+                        const totals = {};
+                        Object.values(val).forEach(tx => {
+                            if (tx.type === 'income' && tx.donorId) {
+                                totals[tx.donorId] = (totals[tx.donorId] || 0) + parseInt(tx.amount);
+                            }
+                        });
+                        return totals;
+                    };
+
+                    const [hist1, hist2, hist3] = await Promise.all([
+                        getHistory(prev1),
+                        getHistory(prev2),
+                        getHistory(prev3)
+                    ]);
+
+                    html += `<table class="print-table">
                         <thead>
                             <tr>
                                 <th width="3%">#</th>
-                                <th width="15%">שם תורם</th>
-                                <th width="15%">כתובת / טלפון</th>
-                                <th width="8%">${mapYear[yearsBack[0]]||yearsBack[0]}</th>
-                                <th width="8%">${mapYear[yearsBack[1]]||yearsBack[1]}</th>
-                                <th width="8%">${mapYear[yearsBack[2]]||yearsBack[2]}</th>
-                                <th width="15%" style="border: 2px solid #000;background:#fff!important">סכום ${mapYear[Store.currentYear]}</th>
-                                <th width="20%">הערות</th>
+                                <th width="10%">שם פרטי</th>
+                                <th width="10%">שם משפחה</th>
+                                <th width="8%">עיר</th>
+                                <th width="8%">שכונה</th>
+                                <th width="10%">רחוב</th>
+                                <th width="5%">קומה</th>
+                                <th width="16%">הערות</th>
+                                <th width="7%">${prev3}</th>
+                                <th width="7%">${prev2}</th>
+                                <th width="7%">${prev1}</th>
+                                <th width="9%">סכום</th>
                             </tr>
-                        </thead><tbody>`;
+                        </thead>
+                        <tbody>`;
                     
                     (g.route||[]).forEach((did, i) => {
                         const d = Store.data.donors[did];
-                        if(!d) return;
-                        
-                        // חישוב סכומים
-                        const sum1 = histories[0].data.filter(t => t.donorId === did && t.type === 'income').reduce((a,b)=>a+parseInt(b.amount||0), 0);
-                        const sum2 = histories[1].data.filter(t => t.donorId === did && t.type === 'income').reduce((a,b)=>a+parseInt(b.amount||0), 0);
-                        const sum3 = histories[2].data.filter(t => t.donorId === did && t.type === 'income').reduce((a,b)=>a+parseInt(b.amount||0), 0);
-                        
-                        html += `<tr>
-                            <td>${i+1}</td>
-                            <td><b>${d.name}</b>${d.vip?' <span style="font-size:0.7em">⭐</span>':''}</td>
-                            <td style="font-size:0.85em">${d.address}<br>${d.phone||''}</td>
-                            <td>${sum1 || '-'}</td>
-                            <td>${sum2 || '-'}</td>
-                            <td>${sum3 || '-'}</td>
-                            <td style="border: 2px solid #000"></td>
-                            <td style="font-size:0.85em">${d.notes||''}</td>
-                        </tr>`;
+                        if(d) {
+                            // ניסיון לחילוץ שם פרטי ומשפחה אם אין שדות מפוצלים
+                            let fName = d.firstName;
+                            let lName = d.lastName;
+                            if(!fName && !lName && d.name) {
+                                const parts = d.name.split(' ');
+                                fName = parts[0];
+                                lName = parts.slice(1).join(' ');
+                            }
+
+                            // ניסיון חילוץ כתובת אם אין שדות מפוצלים
+                            let street = d.street || d.address;
+                            
+                            html += `<tr>
+                                <td>${i+1}</td>
+                                <td>${fName || ''}</td>
+                                <td><b>${lName || ''}</b></td>
+                                <td>${d.city || ''}</td>
+                                <td>${d.neighborhood || ''}</td>
+                                <td>${street || ''}</td>
+                                <td>${d.floor || ''}</td>
+                                <td>${d.notes||''}</td>
+                                <td>${hist3[did] ? '₪'+hist3[did] : ''}</td>
+                                <td>${hist2[did] ? '₪'+hist2[did] : ''}</td>
+                                <td>${hist1[did] ? '₪'+hist1[did] : ''}</td>
+                                <td></td> <!-- ידני -->
+                            </tr>`;
+                        }
                     });
                     html += `</tbody></table>`;
                 }
                 
-                html += `</div>`; // Close container
-                
                 const pa = document.getElementById('print-area');
                 pa.innerHTML = html;
-                setTimeout(() => window.print(), 500);
+                window.print(); 
             }
         };
 
+        // --- 9. FINANCE LOGIC ---
         const Finance = {
-            limit: 30, financeData: {}, currentFilter: 'all',
-            reset() { this.financeData = {}; Store.cursors.finance = null; document.getElementById('finance-tbody').innerHTML = ''; this.loadMore(); },
+            currentFilter: 'all',
+            limit: 30,
+            financeData: {},
+            reset() { 
+                this.financeData = {}; Store.cursors.finance = null; 
+                document.getElementById('finance-tbody').innerHTML = '';
+                this.loadMore(); 
+            },
             loadMore(reset = false) {
                 if(reset) this.reset();
                 let q = db.ref(`years/${Store.currentYear}/finance`).orderByChild('date').limitToLast(this.limit);
                 if(Store.cursors.finance) q = q.endBefore(Store.cursors.finance);
                 q.once('value', snap => {
                     const data = snap.val();
-                    if(!data) { document.getElementById('finance-loader-more').style.display = 'none'; return; }
-                    Object.assign(this.financeData, data);
-                    Store.cursors.finance = Object.values(data).sort((a,b)=>a.date-b.date)[0].date;
+                    if(!data) {
+                        document.getElementById('finance-loader-more').style.display = 'none';
+                        return;
+                    }
+                    const arr = [];
+                    Object.keys(data).forEach(k => arr.push(data[k]));
+                    arr.sort((a,b) => b.date - a.date); 
+                    Store.cursors.finance = arr[arr.length-1].date;
                     document.getElementById('finance-loader-more').style.display = 'block';
+                    Object.assign(this.financeData, data);
                     this.render();
                 });
             },
             render() {
                 const tbody = document.getElementById('finance-tbody');
-                tbody.innerHTML = '';
-                let raw = Object.values(this.financeData).sort((a,b) => b.date - a.date);
-                if(this.currentFilter !== 'all') raw = raw.filter(tx => tx.type === this.currentFilter);
-                
+                tbody.innerHTML = ''; 
+                let raw = Object.values(this.financeData);
+                if(this.currentFilter !== 'all') {
+                    if(this.currentFilter === 'purim') raw = raw.filter(tx => tx.isPurim);
+                    else raw = raw.filter(tx => tx.type === this.currentFilter);
+                }
+                raw.sort((a,b) => b.date - a.date);
                 tbody.innerHTML = raw.map(tx => {
-                    const entityName = tx.studentId ? (Store.data.students[tx.studentId]?.name) : tx.donorId ? (Store.data.donors[tx.donorId]?.name) : '-';
-                    return `<tr class="hover:bg-slate-50 border-b border-slate-50">
+                    let entityName = '-';
+                    if (tx.studentId) {
+                         const s = Store.data.students[tx.studentId];
+                         entityName = s ? (s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : s.name) : 'לא ידוע';
+                    } else if (tx.donorId) {
+                         entityName = Store.data.donors[tx.donorId]?.name || 'לא ידוע';
+                    }
+                    return `
+                    <tr class="hover:bg-slate-50 border-b border-slate-50 transition">
                         <td class="p-3 text-gray-500">${new Date(tx.date).toLocaleDateString('he-IL')}</td>
                         <td class="p-3"><span class="px-2 py-1 rounded text-xs font-bold ${tx.type==='income'?'bg-emerald-50 text-emerald-700':'bg-rose-50 text-rose-700'}">${tx.type==='income'?'הכנסה':'הוצאה'}</span></td>
-                        <td class="p-3 font-medium">${tx.category}</td>
-                        <td class="p-3"><div class="text-sm">${tx.desc||''}</div>${entityName!=='-'?`<div class="text-xs text-gray-400">${entityName}</div>`:''}</td>
+                        <td class="p-3 font-medium text-slate-700">${tx.category}</td>
+                        <td class="p-3">
+                            <div class="text-sm">${tx.desc || ''}</div>
+                            ${entityName !== '-' ? `<div class="text-xs text-gray-400"><i class="fas fa-user-tag"></i> ${entityName}</div>` : ''}
+                        </td>
                         <td class="p-3 font-bold ${tx.type==='income'?'text-emerald-600':'text-rose-600'}" dir="ltr">₪${parseInt(tx.amount).toLocaleString()}</td>
-                        <td class="p-3"><button onclick="Finance.deleteTx('${tx.id}', '${tx.type}', ${tx.amount})" class="text-gray-300 hover:text-red-500"><i class="fas fa-trash-alt"></i></button></td>
+                        <td class="p-3">
+                            <button onclick="Finance.deleteTx('${tx.id}', '${tx.type}', ${tx.amount})" class="text-gray-300 hover:text-red-500 transition"><i class="fas fa-trash-alt"></i></button>
+                        </td>
                     </tr>`;
                 }).join('');
             },
-            setFilter(f) { this.currentFilter = f; this.render(); },
+            setFilter(f) {
+                this.currentFilter = f;
+                document.querySelectorAll('.finance-filter').forEach(b => {
+                    const active = b.dataset.f === f;
+                    b.classList.toggle('active', active);
+                    b.classList.toggle('bg-slate-800', active);
+                    b.classList.toggle('text-white', active);
+                    b.classList.toggle('shadow-md', active);
+                });
+                this.render();
+            },
             openTransactionModal(type) {
                 const cats = type==='income' ? ['תרומה כללית','מזומן','צק','אשראי'] : ['אוכל','ציוד','שיווק','אחר'];
-                const studentsOpts = Object.values(Store.data.students).map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+                const studentsOpts = Object.values(Store.data.students).map(s => {
+                    const n = s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : s.name;
+                    return `<option value="${s.id}">${n}</option>`;
+                }).join('');
                 const donorsOpts = Object.values(Store.data.donors).map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+
                 const html = `
                     <div class="space-y-4">
-                        <div><label class="lbl">סכום</label><input type="text" id="tx-amount" class="input-field w-full" required></div>
-                        <div><label class="lbl">קטגוריה</label><select id="tx-category" class="input-field w-full">${cats.map(c=>`<option>${c}</option>`).join('')}</select></div>
-                        <div class="bg-slate-50 p-3 rounded border"><label class="lbl">מקור</label>
+                        <div>
+                            <label class="lbl">סכום (ספרות בלבד)</label>
+                            <input type="text" id="tx-amount" oninput="this.value=this.value.replace(/[^0-9]/g,'')" class="input-field w-full text-lg font-bold" required>
+                        </div>
+                        <div>
+                            <label class="lbl">קטגוריה</label>
+                            <select id="tx-category" class="input-field w-full">
+                                ${cats.map(c => `<option>${c}</option>`).join('')}
+                            </select>
+                        </div>
+                        
+                        <div class="bg-slate-50 p-3 rounded border">
+                            <label class="lbl">מקור ${type==='income'?'הכנסה':'הוצאה'}</label>
                             <div class="flex gap-4 mb-2">
                                 <label><input type="radio" name="tx-src" value="none" checked onclick="document.getElementById('src-select-area').classList.add('hidden')"> כללי</label>
                                 <label><input type="radio" name="tx-src" value="student" onclick="document.getElementById('src-select-area').classList.remove('hidden'); document.getElementById('sel-student').classList.remove('hidden'); document.getElementById('sel-donor').classList.add('hidden');"> בחור</label>
                                 <label><input type="radio" name="tx-src" value="donor" onclick="document.getElementById('src-select-area').classList.remove('hidden'); document.getElementById('sel-student').classList.add('hidden'); document.getElementById('sel-donor').classList.remove('hidden');"> תורם</label>
                             </div>
                             <div id="src-select-area" class="hidden">
-                                <select id="sel-student" class="input-field w-full hidden"><option value="">-- בחר --</option>${studentsOpts}</select>
-                                <select id="sel-donor" class="input-field w-full hidden"><option value="">-- בחר --</option>${donorsOpts}</select>
+                                <select id="sel-student" class="input-field w-full hidden"><option value="">-- בחר בחור --</option>${studentsOpts}</select>
+                                <select id="sel-donor" class="input-field w-full hidden"><option value="">-- בחר תורם --</option>${donorsOpts}</select>
                             </div>
                         </div>
-                        <div><label class="lbl">תיאור</label><textarea id="tx-desc" class="input-field w-full"></textarea></div>
-                    </div>`;
-                Modal.renderRaw(type==='income'?'הכנסה':'הוצאה', html, () => {
+
+                        <div>
+                            <label class="lbl">תיאור / הערות</label>
+                            <textarea id="tx-desc" class="input-field w-full h-20"></textarea>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="tx-purim" class="h-5 w-5 rounded text-indigo-600" ${this.currentFilter==='purim'?'checked':''}>
+                            <span class="text-sm font-bold">שייך לפורים?</span>
+                        </div>
+                    </div>
+                `;
+                Modal.renderRaw(type === 'income' ? 'הוספת הכנסה' : 'הוספת הוצאה', html, () => {
                     const amount = parseInt(document.getElementById('tx-amount').value);
-                    if(!amount) return;
+                    if(!amount) return alert('חובה להזין סכום');
                     const srcType = document.querySelector('input[name="tx-src"]:checked').value;
-                    const studentId = srcType==='student'?document.getElementById('sel-student').value:null;
-                    const donorId = srcType==='donor'?document.getElementById('sel-donor').value:null;
+                    let studentId = null, donorId = null;
+                    if(srcType === 'student') studentId = document.getElementById('sel-student').value;
+                    if(srcType === 'donor') donorId = document.getElementById('sel-donor').value;
                     const id = 'tx' + Date.now();
-                    
                     OfflineManager.write(`years/${Store.currentYear}/finance/${id}`, {
-                        id, date: Date.now(), type, amount, category: document.getElementById('tx-category').value,
-                        desc: document.getElementById('tx-desc').value, studentId, donorId
+                        id, date: Date.now(), type,
+                        amount: amount,
+                        category: document.getElementById('tx-category').value,
+                        desc: document.getElementById('tx-desc').value,
+                        isPurim: document.getElementById('tx-purim').checked,
+                        studentId, donorId
                     });
-                    
-                    if(OfflineManager.isOnline) db.ref(`years/${Store.currentYear}/stats/${type}`).transaction(curr => (curr || 0) + amount);
-                    if(type === 'income' && studentId) {
-                        // בדיקת יעד פשוטה
-                         const tiers = [{amount:5000, reward:'בונוס'}]; // הדגמה
+                    if(OfflineManager.isOnline) {
+                        db.ref(`years/${Store.currentYear}/stats/${type}`).transaction(curr => (curr || 0) + amount);
                     }
+                    if(type === 'income' && studentId) {
+                        System.checkStudentProgress(studentId, amount);
+                    }
+                    Notify.show('פעולה נרשמה בהצלחה', 'success');
                     Modal.close();
                     setTimeout(() => Finance.loadMore(true), 500);
                 });
             },
             quickAdd(type, entityId, entityType) {
-                 Modal.render('הוספה מהירה', [{id:'amt',l:'סכום',t:'number',r:true}], (v) => {
+                Modal.render('הוספה מהירה', [{id:'amt',l:'סכום',t:'number',r:true}], (v) => {
                     const id = 'tx' + Date.now();
                     const amount = parseInt(v.amt);
                     OfflineManager.write(`years/${Store.currentYear}/finance/${id}`, {
-                        id, date: Date.now(), type, amount, category: 'תרומה מהירה',
-                        [entityType==='student'?'studentId':'donorId']: entityId
+                        id, date: Date.now(), type, amount: amount,
+                        category: 'תרומה מהירה',
+                        [entityType === 'student' ? 'studentId' : 'donorId']: entityId,
+                        isPurim: true 
                     });
                     if(OfflineManager.isOnline) db.ref(`years/${Store.currentYear}/stats/${type}`).transaction(curr => (curr || 0) + amount);
-                    Notify.show('נקלט', 'success');
+                    if(type === 'income' && entityType === 'student') {
+                        System.checkStudentProgress(entityId, amount);
+                    }
+                    Notify.show('תרומה נקלטה', 'success');
                 });
             },
             deleteTx(id, type, amount) {
-                if(confirm('למחוק?')) {
+                if(confirm('למחוק תנועה זו?')) {
                     OfflineManager.write(`years/${Store.currentYear}/finance/${id}`, null, 'remove');
                     if(OfflineManager.isOnline) db.ref(`years/${Store.currentYear}/stats/${type}`).transaction(curr => (curr || 0) - amount);
                     delete this.financeData[id];
                     this.render();
+                    Notify.show('תנועה נמחקה', 'info');
                 }
             }
         };
 
+        // --- 10. REPORTS & EXPORT ---
         const Reports = {
+            searchEntity(v) {
+                const res = document.getElementById('rep-entity-results');
+                res.innerHTML = '';
+                if(v.length < 2) { res.classList.add('hidden'); return; }
+                res.classList.remove('hidden');
+                const students = Object.values(Store.data.students).filter(s => {
+                    const n = s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : s.name;
+                    return n.includes(v);
+                }).slice(0,5);
+                const donors = Object.values(Store.data.donors).filter(d => d.name.includes(v)).slice(0,5);
+                students.forEach(s => {
+                    const n = s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : s.name;
+                    res.innerHTML += `<div class="p-2 hover:bg-gray-100 cursor-pointer text-sm" onclick="Reports.selectEntity('${s.id}','${n}','student')"><i class="fas fa-user-graduate text-blue-500"></i> ${n} <span class="text-xs text-gray-500">(בחור)</span></div>`;
+                });
+                donors.forEach(d => {
+                    res.innerHTML += `<div class="p-2 hover:bg-gray-100 cursor-pointer text-sm" onclick="Reports.selectEntity('${d.id}','${d.name}','donor')"><i class="fas fa-hand-holding-heart text-emerald-500"></i> ${d.name} <span class="text-xs text-gray-500">(תורם)</span></div>`;
+                });
+            },
+            selectEntity(id, name, type) {
+                document.getElementById('rep-entity-search').value = name;
+                document.getElementById('rep-entity-id').value = id + '|' + type;
+                document.getElementById('rep-entity-results').classList.add('hidden');
+            },
             generateStandard() {
+                Notify.show('מייצא נתונים...', 'info');
                 db.ref(`years/${Store.currentYear}/finance`).once('value', snap => {
                     const type = document.getElementById('rep-type').value;
+                    const entVal = document.getElementById('rep-entity-id').value;
                     let data = Object.values(snap.val() || {});
                     if(type !== 'all') data = data.filter(t => t.type === type);
-
+                    if(entVal) {
+                        const [eid, etype] = entVal.split('|');
+                        data = data.filter(t => (etype === 'student' ? t.studentId : t.donorId) === eid);
+                    }
                     const rows = data.map(t => ({
                         "תאריך": new Date(t.date).toLocaleDateString('he-IL'),
-                        "סוג": t.type==='income'?'הכנסה':'הוצאה',
-                        "קטגוריה": t.category, "תיאור": t.desc, "סכום": t.amount
+                        "סוג תנועה": t.type === 'income' ? 'הכנסה' : 'הוצאה',
+                        "קטגוריה": t.category,
+                        "תיאור / הערות": t.desc,
+                        "סכום בש״ח": t.amount
                     }));
-
                     const ws = XLSX.utils.json_to_sheet(rows);
-                    if(!ws['!views']) ws['!views'] = []; ws['!views'].push({ rightToLeft: true });
+                    if(!ws['!views']) ws['!views'] = [];
+                    ws['!views'].push({ rightToLeft: true });
                     const wb = XLSX.utils.book_new();
-                    XLSX.utils.book_append_sheet(wb, ws, "דוח");
+                    XLSX.utils.book_append_sheet(wb, ws, "דוח כספי");
                     wb.Workbook = { Views: [{ RTL: true }] };
                     XLSX.writeFile(wb, `Report_${Store.currentYear}.xlsx`);
+                    Notify.show('הקובץ מוכן!', 'success');
                 });
+            },
+            async generateDisplayReport() {
+                Notify.show('מחשב נתונים לתצוגה...', 'info');
+                
+                // שימוש ב-window.print במקום אקסל
+                const [finSnap, grpSnap] = await Promise.all([
+                    db.ref(`years/${Store.currentYear}/finance`).once('value'),
+                    db.ref(`years/${Store.currentYear}/groups`).once('value')
+                ]);
+
+                const finances = Object.values(finSnap.val() || {});
+                const groupsData = grpSnap.val() || {};
+                const config = Store.data.config;
+                const groupDiscount = config.groupDiscount || 0;
+                const tiers = config.tiers || [];
+
+                let html = `
+                    <div class="print-header">
+                        <img src="1.JPG" alt="לוגו">
+                        <h1>דוח תצוגה משוקלל - חג הפורים</h1>
+                        <h3>שנה: ${Store.currentYear}</h3>
+                    </div>
+                    <table class="print-table">
+                    <thead>
+                        <tr>
+                            <th>שם הבחור</th>
+                            <th>יעד אישי</th>
+                            <th>גויס בפועל</th>
+                            <th>זיכויים</th>
+                            <th>סה״כ לתצוגה</th>
+                            <th>אחוז מיעד</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                `;
+
+                const list = [];
+
+                Object.values(Store.data.students).forEach(student => {
+                    let actual = 0;
+                    let extra = 0; 
+                    finances.filter(f => f.studentId === student.id && f.type === 'income').forEach(f => actual += f.amount);
+
+                    let inGroup = false;
+                    Object.values(groupsData).forEach(dayGroups => {
+                        Object.values(dayGroups).forEach(g => {
+                            if((g.members||[]).some(m => m.id === student.id)) inGroup = true;
+                        });
+                    });
+                    if(inGroup) extra += groupDiscount;
+
+                    const donorsBrought = Object.values(Store.data.donors).filter(d => d.referrerId === student.id);
+                    donorsBrought.forEach(d => {
+                        let donorTotal = 0;
+                        finances.filter(f => f.donorId === d.id && f.type === 'income').forEach(f => donorTotal += f.amount);
+                        tiers.sort((a,b) => b.amount - a.amount);
+                        const tier = tiers.find(t => donorTotal >= t.amount);
+                        if(tier && tier.gift) {
+                            const bonus = parseInt(tier.gift);
+                            if(!isNaN(bonus)) extra += bonus;
+                        }
+                    });
+
+                    const yData = (Store.data.yearData[Store.currentYear]?.students || {})[student.id] || {};
+                    const goal = yData.personalGoal || config.baseStudentGoal || 0;
+                    const name = student.firstName && student.lastName ? `${student.firstName} ${student.lastName}` : student.name;
+                    const totalDisplay = actual + extra;
+
+                    if(totalDisplay > 0) {
+                        list.push({name, goal, actual, extra, totalDisplay, pct: goal>0 ? Math.round((totalDisplay/goal)*100) : 0});
+                    }
+                });
+
+                list.sort((a,b) => b.totalDisplay - a.totalDisplay);
+
+                list.forEach(item => {
+                    html += `<tr>
+                        <td><b>${item.name}</b></td>
+                        <td>${item.goal}</td>
+                        <td>${item.actual}</td>
+                        <td>${item.extra}</td>
+                        <td><b>${item.totalDisplay}</b></td>
+                        <td>${item.pct}%</td>
+                    </tr>`;
+                });
+
+                html += `</tbody></table>`;
+                document.getElementById('print-area').innerHTML = html;
+                window.print();
             }
         };
-
+        
+        // --- 11. ROBUST EXCEL IMPORT MANAGER ---
         const Importer = {
-            currentType: null, fileData: null,
-            init(type) { this.currentType = type; document.getElementById('excel-upload-input').click(); },
+            currentType: null,
+            fileData: null,
+            init(type) {
+                this.currentType = type;
+                const input = document.getElementById('excel-upload-input');
+                input.value = '';
+                input.click();
+            },
             handleFileSelect(input) {
                 const file = input.files[0];
+                if (!file) return;
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, { type: 'array' });
-                    this.fileData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { defval: "" });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    this.fileData = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
+                    if (this.fileData.length === 0) { Notify.show('הקובץ ריק', 'error'); return; }
                     this.openMappingModal();
                 };
                 reader.readAsArrayBuffer(file);
             },
             openMappingModal() {
-                const headers = Object.keys(this.fileData[0]);
-                const fields = PREDEFINED_FIELDS[this.currentType];
-                let html = `<div class="text-sm mb-4">התאם עמודות (RTL):</div>`;
-                fields.forEach(f => {
-                    let opts = `<option value="">-- בחר --</option>`;
-                    headers.forEach(h => opts += `<option value="${h}" ${h.includes(f.l)?'selected':''}>${h}</option>`);
-                    html += `<div class="grid grid-cols-2 gap-4 mb-2 items-center"><label>${f.l}</label><select id="map-${f.k}" class="border rounded p-1">${opts}</select></div>`;
+                const excelHeaders = Object.keys(this.fileData[0]);
+                const systemFields = PREDEFINED_FIELDS[this.currentType];
+                
+                // הוספת שדות מותאמים אישית למיפוי
+                const customDefs = Store.data.config.customFieldsDefs || {};
+                const allFields = [...systemFields];
+                Object.entries(customDefs).forEach(([k, def]) => {
+                     // הוספה רק אם עוד לא קיים
+                     if(!allFields.find(f => f.k === k)) allFields.push({k:k, l:def.l});
                 });
-                html += `<button onclick="Importer.executeImport()" class="btn-primary w-full mt-4 p-2">יבא נתונים</button>`;
-                Modal.renderRaw('יבוא מאקסל', html, null);
+
+                let html = `<div dir="rtl" class="text-right">`;
+                html += `<div class="bg-blue-50 p-4 rounded mb-4 text-sm text-blue-800">נמצאו ${this.fileData.length} רשומות. אנא התאם את עמודות האקסל לשדות המערכת:</div>`;
+                html += `<div class="grid grid-cols-2 gap-4 font-bold border-b pb-2 mb-2"><div>שדה במערכת</div><div>עמודה באקסל</div></div>`;
+                
+                allFields.forEach(field => {
+                    let options = `<option value="">-- אל תייבא --</option>`;
+                    excelHeaders.forEach(header => {
+                        const isMatch = header.includes(field.l) || field.l.includes(header);
+                        options += `<option value="${header}" ${isMatch ? 'selected' : ''}>${header}</option>`;
+                    });
+                    
+                    html += `
+                    <div class="grid grid-cols-2 gap-4 items-center mb-2">
+                        <div class="text-sm">${field.l} ${field.r ? '*' : ''}</div>
+                        <select id="map-${field.k}" class="border rounded p-1 w-full text-sm bg-white">${options}</select>
+                    </div>`;
+                });
+                
+                html += `</div>`; 
+
+                const customBtn = `<button onclick="Importer.executeImport()" class="w-full bg-green-600 text-white py-3 rounded-xl font-bold mt-4 shadow-lg hover:bg-green-700">בצע יבוא</button>`;
+                
+                Modal.renderRaw(`יבוא ${this.currentType === 'students' ? 'בחורים' : 'תורמים'} מאקסל`, html + customBtn, () => {});
+                document.querySelector('#modal-form .btn-primary').parentElement.style.display = 'none';
             },
             executeImport() {
-                const fields = PREDEFINED_FIELDS[this.currentType];
+                const systemFields = PREDEFINED_FIELDS[this.currentType];
                 const mapping = {};
-                fields.forEach(f => mapping[f.k] = document.getElementById(`map-${f.k}`).value);
-                const batch = {};
-                this.fileData.forEach(row => {
-                    const id = db.ref().push().key;
-                    const item = { id };
-                    if (this.currentType === 'students') item.lastUpdatedYear = Store.currentYear;
-                    else item.joinYear = Store.currentYear;
-                    fields.forEach(f => { if(mapping[f.k]) item[f.k] = row[mapping[f.k]]; });
-                    batch[`global/${this.currentType}/${id}`] = item;
+                
+                // מיפוי מורחב כולל מותאמים
+                const customDefs = Store.data.config.customFieldsDefs || {};
+                const allFields = [...systemFields];
+                Object.entries(customDefs).forEach(([k, def]) => {
+                     if(!allFields.find(f => f.k === k)) allFields.push({k:k, l:def.l});
                 });
-                db.ref().update(batch);
-                Notify.show('יבוא הושלם', 'success');
-                Modal.close();
+
+                allFields.forEach(f => {
+                    const el = document.getElementById(`map-${f.k}`);
+                    if(el && el.value) mapping[f.k] = el.value;
+                });
+
+                const missingRequired = systemFields.filter(f => f.r && !mapping[f.k]);
+                if (missingRequired.length > 0) {
+                    Notify.show('חובה למפות את השדות: ' + missingRequired.map(f => f.l).join(', '), 'error');
+                    return;
+                }
+
+                let count = 0;
+                const dbPath = this.currentType === 'students' ? 'global/students' : 'global/donors';
+                
+                const batchSize = 100;
+                let i = 0;
+                
+                const processBatch = () => {
+                   const batch = {}; 
+                   for(let j=0; j<batchSize && i<this.fileData.length; j++, i++) {
+                       const row = this.fileData[i];
+                       const newId = db.ref(dbPath).push().key;
+                       const newObj = { id: newId };
+                       if (this.currentType === 'students') newObj.lastUpdatedYear = Store.currentYear;
+                       else newObj.joinYear = Store.currentYear;
+
+                       Object.keys(mapping).forEach(sysKey => {
+                           newObj[sysKey] = row[mapping[sysKey]];
+                       });
+                       
+                       if(this.currentType === 'students' && (newObj.firstName || newObj.lastName)) {
+                           newObj.name = `${newObj.firstName || ''} ${newObj.lastName || ''}`.trim();
+                       }
+                       // תאימות גם לתורמים
+                       if(this.currentType === 'donors' && (newObj.firstName || newObj.lastName)) {
+                           newObj.name = `${newObj.firstName || ''} ${newObj.lastName || ''}`.trim();
+                       }
+
+                       batch[newId] = newObj;
+                   }
+                   
+                   db.ref(dbPath).update(batch, (error) => {
+                       if(error) Notify.show('שגיאה ביבוא', 'error');
+                       else {
+                           if(i < this.fileData.length) {
+                               setTimeout(processBatch, 50); 
+                           } else {
+                               Modal.close();
+                               document.querySelector('#modal-form .btn-primary').parentElement.style.display = 'flex';
+                               Notify.show(`יבוא ${this.fileData.length} רשומות הושלם!`, 'success');
+                           }
+                       }
+                   });
+                };
+                Notify.show('מתחיל יבוא...', 'info');
+                processBatch();
             }
         };
 
         const Settings = {
-            init() { this.renderFieldsEditor(); },
+            init() {
+                this.renderFieldsEditor();
+                this.renderGoals();
+                this.renderStudentRewards();
+                if(Store.data.config) {
+                    document.getElementById('conf-global-goal').value = Store.data.config.globalGoal || '';
+                    document.getElementById('conf-group-disc').value = Store.data.config.groupDiscount || '';
+                    document.getElementById('conf-base-student-goal').value = Store.data.config.baseStudentGoal || '';
+                }
+            },
+            save(key, val) { OfflineManager.write(`settings/${key}`, parseInt(val)); Notify.show('הגדרה נשמרה', 'success'); },
+            createUser() {
+                const email = document.getElementById('new-user-email').value;
+                const pass = document.getElementById('new-user-pass').value;
+                const role = document.getElementById('new-user-role').value;
+                if(!email || !pass) return alert('נא למלא אימייל וסיסמה');
+                if(confirm('פעולה זו תנתק אותך ותחבר את המשתמש החדש שיצרת. האם להמשיך?')) {
+                    auth.createUserWithEmailAndPassword(email, pass).then(cred => {
+                        db.ref(`users/${cred.user.uid}`).set({
+                            email: email,
+                            role: role
+                        });
+                        Notify.show('משתמש נוצר בהצלחה', 'success');
+                    }).catch(err => {
+                        alert("שגיאה ביצירת משתמש: " + err.message);
+                    });
+                }
+            },
+            syncYears() {
+                if(!confirm('פעולה זו תקדם את כל הבחורים בשיעור אחד. בוגרי קיבוץ ח\' יועברו לרשימת התורמים. האם להמשיך?')) return;
+                Notify.show('מבצע סנכרון...', 'info');
+                db.ref('global/students').once('value', s => {
+                    const allStudents = s.val() || {};
+                    const updates = {};
+                    const newDonors = {};
+                    let movedCount = 0;
+                    Object.values(allStudents).forEach(st => {
+                        const currentGrade = st.grade;
+                        if(!currentGrade) return;
+                        const idx = SHIURIM_ORDER.indexOf(currentGrade);
+                        if(idx === -1) return; 
+                        if(idx < SHIURIM_ORDER.length - 1) {
+                            updates[`global/students/${st.id}/grade`] = SHIURIM_ORDER[idx + 1];
+                        } else {
+                            movedCount++;
+                            updates[`global/students/${st.id}`] = null; 
+                            const n = st.firstName && st.lastName ? `${st.firstName} ${st.lastName}` : st.name;
+                            newDonors[`global/donors/${st.id}`] = {
+                                id: st.id,
+                                name: n,
+                                phone: st.phone,
+                                address: st.city || '',
+                                joinYear: Store.currentYear,
+                                notes: 'בוגר (הועבר אוטומטית)',
+                                isAlumni: true
+                            };
+                        }
+                    });
+                    db.ref().update(updates).then(() => {
+                         if(movedCount > 0) db.ref().update(newDonors);
+                         Notify.show(`סנכרון הושלם. ${movedCount} בוגרים הועברו לתורמים.`, 'success');
+                         setTimeout(() => location.reload(), 2000);
+                    });
+                });
+            },
             renderFieldsEditor() {
                 const type = document.getElementById('settings-field-type').value;
                 const list = document.getElementById('settings-active-fields');
                 const select = document.getElementById('settings-predefined-field');
+                
+                const defs = PREDEFINED_FIELDS[type] || [];
                 select.innerHTML = '';
-                PREDEFINED_FIELDS[type].forEach(d => select.innerHTML += `<option value="${d.k}">${d.l}</option>`);
+                defs.forEach(d => select.innerHTML += `<option value="${d.k}">${d.l}</option>`);
+                
+                const customDefs = Store.data.config.customFieldsDefs || {};
+                Object.entries(customDefs).forEach(([k, def]) => {
+                     select.innerHTML += `<option value="${k}" class="text-indigo-600">${def.l} (מותאם)</option>`;
+                });
                 
                 const active = (Store.data.config.fields || {})[type] || DEFAULT_ACTIVE_FIELDS[type];
-                list.innerHTML = active.map(k => {
-                    const def = PREDEFINED_FIELDS[type].find(d => d.k === k);
-                    return `<div class="flex justify-between bg-gray-50 p-2 border text-sm"><span>${def?def.l:k}</span><button onclick="Settings.removeField('${type}','${k}')" class="text-red-500"><i class="fas fa-trash"></i></button></div>`;
-                }).join('');
+                list.innerHTML = '';
+                active.forEach(k => {
+                    let def = defs.find(d => d.k === k);
+                    if (!def && customDefs[k]) def = {l: customDefs[k].l};
+                    const label = def ? def.l : k;
+                    list.innerHTML += `
+                        <div class="flex justify-between items-center bg-gray-50 p-2 rounded border text-sm">
+                            <span>${label}</span>
+                            <button onclick="Settings.removeField('${type}','${k}')" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
+                        </div>
+                    `;
+                });
             },
             addField() {
                 const type = document.getElementById('settings-field-type').value;
@@ -1635,51 +2573,130 @@
                     this.renderFieldsEditor();
                 }
             },
+            addCustomField() {
+                const key = document.getElementById('custom-field-key').value.trim();
+                const label = document.getElementById('custom-field-label').value.trim();
+                if(!key || !label) return alert('חובה למלא מזהה (באנגלית) ותווית (בעברית)');
+                const defs = Store.data.config.customFieldsDefs || {};
+                defs[key] = { l: label };
+                OfflineManager.write(`settings/customFieldsDefs`, defs);
+                Store.data.config.customFieldsDefs = defs;
+                const type = document.getElementById('settings-field-type').value;
+                const active = (Store.data.config.fields || {})[type] || [];
+                if(!active.includes(key)) {
+                    active.push(key);
+                    OfflineManager.write(`settings/fields/${type}`, active);
+                    if(!Store.data.config.fields) Store.data.config.fields = {};
+                    Store.data.config.fields[type] = active;
+                }
+                document.getElementById('custom-field-key').value = '';
+                document.getElementById('custom-field-label').value = '';
+                Notify.show('שדה מותאם נוסף בהצלחה', 'success');
+                this.renderFieldsEditor();
+            },
             removeField(type, key) {
+                if(!confirm('האם להסיר את השדה מהרשימה הפעילה?')) return;
                 let active = (Store.data.config.fields || {})[type] || [];
                 active = active.filter(k => k !== key);
                 OfflineManager.write(`settings/fields/${type}`, active);
                 Store.data.config.fields[type] = active;
                 this.renderFieldsEditor();
             },
-            syncYears() {
-                if(confirm('פעולה זו תקדם כיתות. להמשיך?')) {
-                    db.ref('global/students').once('value', s => {
-                        const u = {};
-                        Object.values(s.val()||{}).forEach(st => {
-                            const i = SHIURIM_ORDER.indexOf(st.grade);
-                            if(i > -1 && i < SHIURIM_ORDER.length-1) u[`global/students/${st.id}/grade`] = SHIURIM_ORDER[i+1];
-                        });
-                        db.ref().update(u).then(() => { Notify.show('סנכרון הושלם', 'success'); location.reload(); });
-                    });
-                }
+            renderGoals() {
+                const div = document.getElementById('settings-goals-tiers');
+                const tiers = Store.data.config.tiers || [];
+                div.innerHTML = tiers.map((t, i) => `
+                    <div class="flex gap-2 items-center mb-2">
+                        <span class="text-sm font-bold w-6">#${i+1}</span>
+                        <input type="number" placeholder="סכום תרומה" value="${t.amount}" onchange="Settings.updateTier(${i}, 'amount', this.value)" class="input-field w-24 p-1 text-sm">
+                        <input type="text" placeholder="סכום זיכוי (מספר) או מתנה" value="${t.gift}" onchange="Settings.updateTier(${i}, 'gift', this.value)" class="input-field flex-1 p-1 text-sm">
+                        <button onclick="Settings.removeTier(${i})" class="text-red-500"><i class="fas fa-times"></i></button>
+                    </div>
+                `).join('');
             },
-            addHistoryYear() {
-                const y = prompt("הכנס שנה היסטורית (לדוגמה: 5770):");
-                if(y && y.length === 4 && !isNaN(y)) {
-                    // יצירת צומת ריק לשנה ב-DB כדי שהיא תופיע ברשימות
-                    db.ref(`years/${y}`).set({created: Date.now()}).then(() => {
-                        Notify.show(`שנת ${y} נוספה למערכת`, 'success');
-                        setTimeout(() => location.reload(), 1000);
-                    });
-                } else {
-                    alert('שנה לא תקינה');
-                }
+            addGoalTier() {
+                const tiers = Store.data.config.tiers || [];
+                tiers.push({amount: 0, gift: ''});
+                OfflineManager.write('settings/tiers', tiers);
+                Store.data.config.tiers = tiers;
+                this.renderGoals();
+            },
+            updateTier(i, k, v) {
+                const tiers = [...Store.data.config.tiers];
+                tiers[i][k] = v;
+                OfflineManager.write('settings/tiers', tiers);
+            },
+            removeTier(i) {
+                const tiers = Store.data.config.tiers || [];
+                tiers.splice(i, 1);
+                OfflineManager.write('settings/tiers', tiers);
+                Store.data.config.tiers = tiers;
+                this.renderGoals();
+            },
+            renderStudentRewards() {
+                const div = document.getElementById('settings-student-rewards');
+                const tiers = Store.data.config.studentTiers || [];
+                div.innerHTML = tiers.map((t, i) => `
+                    <div class="flex gap-2 items-center bg-white p-2 rounded border border-amber-100">
+                        <div class="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 font-bold">${i+1}</div>
+                        <div class="flex-1 grid grid-cols-2 gap-2">
+                            <input type="number" placeholder="סכום יעד" value="${t.amount}" onchange="Settings.updateStudentReward(${i}, 'amount', this.value)" class="input-field text-sm">
+                            <input type="text" placeholder="תיאור מתנה/תגמול" value="${t.reward}" onchange="Settings.updateStudentReward(${i}, 'reward', this.value)" class="input-field text-sm">
+                        </div>
+                        <button onclick="Settings.removeStudentReward(${i})" class="text-red-400 hover:bg-red-50 p-2 rounded"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                `).join('');
+            },
+            addStudentReward() {
+                const tiers = Store.data.config.studentTiers || [];
+                tiers.push({amount: 5000, reward: 'מתנה חדשה'});
+                OfflineManager.write('settings/studentTiers', tiers);
+                Store.data.config.studentTiers = tiers;
+                this.renderStudentRewards();
+            },
+            updateStudentReward(i, k, v) {
+                const tiers = [...Store.data.config.studentTiers];
+                tiers[i][k] = k === 'amount' ? parseInt(v) : v;
+                OfflineManager.write('settings/studentTiers', tiers);
+            },
+            removeStudentReward(i) {
+                const tiers = Store.data.config.studentTiers || [];
+                tiers.splice(i, 1);
+                OfflineManager.write('settings/studentTiers', tiers);
+                Store.data.config.studentTiers = tiers;
+                this.renderStudentRewards();
             }
         };
 
+        // --- 12. SHARED MODAL & HELPERS ---
         const Modal = {
             render(title, fields, onSave, extraHtml='') {
                 let html = '';
                 fields.forEach(f => {
-                    html += `<div class="mb-4"><label class="lbl">${f.l}</label>`;
-                    if(f.t === 'select') html += `<select id="field-${f.id}" class="input-field w-full">${f.opts.map(o=>`<option value="${o}" ${f.v===o?'selected':''}>${o}</option>`).join('')}</select>`;
-                    else if(f.t === 'checkbox') html += `<input type="checkbox" id="field-${f.id}" ${f.v?'checked':''}>`;
-                    else if(f.t === 'textarea') html += `<textarea id="field-${f.id}" class="input-field w-full h-24">${f.v||''}</textarea>`;
-                    else html += `<input id="field-${f.id}" type="${f.t}" value="${f.v||''}" class="input-field w-full">`;
+                    html += `<div class="mb-4">
+                        <label class="block text-sm font-bold text-slate-700 mb-1">${f.l} ${f.r?'<span class="text-red-500">*</span>':''}</label>`;
+                    
+                    if(f.t === 'select') {
+                        html += `<select id="field-${f.id}" class="w-full border border-slate-300 p-2.5 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition">`;
+                        f.opts.forEach(o => html += `<option value="${o}" ${f.v===o?'selected':''}>${o}</option>`);
+                        html += `</select>`;
+                    } else if(f.t === 'checkbox') {
+                         html += `<div class="flex items-center gap-2"><input type="checkbox" id="field-${f.id}" ${f.v?'checked':''} class="h-5 w-5 rounded text-indigo-600"> <span class="text-sm">פעיל</span></div>`;
+                    } else if(f.t === 'textarea') {
+                        html += `<textarea id="field-${f.id}" class="w-full border border-slate-300 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition h-24">${f.v||''}</textarea>`;
+                    } else if(f.t === 'referrer_select') {
+                        const opts = Object.values(Store.data.students).map(s => {
+                            const n = s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : s.name;
+                            return `<option value="${s.id}" ${f.v===s.id?'selected':''}>${n}</option>`;
+                        }).join('');
+                        html += `<select id="field-${f.id}" class="w-full border border-slate-300 p-2.5 rounded-lg bg-white"><option value="">-- בחר --</option>${opts}</select>`;
+                    } else {
+                        html += `<input id="field-${f.id}" type="${f.t||'text'}" value="${f.v||''}" class="w-full border border-slate-300 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition" ${f.r?'required':''}>`;
+                    }
                     html += `</div>`;
                 });
-                this.renderRaw(title, html + extraHtml, () => {
+                html += extraHtml;
+                this.renderRaw(title, html, () => {
                     const data = {};
                     fields.forEach(f => {
                         const el = document.getElementById(`field-${f.id}`);
@@ -1689,24 +2706,57 @@
                     this.close();
                 });
             },
-            renderRaw(title, body, onSave) {
+            renderRaw(title, bodyHtml, onSaveAction) {
                 document.getElementById('modal-title').innerText = title;
-                document.getElementById('modal-body').innerHTML = body;
+                document.getElementById('modal-body').innerHTML = bodyHtml;
                 document.getElementById('modal-form').classList.remove('hidden-screen');
+                setTimeout(() => document.querySelector('#modal-form > div').classList.remove('scale-95', 'opacity-0'), 10);
                 const btn = document.getElementById('modal-save-btn');
                 const newBtn = btn.cloneNode(true);
                 btn.parentNode.replaceChild(newBtn, btn);
-                if(onSave) { newBtn.onclick = onSave; newBtn.style.display = 'block'; } else { newBtn.style.display = 'none'; }
+                newBtn.onclick = onSaveAction;
             },
-            close() { document.getElementById('modal-form').classList.add('hidden-screen'); }
+            close() { 
+                const el = document.querySelector('#modal-form > div');
+                el.classList.add('scale-95'); 
+                setTimeout(() => document.getElementById('modal-form').classList.add('hidden-screen'), 150); 
+            }
         };
 
         const Dashboard = {
             render() {
                 const stats = Store.data.stats || { income: 0, expense: 0 };
-                document.getElementById('dash-income').innerText = `₪${(stats.income||0).toLocaleString()}`;
-                document.getElementById('dash-expense').innerText = `₪${(stats.expense||0).toLocaleString()}`;
-                document.getElementById('dash-total-balance').innerText = `₪${((stats.income||0) - (stats.expense||0)).toLocaleString()}`;
+                const inc = stats.income || 0;
+                const exp = stats.expense || 0;
+                document.getElementById('dash-income').innerText = `₪${inc.toLocaleString()}`;
+                document.getElementById('dash-expense').innerText = `₪${exp.toLocaleString()}`;
+                document.getElementById('dash-total-balance').innerText = `₪${(inc - exp).toLocaleString()}`;
+                const goal = Store.data.config.globalGoal || 100000;
+                const pct = Math.min(100, Math.round((inc / goal) * 100));
+                setTimeout(() => { document.getElementById('dash-bar').style.width = pct + '%'; }, 100);
+                document.getElementById('dash-goal-progress').innerText = pct + '%';
+                if (Store.role !== 'user') {
+                    db.ref(`years/${Store.currentYear}/finance`).orderByChild('date').limitToLast(5).once('value', s => {
+                        const logs = document.getElementById('dash-logs');
+                        const val = s.val();
+                        if(!val) { logs.innerHTML = '<div class="text-center text-gray-400 mt-4">אין תנועות אחרונות</div>'; return; }
+                        const arr = Object.values(val).sort((a,b)=>b.date-a.date);
+                        logs.innerHTML = arr.map(t => {
+                            const icon = t.type==='income' ? 'fa-arrow-down text-emerald-500' : 'fa-arrow-up text-rose-500';
+                            return `
+                            <div class="p-3 border-b flex justify-between items-center text-sm hover:bg-slate-50">
+                                <div class="flex items-center gap-2">
+                                    <i class="fas ${icon}"></i>
+                                    <span class="font-medium">${t.category}</span>
+                                    <span class="text-xs text-gray-400">${t.desc||''}</span>
+                                </div>
+                                <span class="font-bold">₪${t.amount}</span>
+                            </div>`;
+                        }).join('');
+                    });
+                } else {
+                     document.getElementById('dash-logs').innerHTML = '<div class="text-center text-gray-400 mt-4">אין גישה לנתונים כספיים</div>';
+                }
             }
         };
 
@@ -1723,6 +2773,7 @@
             @keyframes bounceSlight { 0%, 100% { transform: translateY(-5%); } 50% { transform: translateY(0); } }
         `;
         document.head.appendChild(style);
+
     </script>
 </body>
 </html>
