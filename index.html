@@ -622,7 +622,7 @@
                                         </select>
                                         <button onclick="Settings.createUser()" class="bg-slate-800 text-white rounded-lg font-bold text-sm">צור משתמש</button>
                                     </div>
-                                    <div class="mt-2 text-xs text-red-500 font-bold">* אזהרה: יצירת משתמש תנתק אותך ותחבר אותך כמשתמש החדש.</div>
+                                    <div class="mt-2 text-xs text-blue-500 font-bold">* המשתמש ייווצר במערכת ללא ניתוק המנהל הנוכחי.</div>
                                 </div>
                             </div>
                         </div>
@@ -654,6 +654,11 @@
                                                  <input type="text" id="custom-field-label" placeholder="תווית (בעברית)" class="input-field text-sm">
                                              </div>
                                              <button onclick="Settings.addCustomField()" class="w-full bg-indigo-100 text-indigo-700 text-sm font-bold py-2 rounded hover:bg-indigo-200">צור והוסף שדה</button>
+                                        </div>
+
+                                        <div class="border-t pt-4 mt-4">
+                                            <div class="text-sm font-bold mb-2 text-red-700">שדות מותאמים שנשמרו במערכת:</div>
+                                            <div id="settings-custom-list" class="space-y-1"></div>
                                         </div>
 
                                         <div class="text-sm font-bold mt-4 mb-2">שדות פעילים:</div>
@@ -1019,6 +1024,11 @@
                     if(!this.data.config.tiers) this.data.config.tiers = [];
                     if(!this.data.config.studentTiers) this.data.config.studentTiers = [];
                     if(!this.data.config.customFieldsDefs) this.data.config.customFieldsDefs = {};
+                    
+                    // Render settings if active
+                    if(Router.current === 'settings') {
+                         Settings.renderFieldsEditor();
+                    }
                 });
             }
         };
@@ -1071,7 +1081,7 @@
                 const em = document.getElementById('email').value;
                 const pw = document.getElementById('password').value;
                 
-                localStorage.setItem('last_email_login', em);
+                // localStorage.setItem('last_email_login', em); // DELETED
 
                 auth.signInWithEmailAndPassword(em, pw).catch(err => {
                     const msg = document.getElementById('login-msg');
@@ -1107,10 +1117,10 @@
                     document.getElementById('sidebar').classList.add('hidden-screen');
                     document.getElementById('main-content').classList.add('hidden-screen');
                     
-                    const savedEmail = localStorage.getItem('last_email_login');
-                    if(savedEmail) {
-                        document.getElementById('email').value = savedEmail;
-                    }
+                    // const savedEmail = localStorage.getItem('last_email_login'); // DELETED
+                    // if(savedEmail) {
+                    //     document.getElementById('email').value = savedEmail; // DELETED
+                    // }
                     clearTimeout(InactivityTimer.timer);
                 }
             }
@@ -1314,19 +1324,24 @@
                     const row = document.createElement('tr');
                     row.className = "hover:bg-slate-50 border-b border-slate-50 transition cursor-pointer group";
                     row.onclick = (e) => { if(!e.target.closest('button')) this.openEdit(s.id); };
+                    
+                    const reportBtn = Store.role === 'admin' ? 
+                        `<button onclick="Reports.generateIndividual('${s.id}', '${s.displayName}')" class="text-green-500 hover:text-green-700 transition p-2 hover:bg-green-50 rounded-full" title="הפק דוח אישי"><i class="fas fa-file-invoice-dollar"></i></button>` : '';
+
                     row.innerHTML = `
                         <td class="p-3 text-right font-medium text-slate-700 group-hover:text-indigo-600 transition">${s.displayName}</td>
                         <td class="p-3 text-right text-gray-500">${s.grade || '-'}</td>
                         <td class="p-3 text-right text-gray-400">${s.entryYear || '-'}</td>
                         <td class="p-3 text-right font-bold text-slate-800">₪${parseInt(s.effectiveGoal).toLocaleString()}</td>
                         <td class="p-3 text-center flex items-center justify-center gap-2">
+                            ${reportBtn}
                             <button onclick="Students.openEdit('${s.id}')" class="text-indigo-400 hover:text-indigo-600 transition p-2 hover:bg-indigo-50 rounded-full"><i class="fas fa-pen"></i></button>
                             <button onclick="Students.delete('${s.id}')" class="text-red-400 hover:text-red-600 transition p-2 hover:bg-red-50 rounded-full"><i class="fas fa-trash"></i></button>
                         </td>
                     `;
                     tbody.appendChild(row);
                 });
-                document.getElementById('dash-stat-students').innerText = Object.keys(Store.data.students).length;
+                // Note: The main count is updated by Dashboard.render now correctly
                 if(!Store.loadedAll.students && list.length < 500) document.getElementById('students-loader-more').style.display = 'block';
             },
             handleSearch(term) { this.render(); },
@@ -1498,7 +1513,7 @@
                 });
             },
             render() {
-                document.getElementById('dash-stat-donors').innerText = Object.keys(Store.data.donors).length;
+                // Main count is handled by Dashboard/async fetch now
                 if(this.viewMode === 'list') {
                     document.getElementById('donors-list-view').style.display = 'block';
                     document.getElementById('donors-quick-manager').style.display = 'none';
@@ -1908,9 +1923,8 @@
                         
                         return `<tr class="${rowClass}">
                             <td width="5%">${idx+1}</td>
-                            <td width="35%"><b>${name}</b> ${roleBadge}</td>
-                            <td width="30%">${s.phone}</td>
-                            <td width="30%">${s.grade || ''}</td>
+                            <td width="55%"><b>${name}</b> ${roleBadge}</td>
+                            <td width="40%">${s.grade || ''}</td>
                         </tr>`;
                     };
 
@@ -1919,7 +1933,6 @@
                             <tr>
                                 <th>#</th>
                                 <th>שם הבחור</th>
-                                <th>טלפון</th>
                                 <th>שיעור</th>
                             </tr>
                         </thead>
@@ -2217,6 +2230,30 @@
                 document.getElementById('rep-entity-id').value = id + '|' + type;
                 document.getElementById('rep-entity-results').classList.add('hidden');
             },
+            generateIndividual(id, name) {
+                Notify.show('מכין דוח אישי...', 'info');
+                db.ref(`years/${Store.currentYear}/finance`).orderByChild('studentId').equalTo(id).once('value', snap => {
+                    const data = Object.values(snap.val() || {});
+                    if(data.length === 0) return Notify.show('לא נמצאו תנועות לבחור זה', 'error');
+                    
+                    const rows = data.map(t => ({
+                        "תאריך": new Date(t.date).toLocaleDateString('he-IL'),
+                        "סוג תנועה": t.type === 'income' ? 'הכנסה' : 'הוצאה',
+                        "קטגוריה": t.category,
+                        "תיאור": t.desc,
+                        "סכום": t.amount
+                    }));
+
+                    const ws = XLSX.utils.json_to_sheet(rows);
+                    if(!ws['!views']) ws['!views'] = [];
+                    ws['!views'].push({ rightToLeft: true });
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, "דוח אישי");
+                    wb.Workbook = { Views: [{ RTL: true }] };
+                    XLSX.writeFile(wb, `Report_${name.replace(/ /g,'_')}.xlsx`);
+                    Notify.show('הדוח הורד בהצלחה', 'success');
+                });
+            },
             generateStandard() {
                 Notify.show('מייצא נתונים...', 'info');
                 db.ref(`years/${Store.currentYear}/finance`).once('value', snap => {
@@ -2271,8 +2308,6 @@
                         <tr>
                             <th>שם הבחור</th>
                             <th>יעד אישי</th>
-                            <th>גויס בפועל</th>
-                            <th>זיכויים</th>
                             <th>סה״כ לתצוגה</th>
                             <th>אחוז מיעד</th>
                         </tr>
@@ -2323,8 +2358,6 @@
                     html += `<tr>
                         <td><b>${item.name}</b></td>
                         <td>${item.goal}</td>
-                        <td>${item.actual}</td>
-                        <td>${item.extra}</td>
                         <td><b>${item.totalDisplay}</b></td>
                         <td>${item.pct}%</td>
                     </tr>`;
@@ -2484,17 +2517,28 @@
                 const pass = document.getElementById('new-user-pass').value;
                 const role = document.getElementById('new-user-role').value;
                 if(!email || !pass) return alert('נא למלא אימייל וסיסמה');
-                if(confirm('פעולה זו תנתק אותך ותחבר את המשתמש החדש שיצרת. האם להמשיך?')) {
-                    auth.createUserWithEmailAndPassword(email, pass).then(cred => {
+                
+                Notify.show('יוצר משתמש...', 'info');
+                
+                // שימוש באפליקציה משנית כדי לא לנתק את המנהל הנוכחי
+                try {
+                    const secondaryApp = firebase.initializeApp(firebaseConfig, "Secondary");
+                    secondaryApp.auth().createUserWithEmailAndPassword(email, pass).then(cred => {
+                        // כתיבת הרשאות ע"י המנהל הראשי (המחובר באפליקציה הראשית)
                         db.ref(`users/${cred.user.uid}`).set({
                             email: email,
                             role: role
                         });
-                        Notify.show('משתמש נוצר בהצלחה', 'success');
+                        secondaryApp.auth().signOut();
+                        secondaryApp.delete(); 
+                        Notify.show('משתמש נוצר בהצלחה!', 'success');
+                        document.getElementById('new-user-email').value = '';
+                        document.getElementById('new-user-pass').value = '';
                     }).catch(err => {
                         alert("שגיאה ביצירת משתמש: " + err.message);
+                        if(secondaryApp) secondaryApp.delete();
                     });
-                }
+                } catch(e) { console.error(e); }
             },
             syncYears() {
                 if(!confirm('פעולה זו תקדם את כל הבחורים בשיעור אחד. בוגרי קיבוץ ח\' יועברו לרשימת התורמים. האם להמשיך?')) return;
@@ -2536,6 +2580,7 @@
             renderFieldsEditor() {
                 const type = document.getElementById('settings-field-type').value;
                 const list = document.getElementById('settings-active-fields');
+                const customList = document.getElementById('settings-custom-list');
                 const select = document.getElementById('settings-predefined-field');
                 
                 const defs = PREDEFINED_FIELDS[type] || [];
@@ -2543,9 +2588,17 @@
                 defs.forEach(d => select.innerHTML += `<option value="${d.k}">${d.l}</option>`);
                 
                 const customDefs = Store.data.config.customFieldsDefs || {};
+                customList.innerHTML = '';
                 Object.entries(customDefs).forEach(([k, def]) => {
                      select.innerHTML += `<option value="${k}" class="text-indigo-600">${def.l} (מותאם)</option>`;
+                     customList.innerHTML += `
+                        <div class="flex justify-between items-center text-xs bg-gray-50 p-1 border rounded">
+                            <span>${def.l} (${k})</span>
+                            <button onclick="Settings.deleteCustomFieldDef('${k}')" class="text-red-500 hover:text-red-700 px-2" title="מחק שדה מהמערכת"><i class="fas fa-trash"></i></button>
+                        </div>
+                     `;
                 });
+                if(Object.keys(customDefs).length === 0) customList.innerHTML = '<span class="text-gray-400 text-xs">אין שדות מותאמים</span>';
                 
                 const active = (Store.data.config.fields || {})[type] || DEFAULT_ACTIVE_FIELDS[type];
                 list.innerHTML = '';
@@ -2593,6 +2646,26 @@
                 document.getElementById('custom-field-label').value = '';
                 Notify.show('שדה מותאם נוסף בהצלחה', 'success');
                 this.renderFieldsEditor();
+            },
+            deleteCustomFieldDef(key) {
+                if(!confirm('האם אתה בטוח שברצונך למחוק שדה זה מהמערכת? פעולה זו תסיר אותו מהקבוצות בשנה הנוכחית.')) return;
+                const defs = Store.data.config.customFieldsDefs || {};
+                delete defs[key];
+                OfflineManager.write('settings/customFieldsDefs', defs);
+                Store.data.config.customFieldsDefs = defs;
+                
+                // הסרה גם מהרשימות הפעילות אם קיים
+                ['students', 'donors'].forEach(type => {
+                    let active = (Store.data.config.fields || {})[type] || [];
+                    if(active.includes(key)) {
+                        active = active.filter(k => k !== key);
+                        OfflineManager.write(`settings/fields/${type}`, active);
+                        Store.data.config.fields[type] = active;
+                    }
+                });
+
+                this.renderFieldsEditor();
+                Notify.show('השדה נמחק מהמערכת', 'info');
             },
             removeField(type, key) {
                 if(!confirm('האם להסיר את השדה מהרשימה הפעילה?')) return;
@@ -2735,6 +2808,11 @@
                 const pct = Math.min(100, Math.round((inc / goal) * 100));
                 setTimeout(() => { document.getElementById('dash-bar').style.width = pct + '%'; }, 100);
                 document.getElementById('dash-goal-progress').innerText = pct + '%';
+                
+                // עדכון מספרי משתמשים ותורמים מלאים (אמיתיים) מהשרת
+                db.ref('global/students').once('value', s => document.getElementById('dash-stat-students').innerText = s.numChildren());
+                db.ref('global/donors').once('value', s => document.getElementById('dash-stat-donors').innerText = s.numChildren());
+
                 if (Store.role !== 'user') {
                     db.ref(`years/${Store.currentYear}/finance`).orderByChild('date').limitToLast(5).once('value', s => {
                         const logs = document.getElementById('dash-logs');
