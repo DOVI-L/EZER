@@ -107,12 +107,15 @@
             background-size: 20px 20px; gap: 20px;
         }
         .report-page {
-            width: 297mm; min-height: 210mm; /* A4 Landscape */
+            /* גודל בסיסי ישתנה דינמית */
             background: white; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             position: relative; overflow: hidden; 
             margin-bottom: 20px;
             transform-origin: top center; transition: transform 0.2s;
         }
+        .page-landscape { width: 297mm; min-height: 210mm; }
+        .page-portrait { width: 210mm; min-height: 297mm; }
+
         .draggable-item {
             position: absolute; cursor: move; border: 2px solid transparent; z-index: 50;
         }
@@ -129,28 +132,18 @@
 
         /* --- אזור הדפסה משודרג --- */
         @media print {
-            /* הסתרת כל האלמנטים הרגילים */
             body > *:not(#print-area) { display: none !important; }
-            #report-editor-screen { display: none !important; } /* הסתרת העורך בהדפסה */
+            #report-editor-screen { display: none !important; } 
             
-            /* הגדרות לאזור ההדפסה */
             #print-area { 
                 display: block !important; 
-                position: absolute; 
-                top: 0; 
-                left: 0; 
-                width: 100%; 
-                height: 100%; 
-                z-index: 99999; 
-                background-color: white; 
-                direction: rtl;
-                padding: 0;
+                position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+                z-index: 99999; background-color: white; direction: rtl; padding: 0;
                 color: black !important;
             }
 
-            @page { size: A4 landscape; margin: 0; } 
+            @page { margin: 0; } 
             
-            /* שיפור לתצוגת הרקע והאלמנטים בהדפסה מהעורך */
             .editor-print-mode {
                 width: 100% !important; height: 100% !important;
                 transform: none !important; box-shadow: none !important;
@@ -159,7 +152,6 @@
                 position: relative;
             }
 
-            /* שמירה על שקיפות ומיקום בהדפסה */
             .print-layer-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .print-layer-content { position: relative; z-index: 10 !important; }
             .print-layer-decor { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5 !important; pointer-events: none; }
@@ -167,7 +159,6 @@
             .print-table { width: 100%; margin: 10px auto; border-collapse: collapse; font-size: 10pt; table-layout: fixed; }
             .print-table th { background-color: rgba(226, 232, 240, 0.8) !important; border: 1px solid #000; padding: 4px; text-align: center; color: #000 !important; font-weight: 800; -webkit-print-color-adjust: exact; white-space: nowrap; overflow: hidden; }
             .print-table td { border: 1px solid #000; padding: 4px; text-align: right; color: #000; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; background: rgba(255,255,255,0.7); }
-            .print-table tr:nth-child(even) td { background-color: rgba(249, 249, 249, 0.7) !important; -webkit-print-color-adjust: exact; }
             
             .print-header { text-align: center; margin-bottom: 15px; border-bottom: 2px solid #000; padding-bottom: 5px; }
             .print-header img { position: absolute; right: 0; top: 0; height: 60px; width: auto; }
@@ -178,33 +169,48 @@
             .role-commander { background-color: #e0f2fe !important; -webkit-print-color-adjust: exact; }
             .role-deputy { background-color: #fef3c7 !important; -webkit-print-color-adjust: exact; }
 
-            /* התאמה לקיר - דף קבוצה */
-            .wall-mode .print-table { font-size: 14pt; }
-            .wall-mode .print-table td { padding: 8px; }
-            .wall-mode th { background-color: #334155 !important; color: white !important; }
-            
-            .print-grid-container {
-                display: grid;
-                grid-template-columns: repeat(3, 1fr);
-                gap: 10px;
-                width: 100%;
-                height: 100%;
+            /* הדפסת קוביות קבוצה */
+            .boxes-container {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 15px;
+                justify-content: flex-start;
                 padding: 10px;
+                direction: rtl;
             }
-            .print-grid-item {
+            .group-box {
+                width: 32%; /* 3 בשורה */
                 border: 2px solid #000;
-                padding: 5px;
-                font-size: 10pt;
-                break-inside: avoid;
+                padding: 0;
+                box-sizing: border-box;
+                page-break-inside: avoid;
+                background: #fff;
             }
-
-            .no-print { display: none !important; }
+            .group-box-header {
+                background: #e2e8f0;
+                border-bottom: 2px solid #000;
+                padding: 5px;
+                text-align: center;
+                font-weight: 900;
+                font-size: 14pt;
+                -webkit-print-color-adjust: exact;
+            }
+            .group-box-content {
+                padding: 5px;
+            }
+            .group-box-row {
+                display: flex;
+                justify-content: space-between;
+                border-bottom: 1px dashed #ccc;
+                padding: 2px 0;
+                font-size: 11pt;
+            }
+            .group-box-row:last-child { border-bottom: none; }
+            .box-role { font-weight: bold; }
         }
         
-        /* הסתרת אזור ההדפסה במסך רגיל */
         #print-area { display: none; }
         
-        /* הרשאות - הוסר admin-only לייצוא לפי בקשה 3 */
         body.role-user .financial-data { display: none !important; }
         body.role-user .admin-only { display: none !important; }
 
@@ -212,7 +218,6 @@
         .logo-img-sidebar { max-height: 90px; width: auto; max-width: 100%; object-fit: contain; }
         .nav-btn.active { background-color: rgba(255,255,255,0.1); border-right-color: #6366f1; color: white; }
 
-        /* Toast Notifications */
         #toast-container { position: fixed; bottom: 20px; left: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; }
         .toast { min-width: 300px; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 15px; display: flex; align-items: center; gap: 12px; animation: slideInLeft 0.3s ease; border-right: 4px solid transparent; }
         .toast.success { border-right-color: #10b981; }
@@ -224,7 +229,6 @@
         .info .toast-icon { color: #3b82f6; }
         @keyframes slideInLeft { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
-        /* Status Indicator for Offline */
         #connection-status {
             position: fixed; bottom: 10px; right: 10px; z-index: 9999;
             padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;
@@ -233,9 +237,8 @@
         .status-offline { background-color: #fee2e2; color: #991b1b; display: flex !important; }
         .status-syncing { background-color: #fef3c7; color: #92400e; display: flex !important; }
 
-        /* Kanban Column Scroll Fix */
         .kanban-group-list {
-            height: calc(100vh - 350px); /* Height adjusted for tabs */
+            height: calc(100vh - 350px);
             overflow-y: auto;
             min-height: 200px;
         }
@@ -248,7 +251,6 @@
              width: 100%;
         }
 
-        /* Celebration Animation */
         .celebration-bg {
             background: linear-gradient(135deg, #FFD700 0%, #FF8C00 100%);
             animation: pulse 1s infinite;
@@ -275,10 +277,13 @@
     <!-- אזור הדפסה -->
     <div id="print-area"></div>
 
-    <!-- עורך דוחות חדש (מוסתר כברירת מחדל) -->
+    <!-- עורך דוחות חדש -->
     <div id="report-editor-screen" class="hidden-screen">
         <aside id="report-sidebar">
-            <h2 class="text-xl font-bold border-b pb-2">עורך דוח תצוגה</h2>
+            <div class="flex justify-between items-center border-b pb-2">
+                <h2 class="text-xl font-bold">עורך דוח תצוגה</h2>
+                <button onclick="Reports.closeEditor()" class="text-red-500 hover:bg-red-50 rounded-full w-8 h-8"><i class="fas fa-times"></i></button>
+            </div>
             
             <div class="space-y-4 overflow-y-auto custom-scroll flex-1">
                 <div>
@@ -293,6 +298,14 @@
                         <span class="text-xs">שקיפות:</span>
                         <input type="range" min="0" max="1" step="0.1" value="0.2" oninput="Reports.updateBgOpacity(this.value)" class="flex-1">
                     </div>
+                </div>
+
+                <div class="border-t pt-2">
+                    <label class="text-sm font-bold block mb-2">כיוון דף</label>
+                    <select onchange="Reports.setOrientation(this.value)" class="input-field w-full text-sm">
+                        <option value="landscape">לרוחב (Landscape)</option>
+                        <option value="portrait">לאורך (Portrait)</option>
+                    </select>
                 </div>
 
                 <div class="border-t pt-2">
@@ -603,7 +616,7 @@
                                 <button onclick="Importer.init('donors')" class="btn-secondary"><i class="fas fa-file-excel text-green-600"></i> יבוא מאקסל</button>
                             </div>
                             <div class="relative w-80">
-                                <input type="text" id="donor-search-input" oninput="Donors.handleSearch(this.value)" placeholder="חפש תורם..." class="input-field w-full pl-4 pr-10">
+                                <input type="text" id="donor-search-input" oninput="System.searchFirebase(this.value, 'donors')" placeholder="חפש תורם..." class="input-field w-full pl-4 pr-10">
                                 <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
                             </div>
                         </div>
@@ -617,9 +630,20 @@
                         </div>
                     </div>
 
-                    <!-- מסך רגיל: רשימת תורמים -->
+                    <!-- מסך רגיל: רשימת תורמים (טבלה) -->
                     <div id="donors-list-view" class="flex-1 overflow-y-auto p-4 custom-scroll">
-                        <div id="donors-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pb-4"></div>
+                        <table class="w-full text-sm">
+                            <thead class="bg-slate-50 text-slate-600 sticky top-0 shadow-sm z-10">
+                                <tr>
+                                    <th class="p-3 text-right rounded-r-lg bg-slate-50">שם מלא</th>
+                                    <th class="p-3 text-right bg-slate-50">כתובת</th>
+                                    <th class="p-3 text-right bg-slate-50">טלפון</th>
+                                    <th class="p-3 text-right bg-slate-50">קבוצה</th>
+                                    <th class="p-3 text-center rounded-l-lg bg-slate-50">פעולות</th>
+                                </tr>
+                            </thead>
+                            <tbody id="donors-tbody" class="divide-y divide-slate-100"></tbody>
+                        </table>
                         <div id="donors-loader-more" class="p-4 text-center hidden">
                             <button onclick="Donors.loadMore()" class="bg-slate-200 text-slate-600 px-6 py-2 rounded-full font-bold text-sm">טען עוד...</button>
                         </div>
@@ -841,7 +865,7 @@
                                 </div>
                                 
                                 <div class="border-t pt-4">
-                                    <h4 class="font-bold mb-3 text-sm">משתמשים קיימים (עריכה ומחיקה)</h4>
+                                    <h4 class="font-bold mb-3 text-sm">משתמשים קיימים</h4>
                                     <div id="users-list-container" class="space-y-2">
                                         <!-- רשימת משתמשים תטען כאן -->
                                     </div>
@@ -928,10 +952,10 @@
                             </div>
 
                             <div class="mt-6 border-t pt-4">
-                                <h4 class="font-bold text-sm mb-3">אחוזי זיכוי בחור לפי סכום תרומה (מדורג)</h4>
-                                <p class="text-xs text-gray-500 mb-2">לדוגמה: 0-1000 ש"ח = 10%, 1000-5000 ש"ח = 20%.</p>
+                                <h4 class="font-bold text-sm mb-3">בונוס אחוזים לתרומת תורם בודד (לפי מדרגות)</h4>
+                                <p class="text-xs text-gray-500 mb-2">כאשר תורם תורם סכום בטווח מסוים, הבחור יקבל אחוז מסוים.</p>
                                 <div id="settings-bonus-tiers" class="space-y-2"></div>
-                                <button onclick="Settings.addBonusTier()" class="text-indigo-600 text-sm font-bold mt-2 hover:underline">+ הוסף מדרגת אחוזים</button>
+                                <button onclick="Settings.addBonusTier()" class="text-indigo-600 text-sm font-bold mt-2 hover:underline">+ הוסף מדרגת טווח לתורם</button>
                             </div>
 
                             <div class="mt-6 border-t pt-4">
@@ -1146,7 +1170,9 @@
 
                 if (storeKey && itemId) {
                     if (type === 'remove') {
-                        delete Store.data[storeKey][itemId];
+                        if (Store.data[storeKey][itemId]) {
+                            delete Store.data[storeKey][itemId];
+                        }
                     } else if (type === 'set' || type === 'update') {
                         const existing = Store.data[storeKey][itemId] || {};
                         Store.data[storeKey][itemId] = type === 'update' ? { ...existing, ...data } : data;
@@ -1158,7 +1184,8 @@
                         else Donors.render();
                     }
                 }
-
+                
+                // עדכון יעדים (studentData)
                 if (path.includes('studentData') && path.includes('personalGoal')) {
                     const year = parts[1];
                     const sid = parts[3];
@@ -1337,6 +1364,7 @@
             },
             logout() { 
                 ListenerManager.clearAll();
+                localStorage.removeItem('currentView');
                 auth.signOut(); 
                 location.reload(); 
             },
@@ -1355,7 +1383,9 @@
                         document.body.className = `role-${Store.role}`;
                         Store.init();
                         System.initUI();
-                        Router.go('dashboard');
+                        
+                        const savedView = localStorage.getItem('currentView');
+                        Router.go(savedView || 'dashboard');
                         InactivityTimer.init();
                     });
                 } else {
@@ -1374,15 +1404,19 @@
             go(view) {
                 if (view === 'finance' && Store.role === 'user') return Notify.show('אין לך הרשאה לצפות בנתונים כספיים', 'error');
                 if (view === 'settings' && Store.role === 'user') return Notify.show('אין לך הרשאה להגדרות', 'error');
+                if (view === 'reports' && Store.role === 'user') return Notify.show('אין לך הרשאה לדוחות', 'error');
 
                 this.current = view;
+                localStorage.setItem('currentView', view);
+                
                 document.querySelectorAll('.view-section').forEach(el => { el.classList.add('hidden'); el.classList.remove('fade-in'); });
                 const el = document.getElementById('view-' + view);
                 el.classList.remove('hidden');
                 setTimeout(() => el.classList.add('fade-in'), 10);
                 
                 document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-                document.getElementById('nav-' + view).classList.add('active');
+                const navBtn = document.getElementById('nav-' + view);
+                if(navBtn) navBtn.classList.add('active');
                 
                 const titles = {dashboard:'לוח מחוונים', students:'ניהול בחורים', donors:'ניהול תורמים', groups:'קבוצות ומסלולים', finance:'ניהול קופה', reports:'דוחות', settings:'הגדרות'};
                 document.getElementById('page-title').innerText = titles[view] || view;
@@ -1512,16 +1546,34 @@
                 }
                 
                 this.searchTimeout = setTimeout(() => {
-                    // ביצוע חיפוש מול פיירבייס אם התוצאות המקומיות לא מספקות או כברירת מחדל
-                    // למטרת הייעול נסתמך כרגע על הטעינה המקומית המלאה ב-Store
-                    // ונבצע את החיפוש הלוקאלי (שכבר ממומש ב-render), אבל נדמה קריאה לשרת אם חסר
-                    if(type === 'students' && !Store.loadedAll.students) Students.loadMore();
-                    else if(type === 'donors' && !Store.loadedAll.donors) Donors.loadMore();
+                    // תיקון: חיפוש אמיתי מול Firebase כדי לחסוך קריאות ולקבל תוצאות רלוונטיות
+                    const path = type === 'students' ? 'global/students' : 'global/donors';
+                    const ref = db.ref(path);
                     
-                    if(type === 'students') Students.handleSearch(term);
-                    if(type === 'donors') Donors.handleSearch(term);
+                    // שאילתה שמחפשת לפי שם
+                    ref.orderByChild('name')
+                       .startAt(term)
+                       .endAt(term + "\uf8ff")
+                       .once('value')
+                       .then(snapshot => {
+                            const results = snapshot.val();
+                            if(results) {
+                                // עדכון המטמון בתוצאות החיפוש
+                                const targetStore = type === 'students' ? Store.data.students : Store.data.donors;
+                                Object.assign(targetStore, results);
+                                OfflineManager.saveState(type, targetStore);
+                                
+                                // רינדור מחדש עם הסינון
+                                if(type === 'students') Students.render(term);
+                                else Donors.render(term);
+                            } else {
+                                Notify.show('לא נמצאו תוצאות', 'info');
+                                if(type === 'students') Students.render(term);
+                                else Donors.render(term);
+                            }
+                       });
 
-                }, 800); // 800ms debounce
+                }, 800); 
             }
         };
 
@@ -1572,8 +1624,8 @@
                     }
                 });
             },
-            render() {
-                const term = document.getElementById('student-search').value.trim();
+            render(searchTerm = null) {
+                const term = searchTerm || document.getElementById('student-search').value.trim();
                 const tbody = document.getElementById('students-tbody');
                 tbody.innerHTML = '';
                 let list = Object.values(Store.data.students).filter(s => !s.isArchived).map(s => {
@@ -1586,8 +1638,18 @@
                     const yData = (Store.data.yearData[Store.currentYear]?.students || {})[s.id] || {};
                     return { ...s, ...yData, effectiveGoal: yData.personalGoal || baseGoal }; 
                 });
-                if(term) list = list.filter(s => s.displayName.includes(term) || s.phone.includes(term));
-                const displayList = list.slice(0, 100);
+                
+                if(term) {
+                    list = list.filter(s => s.displayName.includes(term) || s.phone.includes(term) || (s.grade && s.grade.includes(term)));
+                }
+                
+                const displayList = list.slice(0, 100); // הגבלת תצוגה
+                
+                if (displayList.length === 0) {
+                     tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-gray-400">לא נמצאו בחורים</td></tr>';
+                     return;
+                }
+
                 displayList.forEach(s => {
                     const row = document.createElement('tr');
                     row.className = "hover:bg-slate-50 border-b border-slate-50 transition cursor-pointer group";
@@ -1608,9 +1670,15 @@
                     `;
                     tbody.appendChild(row);
                 });
-                if(!Store.loadedAll.students && list.length < 500) document.getElementById('students-loader-more').style.display = 'block';
+                
+                // הסתרת טעינה אם סונן או נטען הכל
+                if(term || Store.loadedAll.students) {
+                     document.getElementById('students-loader-more').style.display = 'none';
+                } else if(!Store.loadedAll.students && list.length < 500) {
+                     document.getElementById('students-loader-more').style.display = 'block';
+                }
             },
-            handleSearch(term) { this.render(); },
+            handleSearch(term) { this.render(term); },
             getFormFields() {
                 const activeKeys = Store.data.config.fields.students || DEFAULT_ACTIVE_FIELDS.students;
                 const fields = [];
@@ -1726,6 +1794,9 @@
             delete(id) {
                 if(confirm('האם אתה בטוח שברצונך למחוק בחור זה? פעולה זו תסיר אותו מהקבוצות בשנה הנוכחית.')) {
                     OfflineManager.write(`global/students/${id}`, null, 'remove');
+                    // מחיקה מהירה מהמטמון כדי שהממשק יתעדכן מיד
+                    delete Store.data.students[id];
+                    
                     const groups = Store.data.yearData[Store.currentYear]?.groups || {};
                     Object.keys(groups).forEach(day => {
                         Object.keys(groups[day]).forEach(gid => {
@@ -1736,7 +1807,7 @@
                             }
                         });
                     });
-                    delete Store.data.students[id];
+                    
                     this.render();
                     Notify.show('הבחור נמחק והוסר מהקבוצות', 'info');
                 }
@@ -1787,12 +1858,12 @@
                     }
                 });
             },
-            render() {
+            render(searchTerm = null) {
                 if(this.viewMode === 'list') {
                     document.getElementById('donors-list-view').style.display = 'block';
                     document.getElementById('donors-quick-manager').style.display = 'none';
                     document.getElementById('donors-quick-manager').classList.add('hidden');
-                    this.renderGrid();
+                    this.renderList(searchTerm); // שינוי לטבלה/רשימה
                 } else {
                     document.getElementById('donors-list-view').style.display = 'none';
                     document.getElementById('donors-quick-manager').style.display = 'flex';
@@ -1807,12 +1878,13 @@
             setViewTab(tab) {
                 this.viewTab = tab;
                 document.querySelectorAll('.donor-view-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-                this.renderGrid();
+                this.renderList();
             },
-            renderGrid() {
-                const term = document.getElementById('donor-search-input').value.trim();
-                const grid = document.getElementById('donors-grid');
-                grid.innerHTML = '';
+            // שינוי מקוביות (Grid) לשורות (List/Table)
+            renderList(searchTerm) {
+                const term = searchTerm || document.getElementById('donor-search-input').value.trim();
+                const tbody = document.getElementById('donors-tbody');
+                tbody.innerHTML = '';
                 
                 let list = Object.values(Store.data.donors).sort((a,b) => (a.name||'').localeCompare(b.name||''));
                 
@@ -1831,28 +1903,33 @@
                 if(term) list = list.filter(d => d.name.includes(term) || (d.address||'').includes(term) || (d.city||'').includes(term));
                 
                 const displayList = list.slice(0, 50);
+                
+                if(displayList.length === 0) {
+                     tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-gray-400">לא נמצאו תורמים</td></tr>';
+                }
+
                 displayList.forEach(d => {
                     const groupName = Store.data.donorGroupMap[d.id];
-                    grid.innerHTML += `
-                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition relative group hover:-translate-y-1 duration-200">
-                        <div class="flex justify-between items-start mb-2">
-                            <h4 class="font-bold text-slate-800 text-lg">${d.name}</h4>
-                            <div class="flex gap-1">
-                                <button onclick="Donors.openEdit('${d.id}')" class="text-gray-300 hover:text-indigo-600 bg-gray-50 p-1 rounded-lg"><i class="fas fa-pen"></i></button>
-                                <button onclick="Donors.delete('${d.id}')" class="text-gray-300 hover:text-red-600 bg-gray-50 p-1 rounded-lg" title="מחק תורם"><i class="fas fa-trash"></i></button>
-                            </div>
-                        </div>
-                        <div class="text-sm text-gray-500 mb-2 flex items-center gap-2"><i class="fas fa-map-marker-alt text-gray-300"></i> ${d.city || ''} ${d.street || d.address || ''}</div>
-                        
-                        <div class="flex flex-wrap gap-2 mt-3">
-                            ${groupName ? `<span class="text-xs bg-amber-50 text-amber-700 px-2 py-1 rounded font-bold border border-amber-100"><i class="fas fa-users"></i> ${groupName}</span>` : ''}
-                            ${d.vip ? '<span class="text-xs bg-purple-50 text-purple-700 px-2 py-1 rounded border border-purple-100">VIP</span>' : ''}
-                        </div>
-                        
-                        <div class="mt-4 pt-3 border-t border-dashed flex justify-between items-center financial-data">
-                            <button onclick="Finance.quickAdd('income', '${d.id}', 'donor')" class="text-emerald-600 text-sm font-bold hover:bg-emerald-50 px-3 py-1.5 rounded-lg transition w-full text-center">+ תרומה חדשה</button>
-                        </div>
-                    </div>`;
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-slate-50 border-b border-slate-50 transition cursor-pointer group";
+                    tr.innerHTML = `
+                        <td class="p-3 text-right font-medium text-slate-800">
+                             ${d.name} ${d.vip ? '<span class="mr-2 text-[10px] bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-100">VIP</span>' : ''}
+                        </td>
+                        <td class="p-3 text-right text-gray-500 text-sm">
+                             ${d.city || ''} ${d.street || d.address || ''} ${d.floor ? '(קומה '+d.floor+')' : ''}
+                        </td>
+                        <td class="p-3 text-right text-gray-500 text-sm">${d.phone || ''}</td>
+                        <td class="p-3 text-right text-sm">
+                            ${groupName ? `<span class="bg-amber-50 text-amber-700 px-2 py-0.5 rounded font-bold border border-amber-100">${groupName}</span>` : '-'}
+                        </td>
+                        <td class="p-3 text-center flex items-center justify-center gap-2">
+                            <button onclick="Finance.quickAdd('income', '${d.id}', 'donor')" class="text-emerald-500 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 p-2 rounded-full transition financial-data" title="תרומה מהירה"><i class="fas fa-plus"></i></button>
+                            <button onclick="Donors.openEdit('${d.id}')" class="text-indigo-400 hover:text-indigo-600 bg-indigo-50 hover:bg-indigo-100 p-2 rounded-full transition"><i class="fas fa-pen"></i></button>
+                            <button onclick="Donors.delete('${d.id}')" class="text-red-300 hover:text-red-600 hover:bg-red-50 p-2 rounded-full transition" title="מחק תורם"><i class="fas fa-trash"></i></button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
                 });
             },
             setKanbanDay(day) {
@@ -1912,9 +1989,16 @@
                         const d = Store.data.donors[did];
                         if(d) {
                             const item = document.createElement('div');
-                            item.className = "bg-white p-2 border rounded shadow-sm text-sm cursor-grab flex justify-between items-center group";
+                            item.className = "bg-white p-2 border rounded shadow-sm text-sm cursor-grab flex flex-col justify-between group";
                             item.dataset.id = did;
-                            item.innerHTML = `<span class="truncate w-40">${d.name}</span><button onclick="Groups.removeFromRoute('${g.day}','${g.id}','${did}')" class="text-red-300 hover:text-red-500 hidden group-hover:block"><i class="fas fa-times"></i></button>`;
+                            // תיקון: הצגת כתובת גם בשיבוץ
+                            item.innerHTML = `
+                                <div class="flex justify-between items-start">
+                                    <span class="truncate w-40 font-bold">${d.name}</span>
+                                    <button onclick="Groups.removeFromRoute('${g.day}','${g.id}','${did}')" class="text-red-300 hover:text-red-500 hidden group-hover:block"><i class="fas fa-times"></i></button>
+                                </div>
+                                <div class="text-xs text-gray-500 mt-1 truncate">${d.city||''} ${d.street||d.address||''}</div>
+                            `;
                             listEl.appendChild(item);
                         }
                     });
@@ -1942,30 +2026,31 @@
                 Reports.getAllHistory().then(historyData => {
                     const donors = (g.route || []).map(did => Store.data.donors[did]).filter(x => x);
                     
+                    // תיקון: תצוגת 3 שנים בעמודות נפרדות
+                    const years = Object.keys(HEBREW_YEARS_MAPPING).sort().reverse().slice(0,3);
+                    
                     let html = `<div class="overflow-x-auto"><table class="w-full text-sm border-collapse">
                         <thead class="bg-gray-100"><tr>
                             <th class="p-2 border">שם</th>
                             <th class="p-2 border">כתובת</th>
                             <th class="p-2 border">הערות</th>
-                            <th class="p-2 border">תרומות (3 שנים)</th>
+                            ${years.map(y => `<th class="p-2 border text-center">${y}</th>`).join('')}
                             <th class="p-2 border">פעולות</th>
                         </tr></thead><tbody>`;
-                    
-                    const years = Object.keys(HEBREW_YEARS_MAPPING).sort().reverse().slice(0,3);
                     
                     donors.forEach(d => {
                         let donationsHtml = '';
                         years.forEach(y => {
                             const numYear = HEBREW_YEARS_MAPPING[y];
                             const sum = (historyData[numYear] && historyData[numYear][d.id]) || 0;
-                            if (sum > 0) donationsHtml += `<div class="text-xs">${y}: ₪${sum}</div>`;
+                            donationsHtml += `<td class="p-2 border text-center font-bold text-xs">${sum > 0 ? '₪'+sum : '-'}</td>`;
                         });
 
                         html += `<tr>
                             <td class="p-2 border">${d.name}</td>
                             <td class="p-2 border">${d.city||''} ${d.street||''}</td>
-                            <td class="p-2 border">${d.notes||''}</td>
-                            <td class="p-2 border">${donationsHtml}</td>
+                            <td class="p-2 border text-xs max-w-[150px] truncate">${d.notes||''}</td>
+                            ${donationsHtml}
                             <td class="p-2 border text-center">
                                 <button onclick="Groups.removeFromRoute('${day}','${gid}','${d.id}'); Modal.close();" class="text-red-500 hover:bg-red-50 p-1 rounded">הסר</button>
                             </td>
@@ -2044,6 +2129,8 @@
             delete(id) {
                 if(confirm('אזהרה: האם אתה בטוח שברצונך למחוק תורם זה? הפעולה תסיר אותו מכל הקבוצות ומסד הנתונים.')) {
                     OfflineManager.write(`global/donors/${id}`, null, 'remove');
+                    delete Store.data.donors[id]; // מחיקה מיידית מהמטמון
+                    
                     // ניקוי מקבוצות
                     const groups = Store.data.yearData[Store.currentYear]?.groups || {};
                     Object.keys(groups).forEach(day => {
@@ -2055,7 +2142,7 @@
                             }
                         });
                     });
-                    delete Store.data.donors[id];
+                    
                     this.render();
                     Notify.show('התורם נמחק בהצלחה', 'info');
                 }
@@ -2280,18 +2367,9 @@
                 const prevYear = map[currNum - 1];
                 if(!prevYear) return alert('לא ניתן לזהות את השנה הקודמת');
 
-                // יבוא של *כל* התורמים שהיו בקבוצה אי פעם (מיזוג)
                 if(!confirm(`האם לייבא קבוצות משנת ${prevYear}? הפעולה תייבא את מבנה הקבוצות ואת כל התורמים שהיו משובצים אליהן בכל השנים (אלא אם הועברו). הבחורים לא יועתקו.`)) return;
 
                 Notify.show('מייבא נתונים...', 'info');
-                // אלגוריתם מורכב:
-                // 1. קח את הקבוצות משנה קודמת.
-                // 2. לכל קבוצה, בדוק בהיסטוריה של כל השנים אם תורם היה משובץ בה.
-                // 3. בנה רשימה מאוחדת לכל קבוצה.
-                
-                // לשם פשטות ויעילות בצד לקוח, נשתמש בלוגיקה של העתקת המסלול משנה קודמת בלבד כפי שהיה במקור, אבל נמזג עם הקיים.
-                // *תיקון לפי דרישה 13*: לייבא את כל התורמים שהיו בכל השנים בקבוצה.
-                // זה דורש סריקה של כל השנים ב-DB. זה כבד. נעשה קירוב: שנה קודמת + לפני שנתיים.
                 
                 const prevYear2 = map[currNum - 2];
                 const p1 = db.ref(`years/${prevYear}/groups`).once('value');
@@ -2303,7 +2381,6 @@
                     
                     const newGroups = {};
                     
-                    // פונקציית עזר למיזוג
                     const merge = (target, source) => {
                         Object.keys(source).forEach(day => {
                             if(!target[day]) target[day] = {};
@@ -2342,7 +2419,6 @@
                             "טלפון": d.phone || '',
                             "הערות": d.notes || ''
                         };
-                        // הוספת היסטוריה
                          Object.keys(historyData).forEach(yNum => {
                              const hYear = Object.keys(HEBREW_YEARS_MAPPING).find(key => HEBREW_YEARS_MAPPING[key] == yNum);
                              if(hYear) row[hYear] = historyData[yNum][d.id] || 0;
@@ -2375,20 +2451,45 @@
                     }
                 });
             },
+            // תיקון: הדפסת קוביות מסודרות
             printAllGroups() {
                 Notify.show('מכין הדפסה מרוכזת...', 'info');
                 const groups = Store.data.yearData[Store.currentYear]?.groups || {};
-                let html = '<div class="print-grid-container">';
+                let html = '<div class="boxes-container">';
                 
                 Object.keys(groups).forEach(day => {
+                    const dayName = day.replace('night','ליל ').replace('day','יום ');
                     Object.values(groups[day]).forEach(g => {
-                        const dayName = day.replace('night','ליל ').replace('day','יום ');
                         html += `
-                            <div class="print-grid-item">
-                                <div style="font-weight:bold; border-bottom:1px solid #000; margin-bottom:5px;">${g.name}</div>
-                                <div>${dayName}</div>
-                                <div>${(g.members||[]).length} בחורים</div>
-                                <div>${(g.route||[]).length} תורמים</div>
+                            <div class="group-box">
+                                <div class="group-box-header">${g.name} - ${dayName}</div>
+                                <div class="group-box-content">
+                        `;
+                        
+                        // מיון חברים לפי תפקיד
+                        const members = g.members || [];
+                        const commanders = members.filter(m => m.role === 'ראש צוות');
+                        const deputies = members.filter(m => m.role === 'סגן');
+                        const regulars = members.filter(m => m.role !== 'ראש צוות' && m.role !== 'סגן');
+                        
+                        const renderRow = (m, roleText) => {
+                            const s = Store.data.students[m.id];
+                            if (!s) return '';
+                            const name = s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : s.name;
+                            return `
+                                <div class="group-box-row">
+                                    <span class="box-name">${name} ${roleText ? `<span class="box-role">(${roleText})</span>` : ''}</span>
+                                    <span class="box-grade">${s.grade || ''}</span>
+                                </div>
+                            `;
+                        };
+                        
+                        commanders.forEach(m => html += renderRow(m, 'ר"צ'));
+                        deputies.forEach(m => html += renderRow(m, 'סגן'));
+                        regulars.forEach(m => html += renderRow(m, ''));
+                        
+                        html += `
+                                </div>
                             </div>
                         `;
                     });
@@ -2397,7 +2498,7 @@
                 
                 const pa = document.getElementById('print-area');
                 pa.innerHTML = `
-                    <div class="print-header">
+                    <div class="print-header no-print-bg">
                         <img src="1.JPG" alt="לוגו">
                         <h1>רשימת קבוצות מרוכזת</h1>
                         <h3>שנה: ${Store.currentYear}</h3>
@@ -2478,12 +2579,10 @@
                         const val = snap.val() || {};
                         const totals = {};
                         Object.values(val).forEach(tx => {
-                            // שים לב: כאן אנחנו לוקחים גם סכומים שהם מחרוזות (הערות)
                             if (tx.type === 'income' && tx.donorId) {
                                 if (!totals[tx.donorId]) totals[tx.donorId] = 0;
-                                // אם זה מספר מוסיפים, אם זה טקסט שומרים להצגה
                                 if (!isNaN(parseFloat(tx.amount))) totals[tx.donorId] += parseFloat(tx.amount);
-                                else totals[tx.donorId] = tx.amount; // דרישה 19: הצגת הערה
+                                else totals[tx.donorId] = tx.amount; 
                             }
                         });
                         return totals;
@@ -2604,7 +2703,6 @@
                         entityName = `קבוצה: ${tx.groupName || tx.groupId}`;
                     }
 
-                    // דרישה 19: טיפול בסכום שאינו מספר
                     const displayAmount = isNaN(parseFloat(tx.amount)) ? tx.amount : `₪${parseInt(tx.amount).toLocaleString()}`;
 
                     return `
@@ -2682,7 +2780,6 @@
                 Modal.renderRaw(type === 'income' ? 'הוספת הכנסה' : 'הוספת הוצאה', html, () => {
                     let amount = document.getElementById('tx-amount').value;
                     if(!amount) return alert('חובה להזין סכום או ערך');
-                    // ניסיון המרה למספר, אחרת נשמר כמחרוזת
                     if (!isNaN(parseFloat(amount))) amount = parseFloat(amount);
 
                     const srcType = document.querySelector('input[name="tx-src"]:checked').value;
@@ -2699,7 +2796,6 @@
                         studentId, donorId
                     });
                     
-                    // עדכון סטטיסטיקות רק אם זה מספר
                     if(OfflineManager.isOnline && typeof amount === 'number') {
                         db.ref(`years/${Store.currentYear}/stats/${type}`).transaction(curr => (curr || 0) + amount);
                     }
@@ -2714,17 +2810,14 @@
             editTx(id) {
                 const tx = this.financeData[id];
                 if(!tx) return;
-                // Reuse openTransactionModal logic but prefill and save to existing ID
-                this.openTransactionModal(tx.type); // Opens empty
+                this.openTransactionModal(tx.type); 
                 
-                // Prefill with delay
                 setTimeout(() => {
                     document.getElementById('tx-amount').value = tx.amount;
                     document.getElementById('tx-category').value = tx.category;
                     document.getElementById('tx-desc').value = tx.desc || '';
                     document.getElementById('tx-purim').checked = tx.isPurim;
                     
-                    // Handle Radio logic requires simulating clicks
                     if (tx.studentId) {
                          document.querySelector('input[name="tx-src"][value="student"]').click();
                          document.getElementById('sel-student').value = tx.studentId;
@@ -2733,7 +2826,6 @@
                          document.getElementById('sel-donor').value = tx.donorId;
                     }
                     
-                    // Override Save button
                     const btn = document.getElementById('modal-save-btn');
                     btn.onclick = () => {
                          let amount = document.getElementById('tx-amount').value;
@@ -2745,7 +2837,6 @@
                              desc: document.getElementById('tx-desc').value,
                              isPurim: document.getElementById('tx-purim').checked,
                          };
-                         // Update source logic
                          const srcType = document.querySelector('input[name="tx-src"]:checked').value;
                          if(srcType === 'student') updates.studentId = document.getElementById('sel-student').value;
                          else if(srcType === 'donor') updates.donorId = document.getElementById('sel-donor').value;
@@ -2753,8 +2844,6 @@
 
                          OfflineManager.write(`years/${Store.currentYear}/finance/${id}`, updates, 'update');
                          
-                         // Recalculate Stats is complex here because we need delta. 
-                         // Simple approach: subtract old, add new (only if numbers)
                          if (OfflineManager.isOnline) {
                              const oldAmt = typeof tx.amount === 'number' ? tx.amount : 0;
                              const newAmt = typeof amount === 'number' ? amount : 0;
@@ -2829,7 +2918,6 @@
                 document.getElementById('rep-entity-results').classList.add('hidden');
             },
             
-            // Helper to fetch ALL history for a student
             async getAllHistory(studentId = null) {
                 const years = Object.keys(HEBREW_YEARS_MAPPING).map(k => HEBREW_YEARS_MAPPING[k]);
                 const promises = years.map(y => db.ref(`years/${y}/finance`).once('value'));
@@ -2844,7 +2932,7 @@
                 if (studentId) {
                     return allTx.filter(t => t.studentId === studentId && t.type === 'income');
                 }
-                return allTx; // Return all transactions if no ID
+                return allTx; 
             },
 
             async generateIndividual(id, name) {
@@ -2877,9 +2965,6 @@
                 if(data.length === 0) return Notify.show('לא נמצאו תרומות', 'error');
 
                 const doc = new jspdf.jsPDF();
-                // Hebrew support requires a custom font. Using a CDN/Base64 approach is standard but large for this snippet.
-                // Assuming standard English/Number output or Heebo font setup in real prod.
-                // For this demo, we use basic text.
                 
                 doc.addFont('https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Regular.ttf', 'Roboto', 'normal');
                 doc.setFont("Roboto");
@@ -2941,12 +3026,12 @@
                 images: [],
                 zoom: 0.6,
                 headers: ['שם הבחור', 'יעד אישי', 'סה״כ לתצוגה', 'אחוז מיעד', 'מתנה'],
-                colsVisible: [true, true, true, true, true]
+                colsVisible: [true, true, true, true, true],
+                orientation: 'landscape' 
             },
             
             openEditor() {
                 document.getElementById('report-editor-screen').classList.remove('hidden-screen');
-                // Update inputs to match state
                 this.editorState.headers.forEach((h, i) => {
                     const el = document.getElementById('head-' + i);
                     if(el) el.value = h;
@@ -2995,7 +3080,7 @@
                         });
                     });
 
-                    // חישוב בונוס תורמים מדורג
+                    // תיקון: בונוס לפי תרומה של תורם (מדרגות טווח)
                     const donorsBrought = Object.values(Store.data.donors).filter(d => d.referrerId === student.id);
                     donorsBrought.forEach(d => {
                         let donorTotal = 0;
@@ -3003,25 +3088,12 @@
                             if (!isNaN(parseFloat(f.amount))) donorTotal += parseFloat(f.amount);
                         });
                         
-                        // אחוזים לפי מדרגות
-                        let calculatedBonus = 0;
-                        let remaining = donorTotal;
-                        let lastLimit = 0;
-                        
-                        // Sort tiers by limit ascending
-                        const sortedTiers = [...bonusTiers].sort((a,b) => a.limit - b.limit);
-                        
-                        for (let t of sortedTiers) {
-                            if (remaining <= 0) break;
-                            const range = t.limit - lastLimit;
-                            const taking = Math.min(remaining, range);
-                            calculatedBonus += (taking * (t.percent / 100));
-                            remaining -= taking;
-                            lastLimit = t.limit;
+                        // בדיקת הטווח
+                        // מחפש את המדרגה שהסכום נמצא בתוכה
+                        const tier = bonusTiers.find(t => donorTotal >= t.rangeMin && donorTotal <= t.rangeMax);
+                        if (tier) {
+                            extra += (donorTotal * (tier.percent / 100));
                         }
-                        // אם נשאר מעל המדרגה האחרונה, אולי יש מדרגת "מעל" - כרגע נניח שהאחרונה תופסת הכל או לא
-                        
-                        extra += calculatedBonus;
                     });
                     
                     // בונוס קבוע (Referral Goal Tier)
@@ -3038,7 +3110,6 @@
                     const name = student.firstName && student.lastName ? `${student.firstName} ${student.lastName}` : student.name;
                     const totalDisplay = Math.round(actual + extra);
 
-                    // חישוב מתנה (עמודה חדשה)
                     const studentTiers = config.studentTiers || [];
                     const rewardTier = studentTiers.sort((a,b) => b.amount - a.amount).find(t => totalDisplay >= t.amount);
                     const reward = rewardTier ? rewardTier.reward : '-';
@@ -3050,24 +3121,25 @@
 
                 list.sort((a,b) => b.totalDisplay - a.totalDisplay);
 
-                // --- Pagination Logic ---
-                const ROWS_PER_PAGE = 22; // הערכה
+                // --- Pagination Logic (Orientation Aware) ---
+                const ROWS_PER_PAGE = this.editorState.orientation === 'landscape' ? 22 : 35; 
                 const chunks = [];
                 for (let i = 0; i < list.length; i += ROWS_PER_PAGE) {
                     chunks.push(list.slice(i, i + ROWS_PER_PAGE));
                 }
                 
-                if (chunks.length === 0) chunks.push([]); // Empty page if no data
+                if (chunks.length === 0) chunks.push([]); 
 
-                container.innerHTML = ''; // Clear loading
+                container.innerHTML = ''; 
 
                 const bgStyle = this.editorState.bgImg ? `background-image: url('${this.editorState.bgImg}');` : '';
                 const h = this.editorState.headers;
                 const showCol = this.editorState.colsVisible;
+                const pageClass = this.editorState.orientation === 'landscape' ? 'page-landscape' : 'page-portrait';
 
                 chunks.forEach((chunk, pageIdx) => {
                     let pageHtml = `
-                    <div class="report-page editor-print-mode" style="transform: scale(${this.editorState.zoom});">
+                    <div class="report-page ${pageClass} editor-print-mode" style="transform: scale(${this.editorState.zoom});">
                         <div class="print-layer-bg bg-contain bg-center bg-no-repeat" style="${bgStyle} opacity: ${this.editorState.bgOpacity};"></div>
                         
                         <div class="print-layer-content p-10 h-full flex flex-col">
@@ -3135,6 +3207,7 @@
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         this.editorState.bgImg = e.target.result;
+                        // עדכון מיידי של כל הדפים
                         document.querySelectorAll('.print-layer-bg').forEach(el => el.style.backgroundImage = `url('${e.target.result}')`);
                     };
                     reader.readAsDataURL(input.files[0]);
@@ -3149,6 +3222,16 @@
             setZoom(val) {
                 this.editorState.zoom = val;
                 document.querySelectorAll('.report-page').forEach(el => el.style.transform = `scale(${val})`);
+            },
+            
+            setOrientation(val) {
+                this.editorState.orientation = val;
+                // עדכון CSS כללי לדף ההדפסה
+                const styleEl = document.getElementById('dynamic-print-style') || document.createElement('style');
+                styleEl.id = 'dynamic-print-style';
+                styleEl.innerHTML = `@media print { @page { size: A4 ${val}; margin: 0; } }`;
+                document.head.appendChild(styleEl);
+                this.renderEditorCanvas();
             },
             
             addDecorImage(input) {
@@ -3476,8 +3559,6 @@
                                 let val = row[colHeader];
                                 if (!val) return;
                                 
-                                // דרישה 19: שמירה גם אם לא מספר
-                                // אנחנו לא מנקים כאן, שומרים כמו שהוא
                                 const txId = 'imp' + Date.now() + Math.random().toString(36).substr(2, 5);
                                 const hebrewYear = revYearMap[year] || year;
                                 
@@ -3557,7 +3638,6 @@
                 const role = document.getElementById('new-user-role').value;
                 if(!email || !pass) return alert('נא למלא אימייל וסיסמה');
                 
-                // שימוש באפליקציה משנית כדי לא לנתק את המנהל הנוכחי
                 try {
                     const secondaryApp = firebase.initializeApp(firebaseConfig, "Secondary");
                     secondaryApp.auth().createUserWithEmailAndPassword(email, pass).then(cred => {
@@ -3587,6 +3667,7 @@
                             <div class="flex justify-between items-center bg-gray-50 p-2 rounded text-sm">
                                 <div><span class="font-bold">${u.email}</span> (${u.role})</div>
                                 <div class="flex gap-2">
+                                    <button onclick="Settings.sendPasswordReset('${u.email}')" class="text-orange-500 hover:text-orange-700 text-xs">אפס סיסמה</button>
                                     <button onclick="Settings.updateUserRole('${uid}', '${u.role === 'admin' ? 'user' : 'admin'}')" class="text-blue-500 hover:underline text-xs">שנה תפקיד</button>
                                     <button onclick="Settings.deleteUserDB('${uid}')" class="text-red-500 hover:text-red-700 text-xs font-bold">מחק גישה</button>
                                 </div>
@@ -3594,6 +3675,17 @@
                         `;
                     });
                 });
+            },
+            
+            // פונקציה חדשה לאיפוס סיסמה
+            sendPasswordReset(email) {
+                if(confirm('לשלוח למשתמש מייל לאיפוס סיסמה?')) {
+                    auth.sendPasswordResetEmail(email).then(() => {
+                        Notify.show('מייל איפוס נשלח בהצלחה', 'success');
+                    }).catch(error => {
+                        Notify.show('שגיאה בשליחת מייל: ' + error.message, 'error');
+                    });
+                }
             },
             
             updateUserRole(uid, newRole) {
@@ -3817,18 +3909,21 @@
                 const tiers = Store.data.config.bonusTiers || [];
                 div.innerHTML = tiers.map((t, i) => `
                     <div class="flex gap-2 items-center mb-2">
-                        <span class="text-sm">עד:</span>
-                        <input type="number" value="${t.limit}" onchange="Settings.updateBonusTier(${i}, 'limit', this.value)" class="input-field w-24 p-1 text-sm">
-                        <span class="text-sm">ש"ח =</span>
+                        <span class="text-xs">מ:</span>
+                        <input type="number" value="${t.rangeMin}" onchange="Settings.updateBonusTier(${i}, 'rangeMin', this.value)" class="input-field w-20 p-1 text-sm">
+                        <span class="text-xs">עד:</span>
+                        <input type="number" value="${t.rangeMax}" onchange="Settings.updateBonusTier(${i}, 'rangeMax', this.value)" class="input-field w-20 p-1 text-sm">
+                        <span class="text-xs">ש"ח =</span>
                         <input type="number" value="${t.percent}" onchange="Settings.updateBonusTier(${i}, 'percent', this.value)" class="input-field w-16 p-1 text-sm">
-                        <span class="text-sm">%</span>
+                        <span class="text-xs">%</span>
                         <button onclick="Settings.removeBonusTier(${i})" class="text-red-500"><i class="fas fa-times"></i></button>
                     </div>
                 `).join('');
             },
             addBonusTier() {
                 const tiers = Store.data.config.bonusTiers || [];
-                tiers.push({limit: 1000, percent: 10});
+                // עדכון: מדרגות טווח
+                tiers.push({rangeMin: 0, rangeMax: 1000, percent: 10});
                 OfflineManager.write('settings/bonusTiers', tiers);
                 Store.data.config.bonusTiers = tiers;
                 this.renderBonusTiers();
