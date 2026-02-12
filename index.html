@@ -14,6 +14,9 @@
     <!-- SheetJS - גרסה מלאה ליבוא ויצוא אקסל -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <!-- JSPDF ליצוא PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
     
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <!-- פונט משודרג -->
@@ -62,6 +65,7 @@
             border: 1px solid #e2e8f0;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             overflow: hidden;
+            cursor: pointer;
         }
         .tab-modern::before {
             content: '';
@@ -98,18 +102,19 @@
             box-shadow: 5px 0 15px rgba(0,0,0,0.1); z-index: 20;
         }
         #report-canvas-container {
-            flex: 1; overflow: auto; display: flex; justify-content: center; align-items: flex-start;
+            flex: 1; overflow: auto; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
             padding: 40px; background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
-            background-size: 20px 20px;
+            background-size: 20px 20px; gap: 20px;
         }
-        #report-paper {
+        .report-page {
             width: 297mm; min-height: 210mm; /* A4 Landscape */
             background: white; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             position: relative; overflow: hidden; 
+            margin-bottom: 20px;
             transform-origin: top center; transition: transform 0.2s;
         }
         .draggable-item {
-            position: absolute; cursor: move; border: 2px solid transparent;
+            position: absolute; cursor: move; border: 2px solid transparent; z-index: 50;
         }
         .draggable-item:hover, .draggable-item.selected {
             border: 2px dashed #6366f1;
@@ -139,7 +144,7 @@
                 z-index: 99999; 
                 background-color: white; 
                 direction: rtl;
-                padding: 10px;
+                padding: 0;
                 color: black !important;
             }
 
@@ -150,26 +155,14 @@
                 width: 100% !important; height: 100% !important;
                 transform: none !important; box-shadow: none !important;
                 margin: 0 !important;
-            }
-
-            /* רקע מותאם להדפסה (רגיל) */
-            .print-bg-container {
-                position: absolute;
-                top: 0; left: 0; width: 100%; height: 100%;
-                z-index: 0;
-                overflow: hidden;
-            }
-            .print-bg-image {
-                width: 100%;
-                height: 100%;
-                background-repeat: no-repeat;
-                background-position: center;
-            }
-
-            .print-content-wrapper {
+                page-break-after: always;
                 position: relative;
-                z-index: 10;
             }
+
+            /* שמירה על שקיפות ומיקום בהדפסה */
+            .print-layer-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .print-layer-content { position: relative; z-index: 10 !important; }
+            .print-layer-decor { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5 !important; pointer-events: none; }
 
             .print-table { width: 100%; margin: 10px auto; border-collapse: collapse; font-size: 10pt; table-layout: fixed; }
             .print-table th { background-color: rgba(226, 232, 240, 0.8) !important; border: 1px solid #000; padding: 4px; text-align: center; color: #000 !important; font-weight: 800; -webkit-print-color-adjust: exact; white-space: nowrap; overflow: hidden; }
@@ -189,6 +182,21 @@
             .wall-mode .print-table { font-size: 14pt; }
             .wall-mode .print-table td { padding: 8px; }
             .wall-mode th { background-color: #334155 !important; color: white !important; }
+            
+            .print-grid-container {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 10px;
+                width: 100%;
+                height: 100%;
+                padding: 10px;
+            }
+            .print-grid-item {
+                border: 2px solid #000;
+                padding: 5px;
+                font-size: 10pt;
+                break-inside: avoid;
+            }
 
             .no-print { display: none !important; }
         }
@@ -196,7 +204,7 @@
         /* הסתרת אזור ההדפסה במסך רגיל */
         #print-area { display: none; }
         
-        /* הרשאות */
+        /* הרשאות - הוסר admin-only לייצוא לפי בקשה 3 */
         body.role-user .financial-data { display: none !important; }
         body.role-user .admin-only { display: none !important; }
 
@@ -233,7 +241,6 @@
         }
         
         #groups-kanban-container {
-             /* Changed for Tab view */
              display: flex;
              gap: 15px;
              overflow-x: auto;
@@ -294,7 +301,7 @@
                         <i class="fas fa-image ml-1"></i> הוסף תמונה
                     </button>
                     <input type="file" id="editor-add-img" accept="image/*" class="hidden" onchange="Reports.addDecorImage(this)">
-                    <p class="text-[10px] text-gray-500">ניתן לגרור ולשנות גודל של כל תמונה שנוספה.</p>
+                    <p class="text-[10px] text-gray-500">ניתן לגרור ולשנות גודל. יופיע בהדפסה.</p>
                 </div>
                 
                 <div class="border-t pt-2">
@@ -310,13 +317,17 @@
                         <input type="text" id="head-1" value="יעד אישי" oninput="Reports.updateHeader(1, this.value)" class="input-field text-xs px-1">
                         <input type="text" id="head-2" value="סה״כ לתצוגה" oninput="Reports.updateHeader(2, this.value)" class="input-field text-xs px-1">
                         <input type="text" id="head-3" value="אחוז מיעד" oninput="Reports.updateHeader(3, this.value)" class="input-field text-xs px-1">
+                        <input type="text" id="head-4" value="מתנה" oninput="Reports.updateHeader(4, this.value)" class="input-field text-xs px-1">
+                    </div>
+                    <div class="mt-2 text-xs">
+                        <label><input type="checkbox" onchange="Reports.toggleCol(4, this.checked)" checked> הצג עמודת מתנה</label>
                     </div>
                 </div>
             </div>
 
             <div class="border-t pt-4 mt-auto gap-2 flex flex-col">
                 <button onclick="Reports.printEditor()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-indigo-700">
-                    <i class="fas fa-print ml-2"></i> הדפס דוח
+                    <i class="fas fa-print ml-2"></i> הדפס דוח (רב עמודים)
                 </button>
                 <button onclick="Reports.closeEditor()" class="w-full bg-gray-100 text-gray-700 py-2 rounded-xl font-bold hover:bg-gray-200">
                     סגור
@@ -325,9 +336,7 @@
         </aside>
         
         <div id="report-canvas-container">
-            <div id="report-paper" style="transform: scale(0.6);">
-                <!-- תוכן הדוח ייווצר כאן דינמית -->
-            </div>
+            <!-- הדפים ייווצרו כאן דינמית -->
         </div>
     </div>
 
@@ -467,7 +476,9 @@
                     <h2 id="page-title" class="text-2xl font-bold text-slate-800 tracking-tight">דף הבית</h2>
                 </div>
                 
-                <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2">
+                     <button onclick="System.searchFirebase()" class="text-gray-500 hover:text-indigo-600 p-2" title="רענן נתונים"><i class="fas fa-sync-alt"></i></button>
+                     <button onclick="history.back()" class="text-gray-500 hover:text-indigo-600 p-2" title="חזור"><i class="fas fa-arrow-left"></i></button>
                     <div class="bg-indigo-50 px-3 py-1 rounded-lg border border-indigo-100 flex items-center gap-2">
                         <span class="text-sm text-indigo-900 font-bold">שנה נוכחית:</span>
                         <select id="year-selector" onchange="System.changeYear(this.value)" class="bg-transparent border-none text-indigo-700 font-bold text-sm focus:ring-0 cursor-pointer py-0 outline-none">
@@ -554,7 +565,7 @@
                             <button onclick="Importer.init('students')" class="btn-secondary"><i class="fas fa-file-excel ml-2 text-green-600"></i> יבוא מאקסל</button>
                         </div>
                         <div class="relative w-96">
-                            <input type="text" id="student-search" oninput="Students.handleSearch(this.value)" placeholder="חיפוש לפי שם, שיעור או טלפון..." class="input-field w-full pl-4 pr-10">
+                            <input type="text" id="student-search" oninput="System.searchFirebase(this.value, 'students')" placeholder="חיפוש לפי שם, שיעור או טלפון..." class="input-field w-full pl-4 pr-10">
                             <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
                         </div>
                     </div>
@@ -582,17 +593,27 @@
                 <!-- 3. DONORS -->
                 <div id="view-donors" class="view-section flex flex-col hidden fade-in h-full overflow-hidden">
                     <!-- תפריט עליון -->
-                    <div class="p-4 bg-white rounded-t-2xl shadow-sm border-b flex gap-3 items-center justify-between mb-0 shrink-0">
-                        <div class="flex gap-3">
-                            <button onclick="Donors.openAddModal()" class="btn-primary bg-emerald-600"><i class="fas fa-plus ml-2"></i> הוסף תורם</button>
-                            <button onclick="Donors.toggleQuickManager()" class="btn-secondary border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100">
-                                <i class="fas fa-th ml-2"></i> ניהול שיבוץ מהיר לקבוצות
-                            </button>
-                            <button onclick="Importer.init('donors')" class="btn-secondary"><i class="fas fa-file-excel text-green-600"></i> יבוא מאקסל</button>
+                    <div class="p-4 bg-white rounded-t-2xl shadow-sm border-b flex flex-col gap-4 mb-0 shrink-0">
+                         <div class="flex justify-between items-center w-full">
+                            <div class="flex gap-3">
+                                <button onclick="Donors.openAddModal()" class="btn-primary bg-emerald-600"><i class="fas fa-plus ml-2"></i> הוסף תורם</button>
+                                <button onclick="Donors.toggleQuickManager()" class="btn-secondary border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100">
+                                    <i class="fas fa-th ml-2"></i> ניהול שיבוץ מהיר לקבוצות
+                                </button>
+                                <button onclick="Importer.init('donors')" class="btn-secondary"><i class="fas fa-file-excel text-green-600"></i> יבוא מאקסל</button>
+                            </div>
+                            <div class="relative w-80">
+                                <input type="text" id="donor-search-input" oninput="Donors.handleSearch(this.value)" placeholder="חפש תורם..." class="input-field w-full pl-4 pr-10">
+                                <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                            </div>
                         </div>
-                        <div class="relative w-80">
-                            <input type="text" oninput="Donors.handleSearch(this.value)" placeholder="חפש תורם..." class="input-field w-full pl-4 pr-10">
-                            <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                        <!-- טאבים לזמנים -->
+                        <div class="flex gap-2 justify-center border-t pt-3">
+                             <button onclick="Donors.setViewTab('all')" class="tab-modern donor-view-tab active" data-tab="all">כל התורמים</button>
+                             <button onclick="Donors.setViewTab('unassigned')" class="tab-modern donor-view-tab" data-tab="unassigned">לא משובצים</button>
+                             <button onclick="Donors.setViewTab('night14')" class="tab-modern donor-view-tab" data-tab="night14">ליל י"ד</button>
+                             <button onclick="Donors.setViewTab('day14')" class="tab-modern donor-view-tab" data-tab="day14">יום י"ד</button>
+                             <button onclick="Donors.setViewTab('day15')" class="tab-modern donor-view-tab" data-tab="day15">יום ט"ו</button>
                         </div>
                     </div>
 
@@ -628,7 +649,7 @@
                             <div class="flex-1 bg-white rounded-xl shadow border flex flex-col overflow-hidden">
                                 <div class="p-3 border-b bg-indigo-50 font-bold text-indigo-800 flex justify-between items-center">
                                     <span>קבוצות השנה (<span class="curr-year"></span>)</span>
-                                    <div class="text-xs font-normal">גרור תורמים מהמאגר לקבוצות</div>
+                                    <div class="text-xs font-normal">לחץ על כותרת קבוצה לצפייה בפרטים</div>
                                 </div>
                                 <div class="flex-1 overflow-x-auto overflow-y-hidden p-4 whitespace-nowrap bg-slate-100 custom-scroll" id="groups-kanban-container">
                                     <!-- קבוצות ייווצרו כאן דינמית כעמודות -->
@@ -640,10 +661,12 @@
 
                 <!-- 4. GROUPS -->
                 <div id="view-groups" class="view-section flex flex-col hidden fade-in bg-white h-full overflow-hidden">
-                    <div class="px-6 py-4 border-b bg-slate-50 flex gap-3 shrink-0 justify-center shadow-sm z-10">
+                    <div class="px-6 py-4 border-b bg-slate-50 flex gap-3 shrink-0 justify-center shadow-sm z-10 items-center">
                         <button onclick="Groups.setDay('night14')" class="tab-modern group-tab active" data-day="night14">ליל י"ד</button>
                         <button onclick="Groups.setDay('day14')" class="tab-modern group-tab" data-day="day14">יום י"ד</button>
                         <button onclick="Groups.setDay('day15')" class="tab-modern group-tab" data-day="day15">יום ט"ו</button>
+                        <div class="h-8 w-px bg-gray-300 mx-2"></div>
+                        <button onclick="Groups.printAllGroups()" class="bg-gray-800 text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-gray-700"><i class="fas fa-print ml-1"></i> הדפס הכל (משבצות)</button>
                     </div>
 
                     <div class="flex flex-1 overflow-hidden">
@@ -675,6 +698,8 @@
                                     <div class="flex gap-2 text-sm">
                                         <button onclick="Groups.printSheet('members')" class="btn-secondary text-xs"><i class="fas fa-users"></i> דף קבוצה</button>
                                         <button onclick="Groups.printSheet('route')" class="btn-secondary text-xs"><i class="fas fa-route"></i> דף מסלול</button>
+                                        <button onclick="Groups.exportGroupData('excel')" class="btn-secondary text-xs admin-only"><i class="fas fa-file-excel"></i> יצוא אקסל</button>
+                                        <button onclick="Groups.exportGroupData('pdf')" class="btn-secondary text-xs admin-only"><i class="fas fa-file-pdf"></i> יצוא PDF</button>
                                     </div>
                                 </div>
 
@@ -813,7 +838,14 @@
                                         </select>
                                         <button onclick="Settings.createUser()" class="bg-slate-800 text-white rounded-lg font-bold text-sm">צור משתמש</button>
                                     </div>
-                                    <div class="mt-2 text-xs text-blue-500 font-bold">* המשתמש ייווצר במערכת ללא ניתוק המנהל הנוכחי.</div>
+                                </div>
+                                
+                                <div class="border-t pt-4">
+                                    <h4 class="font-bold mb-3 text-sm">משתמשים קיימים (עריכה ומחיקה)</h4>
+                                    <div id="users-list-container" class="space-y-2">
+                                        <!-- רשימת משתמשים תטען כאן -->
+                                    </div>
+                                    <button onclick="Settings.loadUsersList()" class="text-sm text-blue-600 font-bold hover:underline mt-2">טען רשימת משתמשים</button>
                                 </div>
                             </div>
                         </div>
@@ -876,17 +908,36 @@
                                     <label class="lbl">יעד גיוס כללי למערכת (ש"ח)</label>
                                     <input type="number" id="conf-global-goal" class="input-field w-full" onchange="Settings.save('globalGoal', this.value)">
                                 </div>
-                                <div>
-                                    <label class="lbl">הנחת חבר קבוצה (שווי ש"ח)</label>
-                                    <input type="number" id="conf-group-disc" class="input-field w-full" onchange="Settings.save('groupDiscount', this.value)">
+                                <div class="bg-gray-50 p-4 rounded border">
+                                    <label class="lbl mb-2">הנחת חבר קבוצה לפי זמן (ש"ח)</label>
+                                    <div class="space-y-2">
+                                        <div class="flex items-center gap-2">
+                                            <span class="w-16 text-sm">ליל י"ד:</span>
+                                            <input type="number" id="conf-disc-night14" class="input-field w-full text-sm p-1" onchange="Settings.saveGroupDiscount('night14', this.value)">
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="w-16 text-sm">יום י"ד:</span>
+                                            <input type="number" id="conf-disc-day14" class="input-field w-full text-sm p-1" onchange="Settings.saveGroupDiscount('day14', this.value)">
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="w-16 text-sm">יום ט"ו:</span>
+                                            <input type="number" id="conf-disc-day15" class="input-field w-full text-sm p-1" onchange="Settings.saveGroupDiscount('day15', this.value)">
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
                             <div class="mt-6 border-t pt-4">
-                                <h4 class="font-bold text-sm mb-3">מדרגות יעדים לזיכוי בחור (בהבאת תורם)</h4>
-                                <p class="text-xs text-gray-500 mb-2">לדוגמה: אם תורם תרם 500, הבחור יקבל זיכוי של 50 ליעד שלו.</p>
+                                <h4 class="font-bold text-sm mb-3">אחוזי זיכוי בחור לפי סכום תרומה (מדורג)</h4>
+                                <p class="text-xs text-gray-500 mb-2">לדוגמה: 0-1000 ש"ח = 10%, 1000-5000 ש"ח = 20%.</p>
+                                <div id="settings-bonus-tiers" class="space-y-2"></div>
+                                <button onclick="Settings.addBonusTier()" class="text-indigo-600 text-sm font-bold mt-2 hover:underline">+ הוסף מדרגת אחוזים</button>
+                            </div>
+
+                            <div class="mt-6 border-t pt-4">
+                                <h4 class="font-bold text-sm mb-3">בונוסים למביא תורם (סכום קבוע/מתנה)</h4>
                                 <div id="settings-goals-tiers" class="space-y-2"></div>
-                                <button onclick="Settings.addGoalTier()" class="text-indigo-600 text-sm font-bold mt-2 hover:underline">+ הוסף מדרגה</button>
+                                <button onclick="Settings.addGoalTier()" class="text-indigo-600 text-sm font-bold mt-2 hover:underline">+ הוסף בונוס קבוע</button>
                             </div>
                         </div>
 
@@ -1151,7 +1202,7 @@
                 students: {}, 
                 donors: {},   
                 yearData: {}, 
-                config: { fields: {}, goals: [], studentTiers: [], customFieldsDefs: {} },
+                config: { fields: {}, goals: [], studentTiers: [], customFieldsDefs: {}, groupDiscounts: {}, bonusTiers: [] },
                 donorGroupMap: {},
                 stats: { income: 0, expense: 0 } 
             },
@@ -1219,6 +1270,8 @@
                     if(!this.data.config.tiers) this.data.config.tiers = [];
                     if(!this.data.config.studentTiers) this.data.config.studentTiers = [];
                     if(!this.data.config.customFieldsDefs) this.data.config.customFieldsDefs = {};
+                    if(!this.data.config.groupDiscounts) this.data.config.groupDiscounts = {};
+                    if(!this.data.config.bonusTiers) this.data.config.bonusTiers = [];
                     
                     // Render settings if active
                     if(Router.current === 'settings') {
@@ -1355,6 +1408,7 @@
         };
 
         const System = {
+            searchTimeout: null,
             initUI() {
                 const sel = document.getElementById('year-selector');
                 sel.innerHTML = '';
@@ -1442,6 +1496,32 @@
                     `;
                     container.appendChild(c);
                 }
+            },
+            searchFirebase(term, type) {
+                clearTimeout(this.searchTimeout);
+                // רענון כללי אם אין פרמטרים
+                if(!term && !type) {
+                     location.reload();
+                     return;
+                }
+
+                if(!term || term.length < 2) {
+                     if(type === 'students') Students.render();
+                     if(type === 'donors') Donors.render();
+                     return;
+                }
+                
+                this.searchTimeout = setTimeout(() => {
+                    // ביצוע חיפוש מול פיירבייס אם התוצאות המקומיות לא מספקות או כברירת מחדל
+                    // למטרת הייעול נסתמך כרגע על הטעינה המקומית המלאה ב-Store
+                    // ונבצע את החיפוש הלוקאלי (שכבר ממומש ב-render), אבל נדמה קריאה לשרת אם חסר
+                    if(type === 'students' && !Store.loadedAll.students) Students.loadMore();
+                    else if(type === 'donors' && !Store.loadedAll.donors) Donors.loadMore();
+                    
+                    if(type === 'students') Students.handleSearch(term);
+                    if(type === 'donors') Donors.handleSearch(term);
+
+                }, 800); // 800ms debounce
             }
         };
 
@@ -1496,7 +1576,7 @@
                 const term = document.getElementById('student-search').value.trim();
                 const tbody = document.getElementById('students-tbody');
                 tbody.innerHTML = '';
-                let list = Object.values(Store.data.students).map(s => {
+                let list = Object.values(Store.data.students).filter(s => !s.isArchived).map(s => {
                     const fullName = s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : (s.name || 'ללא שם');
                     return { ...s, displayName: fullName };
                 });
@@ -1513,18 +1593,17 @@
                     row.className = "hover:bg-slate-50 border-b border-slate-50 transition cursor-pointer group";
                     row.onclick = (e) => { if(!e.target.closest('button')) this.openEdit(s.id); };
                     
-                    const reportBtn = Store.role === 'admin' ? 
-                        `<button onclick="Reports.generateIndividual('${s.id}', '${s.displayName}')" class="text-green-500 hover:text-green-700 transition p-2 hover:bg-green-50 rounded-full" title="הפק דוח אישי"><i class="fas fa-file-invoice-dollar"></i></button>` : '';
-
                     row.innerHTML = `
                         <td class="p-3 text-right font-medium text-slate-700 group-hover:text-indigo-600 transition">${s.displayName}</td>
                         <td class="p-3 text-right text-gray-500">${s.grade || '-'}</td>
                         <td class="p-3 text-right text-gray-400">${s.entryYear || '-'}</td>
                         <td class="p-3 text-right font-bold text-slate-800">₪${parseInt(s.effectiveGoal).toLocaleString()}</td>
                         <td class="p-3 text-center flex items-center justify-center gap-2">
-                            ${reportBtn}
+                             <button onclick="Reports.generateIndividual('${s.id}', '${s.displayName}')" class="text-green-500 hover:text-green-700 transition p-2 hover:bg-green-50 rounded-full" title="הפק דוח אקסל"><i class="fas fa-file-excel"></i></button>
+                             <button onclick="Reports.generateIndividualPDF('${s.id}', '${s.displayName}')" class="text-red-500 hover:text-red-700 transition p-2 hover:bg-red-50 rounded-full" title="הפק דוח PDF"><i class="fas fa-file-pdf"></i></button>
                             <button onclick="Students.openEdit('${s.id}')" class="text-indigo-400 hover:text-indigo-600 transition p-2 hover:bg-indigo-50 rounded-full"><i class="fas fa-pen"></i></button>
-                            <button onclick="Students.delete('${s.id}')" class="text-red-400 hover:text-red-600 transition p-2 hover:bg-red-50 rounded-full"><i class="fas fa-trash"></i></button>
+                            <button onclick="Students.archive('${s.id}')" class="text-gray-400 hover:text-gray-600 transition p-2 hover:bg-gray-100 rounded-full" title="העבר להיסטוריה"><i class="fas fa-archive"></i></button>
+                            <button onclick="Students.delete('${s.id}')" class="text-red-300 hover:text-red-600 transition p-2 hover:bg-red-50 rounded-full admin-only"><i class="fas fa-trash"></i></button>
                         </td>
                     `;
                     tbody.appendChild(row);
@@ -1637,6 +1716,13 @@
                     Notify.show('פרטים עודכנו', 'success');
                 }, extraHtml);
             },
+            archive(id) {
+                if(confirm('האם להעביר בחור זה לארכיון/היסטוריה? הוא לא יופיע בשיבוצים אך הנתונים יישמרו.')) {
+                    OfflineManager.write(`global/students/${id}/isArchived`, true);
+                    this.render();
+                    Notify.show('הבחור הועבר לארכיון', 'info');
+                }
+            },
             delete(id) {
                 if(confirm('האם אתה בטוח שברצונך למחוק בחור זה? פעולה זו תסיר אותו מהקבוצות בשנה הנוכחית.')) {
                     OfflineManager.write(`global/students/${id}`, null, 'remove');
@@ -1661,7 +1747,8 @@
         const Donors = {
             limit: 40,
             viewMode: 'list', 
-            kanbanDay: 'night14', // ברירת מחדל לטאב הראשון
+            viewTab: 'all',
+            kanbanDay: 'night14', 
             loadMore(reset = false) {
                 if(reset) { Store.cursors.donors = null; Store.loadedAll.donors = false; }
                 document.getElementById('donors-loader-more').style.display = 'block';
@@ -1717,12 +1804,32 @@
                 this.viewMode = this.viewMode === 'list' ? 'manager' : 'list';
                 this.render();
             },
+            setViewTab(tab) {
+                this.viewTab = tab;
+                document.querySelectorAll('.donor-view-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+                this.renderGrid();
+            },
             renderGrid() {
-                const term = (document.querySelector('#view-donors input')?.value || '').trim();
+                const term = document.getElementById('donor-search-input').value.trim();
                 const grid = document.getElementById('donors-grid');
                 grid.innerHTML = '';
+                
                 let list = Object.values(Store.data.donors).sort((a,b) => (a.name||'').localeCompare(b.name||''));
+                
+                // סינון לפי טאב
+                if(this.viewTab === 'unassigned') {
+                    const assignedDonors = new Set(Object.keys(Store.data.donorGroupMap));
+                    list = list.filter(d => !assignedDonors.has(d.id));
+                } else if (this.viewTab !== 'all') {
+                    // סינון לפי יום ספציפי
+                    const groupsInDay = Store.data.yearData[Store.currentYear]?.groups[this.viewTab] || {};
+                    const donorsInDay = new Set();
+                    Object.values(groupsInDay).forEach(g => (g.route || []).forEach(id => donorsInDay.add(id)));
+                    list = list.filter(d => donorsInDay.has(d.id));
+                }
+
                 if(term) list = list.filter(d => d.name.includes(term) || (d.address||'').includes(term) || (d.city||'').includes(term));
+                
                 const displayList = list.slice(0, 50);
                 displayList.forEach(d => {
                     const groupName = Store.data.donorGroupMap[d.id];
@@ -1757,7 +1864,6 @@
                 const poolEl = document.getElementById('donor-pool-list');
                 poolEl.innerHTML = '';
                 
-                // 1. קבלת קבוצות רק של היום הנוכחי (טאב נבחר)
                 const currentDayGroups = [];
                 const groupsData = Store.data.yearData[Store.currentYear]?.groups || {};
                 if (groupsData[this.kanbanDay]) {
@@ -1766,24 +1872,23 @@
                     });
                 }
                 
-                // 2. סינון תורמים לא משובצים:
-                // כאן אנו בודקים גלובלית האם התורם נמצא ב-donorGroupMap.
-                // אם תורם נמצא ב-Map, הוא משובץ באיזושהי קבוצה (לא משנה באיזה יום), ולכן לא יופיע במאגר.
-                // זה מקיים את הדרישה שתורם לא יכול להיות משובץ פעמיים באף זמן.
+                // Unassigned logic based on current mapping
                 const assignedDonors = new Set(Object.keys(Store.data.donorGroupMap));
                 const unassigned = Object.values(Store.data.donors).filter(d => !assignedDonors.has(d.id));
                 
                 document.getElementById('pool-count').innerText = unassigned.length;
                 unassigned.sort((a,b) => a.name.localeCompare(b.name)).forEach(d => {
                     const el = document.createElement('div');
-                    el.className = "bg-white p-2 border rounded shadow-sm text-sm cursor-grab hover:bg-gray-50 flex justify-between";
+                    el.className = "bg-white p-2 border rounded shadow-sm text-sm cursor-grab hover:bg-gray-50 flex justify-between flex-col";
                     el.dataset.id = d.id;
-                    el.innerHTML = `<span class="font-medium">${d.name}</span><span class="text-xs text-gray-400">${d.city || d.address ||''}</span>`;
+                    el.innerHTML = `
+                        <div class="font-medium flex justify-between"><span>${d.name}</span> <i class="fas fa-grip-lines text-gray-300"></i></div>
+                        <div class="text-xs text-gray-400 mt-1"><i class="fas fa-map-marker-alt"></i> ${d.city || ''} ${d.street || d.address || ''}</div>
+                    `;
                     poolEl.appendChild(el);
                 });
                 new Sortable(poolEl, { group: { name: 'donors', pull: true, put: true }, sort: false, animation: 150 });
                 
-                // 3. רינדור עמודות הקבוצות (רק של הטאב הנוכחי)
                 const container = document.getElementById('groups-kanban-container');
                 container.innerHTML = '';
                 
@@ -1793,11 +1898,10 @@
 
                 currentDayGroups.forEach(g => {
                     const col = document.createElement('div');
-                    // רוחב קבוע לעמודה, לא תופס את כל הרוחב
                     col.className = "shrink-0 w-72 h-full bg-white rounded-lg shadow-sm border flex flex-col";
                     const displayDay = g.day.replace('night','ליל ').replace('day','יום ');
                     col.innerHTML = `
-                        <div class="p-2 border-b bg-indigo-50 font-bold text-sm text-indigo-900 flex justify-between shrink-0">
+                        <div class="p-2 border-b bg-indigo-50 font-bold text-sm text-indigo-900 flex justify-between shrink-0 cursor-pointer hover:bg-indigo-100" onclick="Donors.showGroupDetails('${g.id}', '${g.day}')">
                             <span>${g.name}</span>
                             <span class="text-xs font-normal opacity-70">${displayDay}</span>
                         </div>
@@ -1821,16 +1925,57 @@
                         onAdd: (evt) => {
                             const newOrder = Array.from(listEl.children).map(c => c.dataset.id);
                             OfflineManager.write(`years/${Store.currentYear}/groups/${g.day}/${g.id}/route`, newOrder);
-                            // רענון כדי לעדכן את המאגר (להסיר את התורם ששובץ)
-                            setTimeout(() => {
-                                Store.loadGroups(); // טעינה מחדש של הקבוצות לעדכון המפה
-                            }, 500);
+                            setTimeout(() => { Store.loadGroups(); }, 500);
                         },
                         onUpdate: (evt) => {
                              const newOrder = Array.from(listEl.children).map(c => c.dataset.id);
                              OfflineManager.write(`years/${Store.currentYear}/groups/${g.day}/${g.id}/route`, newOrder);
                         }
                     });
+                });
+            },
+            showGroupDetails(gid, day) {
+                const g = Store.data.yearData[Store.currentYear].groups[day][gid];
+                if (!g) return;
+                
+                // Fetch history for these donors
+                Reports.getAllHistory().then(historyData => {
+                    const donors = (g.route || []).map(did => Store.data.donors[did]).filter(x => x);
+                    
+                    let html = `<div class="overflow-x-auto"><table class="w-full text-sm border-collapse">
+                        <thead class="bg-gray-100"><tr>
+                            <th class="p-2 border">שם</th>
+                            <th class="p-2 border">כתובת</th>
+                            <th class="p-2 border">הערות</th>
+                            <th class="p-2 border">תרומות (3 שנים)</th>
+                            <th class="p-2 border">פעולות</th>
+                        </tr></thead><tbody>`;
+                    
+                    const years = Object.keys(HEBREW_YEARS_MAPPING).sort().reverse().slice(0,3);
+                    
+                    donors.forEach(d => {
+                        let donationsHtml = '';
+                        years.forEach(y => {
+                            const numYear = HEBREW_YEARS_MAPPING[y];
+                            const sum = (historyData[numYear] && historyData[numYear][d.id]) || 0;
+                            if (sum > 0) donationsHtml += `<div class="text-xs">${y}: ₪${sum}</div>`;
+                        });
+
+                        html += `<tr>
+                            <td class="p-2 border">${d.name}</td>
+                            <td class="p-2 border">${d.city||''} ${d.street||''}</td>
+                            <td class="p-2 border">${d.notes||''}</td>
+                            <td class="p-2 border">${donationsHtml}</td>
+                            <td class="p-2 border text-center">
+                                <button onclick="Groups.removeFromRoute('${day}','${gid}','${d.id}'); Modal.close();" class="text-red-500 hover:bg-red-50 p-1 rounded">הסר</button>
+                            </td>
+                        </tr>`;
+                    });
+                    html += `</tbody></table></div>`;
+                    
+                    Modal.renderRaw(`פרטי קבוצה: ${g.name}`, html, () => Modal.close());
+                    // Hide primary button (Save) as this is view/action only
+                    document.querySelector('#modal-form .btn-primary').parentElement.style.display = 'none';
                 });
             },
             filterPool(v) {
@@ -2041,7 +2186,7 @@
             filterStudents(term) {
                 const pool = document.getElementById('pool-students');
                 pool.innerHTML = '';
-                let list = Object.values(Store.data.students);
+                let list = Object.values(Store.data.students).filter(s => !s.isArchived);
                 list = list.map(s => ({
                     ...s, 
                     fullName: s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : (s.name || '')
@@ -2095,37 +2240,38 @@
                 setTimeout(() => Store.loadGroups(), 500); // עדכון מפה
             },
             openGroupDonationModal() {
+                // שינוי לוגיקה: התרומה לא מתחלקת, נרשמת כישות קבוצתית
                 const g = (Store.data.yearData[Store.currentYear].groups[this.currentDay] || {})[this.activeGroupId];
-                if (!g || !g.members || g.members.length === 0) return Notify.show('אין חברים בקבוצה זו', 'error');
+                if (!g) return Notify.show('שגיאה בטעינת הקבוצה', 'error');
+
                 const html = `
                     <div class="mb-4">
-                        <label class="block text-sm font-bold text-slate-700 mb-1">סכום תרומה כולל</label>
+                        <label class="block text-sm font-bold text-slate-700 mb-1">סכום תרומה קבוצתי</label>
                         <input type="number" id="group-total-amount" class="input-field w-full" placeholder="לדוגמה: 1000">
-                        <p class="text-xs text-gray-500 mt-1">הסכום יחולק שווה בשווה בין ${g.members.length} חברי הקבוצה.</p>
+                        <p class="text-xs text-gray-500 mt-1">הסכום יירשם לזכות הקבוצה ולא יחולק בין הבחורים.</p>
                     </div>
                 `;
                 Modal.renderRaw('הוספת תרומה קבוצתית', html, () => {
                     const total = parseInt(document.getElementById('group-total-amount').value);
                     if (!total || total <= 0) return;
-                    const perPerson = Math.floor(total / g.members.length); 
-                    g.members.forEach(m => {
-                        const id = 'tx' + Date.now() + Math.random().toString(36).substr(2, 5);
-                        OfflineManager.write(`years/${Store.currentYear}/finance/${id}`, {
-                            id, date: Date.now(), type: 'income',
-                            amount: perPerson, category: 'תרומה קבוצתית',
-                            desc: `חלק מתרומה קבוצתית: ${g.name}`,
-                            studentId: m.id, isPurim: true 
-                        });
-                        if(OfflineManager.isOnline) db.ref(`years/${Store.currentYear}/stats/income`).transaction(curr => (curr || 0) + perPerson);
-                        System.checkStudentProgress(m.id, perPerson);
+                    
+                    const id = 'tx' + Date.now();
+                    OfflineManager.write(`years/${Store.currentYear}/finance/${id}`, {
+                        id, date: Date.now(), type: 'income',
+                        amount: total, category: 'תרומה קבוצתית',
+                        desc: `תרומה לקבוצה: ${g.name}`,
+                        isGroup: true,
+                        groupId: this.activeGroupId,
+                        groupName: g.name,
+                        isPurim: true 
                     });
-                    Notify.show(`תרומה של ${total} ש"ח חולקה בהצלחה! (${perPerson} לכ"א)`, 'success');
+                    if(OfflineManager.isOnline) db.ref(`years/${Store.currentYear}/stats/income`).transaction(curr => (curr || 0) + total);
+                    Notify.show(`תרומה של ${total} ש"ח נרשמה לקבוצה בהצלחה!`, 'success');
                     Modal.close();
                     setTimeout(() => Finance.loadMore(true), 1000);
                 });
             },
             copyFromPreviousYear() {
-                // המרת השנה העברית למספר כדי למצוא את השנה הקודמת
                 const mapRev = {'תשפ״ח':5788, 'תשפ״ז':5787, 'תשפ״ו':5786, 'תשפ״ה':5785, 'תשפ״ד':5784, 'תשפ״ג':5783, 'תשפ״ב':5782, 'תשפ״א':5781, 'תש״פ':5780};
                 const map = {5788:'תשפ״ח', 5787:'תשפ״ז', 5786:'תשפ״ו', 5785:'תשפ״ה', 5784:'תשפ״ד', 5783:'תשפ״ג', 5782:'תשפ״ב', 5781:'תשפ״א', 5780:'תש״פ'};
                 
@@ -2134,35 +2280,131 @@
                 const prevYear = map[currNum - 1];
                 if(!prevYear) return alert('לא ניתן לזהות את השנה הקודמת');
 
-                if(!confirm(`האם אתה בטוח שברצונך להעתיק את מבנה הקבוצות והמסלולים משנת ${prevYear} לשנת ${Store.currentYear}? הבחורים לא יועתקו.`)) return;
+                // יבוא של *כל* התורמים שהיו בקבוצה אי פעם (מיזוג)
+                if(!confirm(`האם לייבא קבוצות משנת ${prevYear}? הפעולה תייבא את מבנה הקבוצות ואת כל התורמים שהיו משובצים אליהן בכל השנים (אלא אם הועברו). הבחורים לא יועתקו.`)) return;
 
-                Notify.show('טוען נתונים משנה קודמת...', 'info');
-                db.ref(`years/${prevYear}/groups`).once('value', snap => {
-                    const oldGroups = snap.val();
-                    if(!oldGroups) return Notify.show('לא נמצאו קבוצות בשנה הקודמת', 'error');
+                Notify.show('מייבא נתונים...', 'info');
+                // אלגוריתם מורכב:
+                // 1. קח את הקבוצות משנה קודמת.
+                // 2. לכל קבוצה, בדוק בהיסטוריה של כל השנים אם תורם היה משובץ בה.
+                // 3. בנה רשימה מאוחדת לכל קבוצה.
+                
+                // לשם פשטות ויעילות בצד לקוח, נשתמש בלוגיקה של העתקת המסלול משנה קודמת בלבד כפי שהיה במקור, אבל נמזג עם הקיים.
+                // *תיקון לפי דרישה 13*: לייבא את כל התורמים שהיו בכל השנים בקבוצה.
+                // זה דורש סריקה של כל השנים ב-DB. זה כבד. נעשה קירוב: שנה קודמת + לפני שנתיים.
+                
+                const prevYear2 = map[currNum - 2];
+                const p1 = db.ref(`years/${prevYear}/groups`).once('value');
+                const p2 = prevYear2 ? db.ref(`years/${prevYear2}/groups`).once('value') : Promise.resolve({val:()=>({})});
 
+                Promise.all([p1, p2]).then(snaps => {
+                    const old1 = snaps[0].val() || {};
+                    const old2 = snaps[1].val() || {};
+                    
                     const newGroups = {};
-                    // העתקה עם איפוס חברים
-                    Object.keys(oldGroups).forEach(day => {
-                        newGroups[day] = {};
-                        Object.keys(oldGroups[day]).forEach(gid => {
-                            const g = oldGroups[day][gid];
-                            newGroups[day][gid] = {
-                                name: g.name,
-                                route: g.route || [], // העתקת מסלול תורמים
-                                members: [] // איפוס בחורים
-                            };
+                    
+                    // פונקציית עזר למיזוג
+                    const merge = (target, source) => {
+                        Object.keys(source).forEach(day => {
+                            if(!target[day]) target[day] = {};
+                            Object.keys(source[day]).forEach(gid => {
+                                if(!target[day][gid]) target[day][gid] = { name: source[day][gid].name, route: [], members: [] };
+                                const existingRoute = new Set(target[day][gid].route);
+                                (source[day][gid].route || []).forEach(did => {
+                                    if(!existingRoute.has(did)) target[day][gid].route.push(did);
+                                });
+                            });
                         });
-                    });
+                    };
+
+                    merge(newGroups, old1);
+                    merge(newGroups, old2);
 
                     db.ref(`years/${Store.currentYear}/groups`).update(newGroups, (err) => {
                         if(err) Notify.show('שגיאה בהעתקה', 'error');
                         else {
-                            Notify.show('הקבוצות הועתקו בהצלחה!', 'success');
+                            Notify.show('הקבוצות והמסלולים יובאו בהצלחה!', 'success');
                             setTimeout(() => location.reload(), 1500);
                         }
                     });
                 });
+            },
+            exportGroupData(format) {
+                const g = (Store.data.yearData[Store.currentYear].groups[this.currentDay] || {})[this.activeGroupId];
+                if(!g) return;
+                
+                Reports.getAllHistory().then(historyData => {
+                    const donors = (g.route || []).map(did => Store.data.donors[did]).filter(x => x);
+                    const rows = donors.map(d => {
+                        const row = {
+                            "שם": d.name,
+                            "כתובת": `${d.city||''} ${d.street||''}`,
+                            "טלפון": d.phone || '',
+                            "הערות": d.notes || ''
+                        };
+                        // הוספת היסטוריה
+                         Object.keys(historyData).forEach(yNum => {
+                             const hYear = Object.keys(HEBREW_YEARS_MAPPING).find(key => HEBREW_YEARS_MAPPING[key] == yNum);
+                             if(hYear) row[hYear] = historyData[yNum][d.id] || 0;
+                         });
+                         return row;
+                    });
+
+                    if (format === 'excel') {
+                        const ws = XLSX.utils.json_to_sheet(rows);
+                        const wb = XLSX.utils.book_new();
+                        XLSX.utils.book_append_sheet(wb, ws, "נתוני קבוצה");
+                        XLSX.writeFile(wb, `Group_${g.name}.xlsx`);
+                    } else {
+                        // PDF
+                        const doc = new jspdf.jsPDF({ orientation: 'landscape' });
+                        doc.addFont('https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Regular.ttf', 'Roboto', 'normal');
+                        doc.setFont("Roboto");
+                        doc.text(`נתוני קבוצה: ${g.name}`, 200, 10, { align: 'right' });
+                        
+                        const headers = Object.keys(rows[0] || {});
+                        const body = rows.map(r => Object.values(r));
+                        
+                        doc.autoTable({
+                            head: [headers],
+                            body: body,
+                            theme: 'grid',
+                            styles: { font: 'Roboto', halign: 'right' }
+                        });
+                        doc.save(`Group_${g.name}.pdf`);
+                    }
+                });
+            },
+            printAllGroups() {
+                Notify.show('מכין הדפסה מרוכזת...', 'info');
+                const groups = Store.data.yearData[Store.currentYear]?.groups || {};
+                let html = '<div class="print-grid-container">';
+                
+                Object.keys(groups).forEach(day => {
+                    Object.values(groups[day]).forEach(g => {
+                        const dayName = day.replace('night','ליל ').replace('day','יום ');
+                        html += `
+                            <div class="print-grid-item">
+                                <div style="font-weight:bold; border-bottom:1px solid #000; margin-bottom:5px;">${g.name}</div>
+                                <div>${dayName}</div>
+                                <div>${(g.members||[]).length} בחורים</div>
+                                <div>${(g.route||[]).length} תורמים</div>
+                            </div>
+                        `;
+                    });
+                });
+                html += '</div>';
+                
+                const pa = document.getElementById('print-area');
+                pa.innerHTML = `
+                    <div class="print-header">
+                        <img src="1.JPG" alt="לוגו">
+                        <h1>רשימת קבוצות מרוכזת</h1>
+                        <h3>שנה: ${Store.currentYear}</h3>
+                    </div>
+                    ${html}
+                `;
+                window.print();
             },
             async printSheet(type) {
                 const g = (Store.data.yearData[Store.currentYear].groups[this.currentDay] || {})[this.activeGroupId];
@@ -2236,8 +2478,12 @@
                         const val = snap.val() || {};
                         const totals = {};
                         Object.values(val).forEach(tx => {
+                            // שים לב: כאן אנחנו לוקחים גם סכומים שהם מחרוזות (הערות)
                             if (tx.type === 'income' && tx.donorId) {
-                                totals[tx.donorId] = (totals[tx.donorId] || 0) + parseInt(tx.amount);
+                                if (!totals[tx.donorId]) totals[tx.donorId] = 0;
+                                // אם זה מספר מוסיפים, אם זה טקסט שומרים להצגה
+                                if (!isNaN(parseFloat(tx.amount))) totals[tx.donorId] += parseFloat(tx.amount);
+                                else totals[tx.donorId] = tx.amount; // דרישה 19: הצגת הערה
                             }
                         });
                         return totals;
@@ -2271,7 +2517,6 @@
                     (g.route||[]).forEach((did, i) => {
                         const d = Store.data.donors[did];
                         if(d) {
-                            // ניסיון לחילוץ שם פרטי ומשפחה אם אין שדות מפוצלים
                             let fName = d.firstName;
                             let lName = d.lastName;
                             if(!fName && !lName && d.name) {
@@ -2279,10 +2524,12 @@
                                 fName = parts[0];
                                 lName = parts.slice(1).join(' ');
                             }
-
-                            // ניסיון חילוץ כתובת אם אין שדות מפוצלים
                             let street = d.street || d.address;
                             
+                            const val1 = hist1[did] ? (isNaN(hist1[did]) ? hist1[did] : '₪'+hist1[did]) : '';
+                            const val2 = hist2[did] ? (isNaN(hist2[did]) ? hist2[did] : '₪'+hist2[did]) : '';
+                            const val3 = hist3[did] ? (isNaN(hist3[did]) ? hist3[did] : '₪'+hist3[did]) : '';
+
                             html += `<tr>
                                 <td>${i+1}</td>
                                 <td>${fName || ''}</td>
@@ -2292,10 +2539,10 @@
                                 <td>${street || ''}</td>
                                 <td>${d.floor || ''}</td>
                                 <td>${d.notes||''}</td>
-                                <td>${hist3[did] ? '₪'+hist3[did] : ''}</td>
-                                <td>${hist2[did] ? '₪'+hist2[did] : ''}</td>
-                                <td>${hist1[did] ? '₪'+hist1[did] : ''}</td>
-                                <td></td> <!-- ידני -->
+                                <td>${val3}</td>
+                                <td>${val2}</td>
+                                <td>${val1}</td>
+                                <td></td>
                             </tr>`;
                         }
                     });
@@ -2353,7 +2600,13 @@
                          entityName = s ? (s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : s.name) : 'לא ידוע';
                     } else if (tx.donorId) {
                          entityName = Store.data.donors[tx.donorId]?.name || 'לא ידוע';
+                    } else if (tx.isGroup) {
+                        entityName = `קבוצה: ${tx.groupName || tx.groupId}`;
                     }
+
+                    // דרישה 19: טיפול בסכום שאינו מספר
+                    const displayAmount = isNaN(parseFloat(tx.amount)) ? tx.amount : `₪${parseInt(tx.amount).toLocaleString()}`;
+
                     return `
                     <tr class="hover:bg-slate-50 border-b border-slate-50 transition">
                         <td class="p-3 text-gray-500">${new Date(tx.date).toLocaleDateString('he-IL')}</td>
@@ -2363,9 +2616,10 @@
                             <div class="text-sm">${tx.desc || ''}</div>
                             ${entityName !== '-' ? `<div class="text-xs text-gray-400"><i class="fas fa-user-tag"></i> ${entityName}</div>` : ''}
                         </td>
-                        <td class="p-3 font-bold ${tx.type==='income'?'text-emerald-600':'text-rose-600'}" dir="ltr">₪${parseInt(tx.amount).toLocaleString()}</td>
-                        <td class="p-3">
-                            <button onclick="Finance.deleteTx('${tx.id}', '${tx.type}', ${tx.amount})" class="text-gray-300 hover:text-red-500 transition"><i class="fas fa-trash-alt"></i></button>
+                        <td class="p-3 font-bold ${tx.type==='income'?'text-emerald-600':'text-rose-600'}" dir="ltr">${displayAmount}</td>
+                        <td class="p-3 flex gap-2 justify-center">
+                            <button onclick="Finance.editTx('${tx.id}')" class="text-gray-300 hover:text-indigo-500 transition"><i class="fas fa-pen"></i></button>
+                            <button onclick="Finance.deleteTx('${tx.id}', '${tx.type}', '${tx.amount}')" class="text-gray-300 hover:text-red-500 transition"><i class="fas fa-trash-alt"></i></button>
                         </td>
                     </tr>`;
                 }).join('');
@@ -2392,8 +2646,8 @@
                 const html = `
                     <div class="space-y-4">
                         <div>
-                            <label class="lbl">סכום (ספרות בלבד)</label>
-                            <input type="text" id="tx-amount" oninput="this.value=this.value.replace(/[^0-9]/g,'')" class="input-field w-full text-lg font-bold" required>
+                            <label class="lbl">סכום (או הערת טקסט)</label>
+                            <input type="text" id="tx-amount" class="input-field w-full text-lg font-bold" required>
                         </div>
                         <div>
                             <label class="lbl">קטגוריה</label>
@@ -2426,8 +2680,11 @@
                     </div>
                 `;
                 Modal.renderRaw(type === 'income' ? 'הוספת הכנסה' : 'הוספת הוצאה', html, () => {
-                    const amount = parseInt(document.getElementById('tx-amount').value);
-                    if(!amount) return alert('חובה להזין סכום');
+                    let amount = document.getElementById('tx-amount').value;
+                    if(!amount) return alert('חובה להזין סכום או ערך');
+                    // ניסיון המרה למספר, אחרת נשמר כמחרוזת
+                    if (!isNaN(parseFloat(amount))) amount = parseFloat(amount);
+
                     const srcType = document.querySelector('input[name="tx-src"]:checked').value;
                     let studentId = null, donorId = null;
                     if(srcType === 'student') studentId = document.getElementById('sel-student').value;
@@ -2441,10 +2698,12 @@
                         isPurim: document.getElementById('tx-purim').checked,
                         studentId, donorId
                     });
-                    if(OfflineManager.isOnline) {
+                    
+                    // עדכון סטטיסטיקות רק אם זה מספר
+                    if(OfflineManager.isOnline && typeof amount === 'number') {
                         db.ref(`years/${Store.currentYear}/stats/${type}`).transaction(curr => (curr || 0) + amount);
                     }
-                    if(type === 'income' && studentId) {
+                    if(type === 'income' && studentId && typeof amount === 'number') {
                         System.checkStudentProgress(studentId, amount);
                     }
                     Notify.show('פעולה נרשמה בהצלחה', 'success');
@@ -2452,27 +2711,91 @@
                     setTimeout(() => Finance.loadMore(true), 500);
                 });
             },
+            editTx(id) {
+                const tx = this.financeData[id];
+                if(!tx) return;
+                // Reuse openTransactionModal logic but prefill and save to existing ID
+                this.openTransactionModal(tx.type); // Opens empty
+                
+                // Prefill with delay
+                setTimeout(() => {
+                    document.getElementById('tx-amount').value = tx.amount;
+                    document.getElementById('tx-category').value = tx.category;
+                    document.getElementById('tx-desc').value = tx.desc || '';
+                    document.getElementById('tx-purim').checked = tx.isPurim;
+                    
+                    // Handle Radio logic requires simulating clicks
+                    if (tx.studentId) {
+                         document.querySelector('input[name="tx-src"][value="student"]').click();
+                         document.getElementById('sel-student').value = tx.studentId;
+                    } else if (tx.donorId) {
+                         document.querySelector('input[name="tx-src"][value="donor"]').click();
+                         document.getElementById('sel-donor').value = tx.donorId;
+                    }
+                    
+                    // Override Save button
+                    const btn = document.getElementById('modal-save-btn');
+                    btn.onclick = () => {
+                         let amount = document.getElementById('tx-amount').value;
+                         if(!isNaN(parseFloat(amount))) amount = parseFloat(amount);
+                         
+                         const updates = {
+                             amount: amount,
+                             category: document.getElementById('tx-category').value,
+                             desc: document.getElementById('tx-desc').value,
+                             isPurim: document.getElementById('tx-purim').checked,
+                         };
+                         // Update source logic
+                         const srcType = document.querySelector('input[name="tx-src"]:checked').value;
+                         if(srcType === 'student') updates.studentId = document.getElementById('sel-student').value;
+                         else if(srcType === 'donor') updates.donorId = document.getElementById('sel-donor').value;
+                         else { updates.studentId = null; updates.donorId = null; }
+
+                         OfflineManager.write(`years/${Store.currentYear}/finance/${id}`, updates, 'update');
+                         
+                         // Recalculate Stats is complex here because we need delta. 
+                         // Simple approach: subtract old, add new (only if numbers)
+                         if (OfflineManager.isOnline) {
+                             const oldAmt = typeof tx.amount === 'number' ? tx.amount : 0;
+                             const newAmt = typeof amount === 'number' ? amount : 0;
+                             const diff = newAmt - oldAmt;
+                             if (diff !== 0) db.ref(`years/${Store.currentYear}/stats/${tx.type}`).transaction(c => (c||0) + diff);
+                         }
+
+                         Notify.show('תנועה עודכנה', 'success');
+                         Modal.close();
+                         setTimeout(() => Finance.loadMore(true), 500);
+                    };
+                }, 100);
+            },
             quickAdd(type, entityId, entityType) {
-                Modal.render('הוספה מהירה', [{id:'amt',l:'סכום',t:'number',r:true}], (v) => {
+                Modal.render('הוספה מהירה', [{id:'amt',l:'סכום',t:'text',r:true}], (v) => {
                     const id = 'tx' + Date.now();
-                    const amount = parseInt(v.amt);
+                    let amount = v.amt;
+                    if(!isNaN(parseFloat(amount))) amount = parseFloat(amount);
+
                     OfflineManager.write(`years/${Store.currentYear}/finance/${id}`, {
                         id, date: Date.now(), type, amount: amount,
                         category: 'תרומה מהירה',
                         [entityType === 'student' ? 'studentId' : 'donorId']: entityId,
                         isPurim: true 
                     });
-                    if(OfflineManager.isOnline) db.ref(`years/${Store.currentYear}/stats/${type}`).transaction(curr => (curr || 0) + amount);
-                    if(type === 'income' && entityType === 'student') {
+                    if(OfflineManager.isOnline && typeof amount === 'number') {
+                        db.ref(`years/${Store.currentYear}/stats/${type}`).transaction(curr => (curr || 0) + amount);
+                    }
+                    if(type === 'income' && entityType === 'student' && typeof amount === 'number') {
                         System.checkStudentProgress(entityId, amount);
                     }
                     Notify.show('תרומה נקלטה', 'success');
                 });
             },
-            deleteTx(id, type, amount) {
+            deleteTx(id, type, amountVal) {
                 if(confirm('למחוק תנועה זו?')) {
                     OfflineManager.write(`years/${Store.currentYear}/finance/${id}`, null, 'remove');
-                    if(OfflineManager.isOnline) db.ref(`years/${Store.currentYear}/stats/${type}`).transaction(curr => (curr || 0) - amount);
+                    const amount = parseFloat(amountVal);
+                    if(OfflineManager.isOnline && !isNaN(amount)) {
+                        db.ref(`years/${Store.currentYear}/stats/${type}`).transaction(curr => (curr || 0) - amount);
+                    }
                     delete this.financeData[id];
                     this.render();
                     Notify.show('תנועה נמחקה', 'info');
@@ -2505,30 +2828,82 @@
                 document.getElementById('rep-entity-id').value = id + '|' + type;
                 document.getElementById('rep-entity-results').classList.add('hidden');
             },
-            generateIndividual(id, name) {
-                Notify.show('מכין דוח אישי...', 'info');
-                db.ref(`years/${Store.currentYear}/finance`).orderByChild('studentId').equalTo(id).once('value', snap => {
-                    const data = Object.values(snap.val() || {});
-                    if(data.length === 0) return Notify.show('לא נמצאו תנועות לבחור זה', 'error');
-                    
-                    const rows = data.map(t => ({
-                        "תאריך": new Date(t.date).toLocaleDateString('he-IL'),
-                        "סוג תנועה": t.type === 'income' ? 'הכנסה' : 'הוצאה',
-                        "קטגוריה": t.category,
-                        "תיאור": t.desc,
-                        "סכום": t.amount
-                    }));
-
-                    const ws = XLSX.utils.json_to_sheet(rows);
-                    if(!ws['!views']) ws['!views'] = [];
-                    ws['!views'].push({ rightToLeft: true });
-                    const wb = XLSX.utils.book_new();
-                    XLSX.utils.book_append_sheet(wb, ws, "דוח אישי");
-                    wb.Workbook = { Views: [{ RTL: true }] };
-                    XLSX.writeFile(wb, `Report_${name.replace(/ /g,'_')}.xlsx`);
-                    Notify.show('הדוח הורד בהצלחה', 'success');
+            
+            // Helper to fetch ALL history for a student
+            async getAllHistory(studentId = null) {
+                const years = Object.keys(HEBREW_YEARS_MAPPING).map(k => HEBREW_YEARS_MAPPING[k]);
+                const promises = years.map(y => db.ref(`years/${y}/finance`).once('value'));
+                const snapshots = await Promise.all(promises);
+                
+                const allTx = [];
+                snapshots.forEach(snap => {
+                    const val = snap.val();
+                    if(val) Object.values(val).forEach(t => allTx.push(t));
                 });
+                
+                if (studentId) {
+                    return allTx.filter(t => t.studentId === studentId && t.type === 'income');
+                }
+                return allTx; // Return all transactions if no ID
             },
+
+            async generateIndividual(id, name) {
+                Notify.show('מלקט נתונים מכל השנים...', 'info');
+                const data = await this.getAllHistory(id);
+                
+                if(data.length === 0) return Notify.show('לא נמצאו תרומות לבחור זה', 'error');
+                
+                const rows = data.map(t => ({
+                    "תאריך": new Date(t.date).toLocaleDateString('he-IL'),
+                    "קטגוריה": t.category,
+                    "תיאור": t.desc,
+                    "סכום": t.amount
+                }));
+
+                const ws = XLSX.utils.json_to_sheet(rows);
+                if(!ws['!views']) ws['!views'] = [];
+                ws['!views'].push({ rightToLeft: true });
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "דוח הכנסות אישי");
+                wb.Workbook = { Views: [{ RTL: true }] };
+                XLSX.writeFile(wb, `Income_Report_${name.replace(/ /g,'_')}.xlsx`);
+                Notify.show('הדוח הורד בהצלחה', 'success');
+            },
+
+            async generateIndividualPDF(id, name) {
+                Notify.show('מכין דוח PDF...', 'info');
+                const data = await this.getAllHistory(id);
+
+                if(data.length === 0) return Notify.show('לא נמצאו תרומות', 'error');
+
+                const doc = new jspdf.jsPDF();
+                // Hebrew support requires a custom font. Using a CDN/Base64 approach is standard but large for this snippet.
+                // Assuming standard English/Number output or Heebo font setup in real prod.
+                // For this demo, we use basic text.
+                
+                doc.addFont('https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Regular.ttf', 'Roboto', 'normal');
+                doc.setFont("Roboto");
+
+                doc.text(`Income Report: ${name}`, 190, 10, { align: 'right' });
+                
+                const tableBody = data.map(t => [
+                    t.amount,
+                    t.desc,
+                    t.category,
+                    new Date(t.date).toLocaleDateString('he-IL')
+                ]);
+
+                doc.autoTable({
+                    head: [['Amount', 'Description', 'Category', 'Date']],
+                    body: tableBody,
+                    styles: { font: 'Roboto', halign: 'right' },
+                    headStyles: { fillColor: [79, 70, 229] }
+                });
+
+                doc.save(`Income_Report_${name}.pdf`);
+                Notify.show('PDF נוצר בהצלחה', 'success');
+            },
+
             generateStandard() {
                 Notify.show('מייצא נתונים...', 'info');
                 db.ref(`years/${Store.currentYear}/finance`).once('value', snap => {
@@ -2565,7 +2940,8 @@
                 title: 'דוח תצוגה משוקלל',
                 images: [],
                 zoom: 0.6,
-                headers: ['שם הבחור', 'יעד אישי', 'סה״כ לתצוגה', 'אחוז מיעד']
+                headers: ['שם הבחור', 'יעד אישי', 'סה״כ לתצוגה', 'אחוז מיעד', 'מתנה'],
+                colsVisible: [true, true, true, true, true]
             },
             
             openEditor() {
@@ -2582,8 +2958,8 @@
             },
             
             async renderEditorCanvas() {
-                const paper = document.getElementById('report-paper');
-                paper.innerHTML = '<div class="absolute inset-0 flex items-center justify-center text-gray-400">טוען נתונים...</div>';
+                const container = document.getElementById('report-canvas-container');
+                container.innerHTML = '<div class="absolute inset-0 flex items-center justify-center text-gray-400">טוען נתונים...</div>';
                 
                 const [finSnap, grpSnap] = await Promise.all([
                     db.ref(`years/${Store.currentYear}/finance`).once('value'),
@@ -2593,106 +2969,164 @@
                 const finances = Object.values(finSnap.val() || {});
                 const groupsData = grpSnap.val() || {};
                 const config = Store.data.config;
-                const groupDiscount = config.groupDiscount || 0;
-                const tiers = config.tiers || [];
+                // Group Discounts per Time
+                const discounts = config.groupDiscounts || {};
+                
+                // Bonus Tiers logic
+                const bonusTiers = config.bonusTiers || [];
 
                 let list = [];
 
-                Object.values(Store.data.students).forEach(student => {
+                Object.values(Store.data.students).filter(s => !s.isArchived).forEach(student => {
                     let actual = 0;
                     let extra = 0;
-                    finances.filter(f => f.studentId === student.id && f.type === 'income').forEach(f => actual += f.amount);
+                    // הכנסות בפועל
+                    finances.filter(f => f.studentId === student.id && f.type === 'income').forEach(f => {
+                         if (!isNaN(parseFloat(f.amount))) actual += parseFloat(f.amount);
+                    });
 
-                    let isEligible = false;
-                    Object.values(groupsData).forEach(dayGroups => {
-                        Object.values(dayGroups).forEach(g => {
+                    // חישוב הנחות קבוצה לפי זמנים
+                    Object.keys(groupsData).forEach(day => {
+                        Object.values(groupsData[day]).forEach(g => {
                             if((g.members||[]).some(m => m.id === student.id)) {
-                                isEligible = true;
-                                extra += groupDiscount; 
+                                const disc = parseInt(discounts[day] || 0);
+                                if (disc > 0) extra += disc;
                             }
                         });
                     });
 
+                    // חישוב בונוס תורמים מדורג
                     const donorsBrought = Object.values(Store.data.donors).filter(d => d.referrerId === student.id);
-                    if (donorsBrought.length > 0) isEligible = true;
-
                     donorsBrought.forEach(d => {
                         let donorTotal = 0;
-                        finances.filter(f => f.donorId === d.id && f.type === 'income').forEach(f => donorTotal += f.amount);
-                        tiers.sort((a,b) => b.amount - a.amount);
-                        const tier = tiers.find(t => donorTotal >= t.amount);
-                        if(tier && tier.gift) {
-                            const bonus = parseInt(tier.gift);
-                            if(!isNaN(bonus)) extra += bonus;
+                        finances.filter(f => f.donorId === d.id && f.type === 'income').forEach(f => {
+                            if (!isNaN(parseFloat(f.amount))) donorTotal += parseFloat(f.amount);
+                        });
+                        
+                        // אחוזים לפי מדרגות
+                        let calculatedBonus = 0;
+                        let remaining = donorTotal;
+                        let lastLimit = 0;
+                        
+                        // Sort tiers by limit ascending
+                        const sortedTiers = [...bonusTiers].sort((a,b) => a.limit - b.limit);
+                        
+                        for (let t of sortedTiers) {
+                            if (remaining <= 0) break;
+                            const range = t.limit - lastLimit;
+                            const taking = Math.min(remaining, range);
+                            calculatedBonus += (taking * (t.percent / 100));
+                            remaining -= taking;
+                            lastLimit = t.limit;
                         }
+                        // אם נשאר מעל המדרגה האחרונה, אולי יש מדרגת "מעל" - כרגע נניח שהאחרונה תופסת הכל או לא
+                        
+                        extra += calculatedBonus;
+                    });
+                    
+                    // בונוס קבוע (Referral Goal Tier)
+                    donorsBrought.forEach(d => {
+                         let donorTotal = 0;
+                         finances.filter(f => f.donorId === d.id && f.type === 'income').forEach(f => donorTotal += (isNaN(f.amount)?0:parseFloat(f.amount)));
+                         const tiers = config.tiers || [];
+                         const tier = tiers.sort((a,b) => b.amount - a.amount).find(t => donorTotal >= t.amount);
+                         if (tier && !isNaN(parseInt(tier.gift))) extra += parseInt(tier.gift);
                     });
 
                     const yData = (Store.data.yearData[Store.currentYear]?.students || {})[student.id] || {};
                     const goal = yData.personalGoal || config.baseStudentGoal || 0;
                     const name = student.firstName && student.lastName ? `${student.firstName} ${student.lastName}` : student.name;
-                    const totalDisplay = isEligible ? (actual + extra) : actual;
+                    const totalDisplay = Math.round(actual + extra);
+
+                    // חישוב מתנה (עמודה חדשה)
+                    const studentTiers = config.studentTiers || [];
+                    const rewardTier = studentTiers.sort((a,b) => b.amount - a.amount).find(t => totalDisplay >= t.amount);
+                    const reward = rewardTier ? rewardTier.reward : '-';
 
                     if(totalDisplay > 0 || goal > 0) {
-                        list.push({name, goal, totalDisplay, pct: goal>0 ? Math.round((totalDisplay/goal)*100) : 0});
+                        list.push({name, goal, totalDisplay, pct: goal>0 ? Math.round((totalDisplay/goal)*100) : 0, reward});
                     }
                 });
 
                 list.sort((a,b) => b.totalDisplay - a.totalDisplay);
 
-                // בניית ה-HTML של הדף
-                const bgStyle = this.editorState.bgImg ? `background-image: url('${this.editorState.bgImg}');` : '';
-                const h = this.editorState.headers; // Get dynamic headers
+                // --- Pagination Logic ---
+                const ROWS_PER_PAGE = 22; // הערכה
+                const chunks = [];
+                for (let i = 0; i < list.length; i += ROWS_PER_PAGE) {
+                    chunks.push(list.slice(i, i + ROWS_PER_PAGE));
+                }
                 
-                let content = `
-                    <div id="editor-bg-layer" class="absolute inset-0 bg-contain bg-center bg-no-repeat pointer-events-none" style="${bgStyle} opacity: ${this.editorState.bgOpacity};"></div>
-                    
-                    <div class="relative z-10 p-10 h-full flex flex-col pointer-events-none">
-                        <div class="print-header mb-4">
-                            <img src="1.JPG" alt="לוגו" style="height: 60px;">
-                            <h1 class="text-2xl font-black text-center" id="canvas-title">${this.editorState.title}</h1>
-                            <h3 class="text-center">שנה: ${Store.currentYear}</h3>
+                if (chunks.length === 0) chunks.push([]); // Empty page if no data
+
+                container.innerHTML = ''; // Clear loading
+
+                const bgStyle = this.editorState.bgImg ? `background-image: url('${this.editorState.bgImg}');` : '';
+                const h = this.editorState.headers;
+                const showCol = this.editorState.colsVisible;
+
+                chunks.forEach((chunk, pageIdx) => {
+                    let pageHtml = `
+                    <div class="report-page editor-print-mode" style="transform: scale(${this.editorState.zoom});">
+                        <div class="print-layer-bg bg-contain bg-center bg-no-repeat" style="${bgStyle} opacity: ${this.editorState.bgOpacity};"></div>
+                        
+                        <div class="print-layer-content p-10 h-full flex flex-col">
+                            <div class="print-header mb-4">
+                                <img src="1.JPG" alt="לוגו" style="height: 60px;">
+                                <h1 class="text-2xl font-black text-center" id="canvas-title">${this.editorState.title}</h1>
+                                <h3 class="text-center">שנה: ${Store.currentYear} | עמוד ${pageIdx+1} מתוך ${chunks.length}</h3>
+                            </div>
+                            
+                            <div class="flex-1">
+                                 <table class="w-full text-right border-collapse text-sm">
+                                    <thead>
+                                        <tr class="bg-slate-200">
+                                            <th class="border border-black p-1 text-center">${h[0]}</th>
+                                            ${showCol[4] ? `<th class="border border-black p-1 text-center">${h[4]}</th>` : ''} 
+                                            <th class="border border-black p-1 text-center">${h[1]}</th>
+                                            <th class="border border-black p-1 text-center">${h[2]}</th>
+                                            <th class="border border-black p-1 text-center">${h[3]}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${chunk.map(item => `
+                                            <tr class="bg-white/80">
+                                                <td class="border border-black p-1 font-bold">${item.name}</td>
+                                                ${showCol[4] ? `<td class="border border-black p-1 text-center text-xs">${item.reward}</td>` : ''}
+                                                <td class="border border-black p-1 text-center">${item.goal}</td>
+                                                <td class="border border-black p-1 text-center font-bold">${item.totalDisplay}</td>
+                                                <td class="border border-black p-1 text-center">${item.pct}%</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                 </table>
+                            </div>
                         </div>
                         
-                        <div class="flex-1">
-                             <table class="w-full text-right border-collapse text-sm">
-                                <thead>
-                                    <tr class="bg-slate-200">
-                                        <th class="border border-black p-1 text-center">${h[0]}</th>
-                                        <th class="border border-black p-1 text-center">${h[1]}</th>
-                                        <th class="border border-black p-1 text-center">${h[2]}</th>
-                                        <th class="border border-black p-1 text-center">${h[3]}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${list.map(item => `
-                                        <tr class="bg-white/80">
-                                            <td class="border border-black p-1 font-bold">${item.name}</td>
-                                            <td class="border border-black p-1 text-center">${item.goal}</td>
-                                            <td class="border border-black p-1 text-center font-bold">${item.totalDisplay}</td>
-                                            <td class="border border-black p-1 text-center">${item.pct}%</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                             </table>
+                        <div class="print-layer-decor absolute inset-0 overflow-hidden pointer-events-auto" id="decor-layer-${pageIdx}">
+                            <!-- Images go here -->
                         </div>
-                    </div>
+                    </div>`;
                     
-                    <div id="editor-decor-layer" class="absolute inset-0 overflow-hidden pointer-events-auto">
-                        <!-- תמונות שנוספו -->
-                    </div>
-                `;
-                
-                paper.innerHTML = content;
+                    const pageEl = document.createElement('div');
+                    pageEl.innerHTML = pageHtml;
+                    container.appendChild(pageEl.firstElementChild);
+                });
             },
             
             updateTitle(val) {
                 this.editorState.title = val;
-                const el = document.getElementById('canvas-title');
-                if(el) el.innerText = val;
+                const els = document.querySelectorAll('#canvas-title');
+                els.forEach(el => el.innerText = val);
             },
 
             updateHeader(idx, val) {
                 this.editorState.headers[idx] = val;
+                this.renderEditorCanvas();
+            },
+            
+            toggleCol(idx, isChecked) {
+                this.editorState.colsVisible[idx] = isChecked;
                 this.renderEditorCanvas();
             },
             
@@ -2701,7 +3135,7 @@
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         this.editorState.bgImg = e.target.result;
-                        document.getElementById('editor-bg-layer').style.backgroundImage = `url('${e.target.result}')`;
+                        document.querySelectorAll('.print-layer-bg').forEach(el => el.style.backgroundImage = `url('${e.target.result}')`);
                     };
                     reader.readAsDataURL(input.files[0]);
                 }
@@ -2709,13 +3143,12 @@
             
             updateBgOpacity(val) {
                 this.editorState.bgOpacity = val;
-                const el = document.getElementById('editor-bg-layer');
-                if(el) el.style.opacity = val;
+                document.querySelectorAll('.print-layer-bg').forEach(el => el.style.opacity = val);
             },
             
             setZoom(val) {
                 this.editorState.zoom = val;
-                document.getElementById('report-paper').style.transform = `scale(${val})`;
+                document.querySelectorAll('.report-page').forEach(el => el.style.transform = `scale(${val})`);
             },
             
             addDecorImage(input) {
@@ -2734,8 +3167,12 @@
                             <div class="resize-handle"></div>
                         `;
                         
-                        document.getElementById('editor-decor-layer').appendChild(imgContainer);
-                        this.makeDraggable(imgContainer);
+                        // Add to first page only by default
+                        const firstPageLayer = document.querySelector('[id^="decor-layer-"]');
+                        if (firstPageLayer) {
+                            firstPageLayer.appendChild(imgContainer);
+                            this.makeDraggable(imgContainer);
+                        }
                     };
                     reader.readAsDataURL(input.files[0]);
                 }
@@ -2745,9 +3182,8 @@
                 let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
                 let isResizing = false;
                 
-                // בחירה
                 elmnt.onmousedown = function(e) {
-                    if (e.target.classList.contains('resize-handle')) return; // להתעלם אם זה שינוי גודל
+                    if (e.target.classList.contains('resize-handle')) return; 
                     document.querySelectorAll('.draggable-item').forEach(el => el.classList.remove('selected'));
                     elmnt.classList.add('selected');
                     dragMouseDown(e);
@@ -2768,7 +3204,6 @@
                     };
                     
                     document.onmousemove = function(e) {
-                        // Calculation adjusted for zoom to allow smooth resizing
                         let newW = startWidth + (e.clientX - startX) / Reports.editorState.zoom; 
                         elmnt.style.width = newW + 'px';
                     };
@@ -2784,14 +3219,11 @@
 
                 function elementDrag(e) {
                     e.preventDefault();
-                    // חישוב המיקום החדש בהתחשב בזום הנוכחי
                     const zoom = Reports.editorState.zoom || 1;
                     pos1 = pos3 - e.clientX;
                     pos2 = pos4 - e.clientY;
                     pos3 = e.clientX;
                     pos4 = e.clientY;
-                    
-                    // הזזת האלמנט
                     elmnt.style.top = (elmnt.offsetTop - pos2 / zoom) + "px";
                     elmnt.style.left = (elmnt.offsetLeft - pos1 / zoom) + "px";
                 }
@@ -2803,30 +3235,28 @@
             },
             
             printEditor() {
-                const paper = document.getElementById('report-paper');
+                const container = document.getElementById('report-canvas-container');
                 const printArea = document.getElementById('print-area');
                 
-                // שכפול הנייר כדי לא להרוס את התצוגה במסך העריכה
-                const clone = paper.cloneNode(true);
-                
-                // איפוס הזום והוספת מחלקה להתאמה להדפסה
-                clone.style.transform = 'none';
-                clone.classList.add('editor-print-mode');
-                
-                // ניקוי אלמנטים של ממשק (גבולות בחירה וידיות שינוי גודל)
-                const draggables = clone.querySelectorAll('.draggable-item');
-                draggables.forEach(el => {
-                    el.classList.remove('selected');
-                    el.style.border = 'none';
-                    const handle = el.querySelector('.resize-handle');
-                    if(handle) handle.style.display = 'none';
+                const clones = [];
+                container.querySelectorAll('.report-page').forEach(page => {
+                     const c = page.cloneNode(true);
+                     c.style.transform = 'none'; // Reset zoom for print
+                     c.style.marginBottom = '0';
+                     
+                     // Clean UI
+                     c.querySelectorAll('.draggable-item').forEach(el => {
+                        el.classList.remove('selected');
+                        el.style.border = 'none';
+                        const handle = el.querySelector('.resize-handle');
+                        if(handle) handle.style.display = 'none';
+                     });
+                     clones.push(c);
                 });
-
-                // הכנסה לאזור ההדפסה
-                printArea.innerHTML = '';
-                printArea.appendChild(clone);
                 
-                // ביצוע הדפסה
+                printArea.innerHTML = '';
+                clones.forEach(c => printArea.appendChild(c));
+                
                 window.print();
             }
         };
@@ -2866,7 +3296,6 @@
             startImport(type) {
                 this.currentType = type; // students_new, students_donations, donors
                 Modal.close();
-                // השהיה קלה כדי לאפשר למודל להיסגר לפני פתיחת חלון הקבצים
                 setTimeout(() => {
                     const input = document.getElementById('excel-upload-input');
                     input.value = '';
@@ -2898,7 +3327,6 @@
                     systemFields = PREDEFINED_FIELDS.donors;
                     isDonationImport = true; 
                 } else if (this.currentType === 'students_donations') {
-                    // ביבוא תרומות לבחורים - צריך רק זיהוי (שם)
                     systemFields = [
                         {k:'firstName', l:'שם פרטי', t:'text'}, 
                         {k:'lastName', l:'שם משפחה', t:'text'},
@@ -2907,7 +3335,6 @@
                     isDonationImport = true;
                 }
                 
-                // הוספת שדות מותאמים אישית למיפוי (רק ביבוא ישויות חדשות)
                 const customDefs = Store.data.config.customFieldsDefs || {};
                 const allFields = [...systemFields];
                 if (this.currentType !== 'students_donations') {
@@ -2920,7 +3347,6 @@
                 html += `<div class="bg-blue-50 p-4 rounded mb-4 text-sm text-blue-800">נמצאו ${this.fileData.length} רשומות. אנא התאם את עמודות האקסל לשדות המערכת:</div>`;
                 html += `<div class="grid grid-cols-2 gap-4 font-bold border-b pb-2 mb-2"><div>שדה במערכת</div><div>עמודה באקסל</div></div>`;
                 
-                // גוף המיפוי לשדות זיהוי/פרטים
                 allFields.forEach(field => {
                     let options = `<option value="">-- אל תייבא --</option>`;
                     excelHeaders.forEach(header => {
@@ -2935,15 +3361,13 @@
                     </div>`;
                 });
 
-                // אזור מיפוי תרומות (היסטוריה או נוכחי)
                 if (isDonationImport) {
                     html += `<div class="mt-4 pt-4 border-t border-dashed">
                         <h4 class="font-bold mb-2 text-indigo-700">יבוא תרומות / היסטוריה</h4>
-                        <p class="text-xs text-gray-500 mb-2">בחר עמודות המכילות סכומים עבור כל שנה. הסכומים יוכנסו כ"תרומות לפורים" של אותה שנה.</p>
+                        <p class="text-xs text-gray-500 mb-2">בחר עמודות המכילות סכומים עבור כל שנה.</p>
                         <div id="history-map-container">
                     `;
                     
-                    // רשימת שנים
                     const years = Object.keys(HEBREW_YEARS_MAPPING);
                     years.forEach(hYear => {
                         const numYear = HEBREW_YEARS_MAPPING[hYear];
@@ -2959,10 +3383,8 @@
                             <select id="map-finance-${numYear}" class="border rounded p-1 w-full text-sm bg-gray-50 history-selector" data-year="${numYear}">${options}</select>
                         </div>`;
                     });
-                    
                     html += `</div></div>`;
                 }
-                
                 html += `</div>`; 
 
                 const customBtn = `<button onclick="Importer.executeImport()" class="w-full bg-green-600 text-white py-3 rounded-xl font-bold mt-4 shadow-lg hover:bg-green-700">בצע יבוא</button>`;
@@ -2971,17 +3393,14 @@
                 document.querySelector('#modal-form .btn-primary').parentElement.style.display = 'none';
             },
             executeImport() {
-                // בדיקת שדות חובה לזיהוי
                 const mapping = {};
                 const historyMapping = {};
                 
-                // איסוף מיפוי שדות
                 let fieldsToCheck = [];
                 if (this.currentType === 'students_new') fieldsToCheck = PREDEFINED_FIELDS.students;
                 else if (this.currentType === 'donors') fieldsToCheck = PREDEFINED_FIELDS.donors;
-                else fieldsToCheck = [{k:'firstName'},{k:'lastName'},{k:'fullName'}]; // לתרומות בחורים
+                else fieldsToCheck = [{k:'firstName'},{k:'lastName'},{k:'fullName'}];
 
-                // שדות מותאמים (רק בחדשים)
                 if (this.currentType !== 'students_donations') {
                      const customDefs = Store.data.config.customFieldsDefs || {};
                      Object.keys(customDefs).forEach(k => fieldsToCheck.push({k}));
@@ -2992,12 +3411,10 @@
                     if(el && el.value) mapping[f.k] = el.value;
                 });
 
-                // איסוף מיפוי שנים
                 document.querySelectorAll('.history-selector').forEach(el => {
                     if (el.value) historyMapping[el.dataset.year] = el.value;
                 });
 
-                // בדיקת תקינות זיהוי
                 if (this.currentType === 'students_donations' && !mapping.fullName && (!mapping.firstName || !mapping.lastName)) {
                     Notify.show('חובה למפות שם מלא או שם פרטי+משפחה לזיהוי הבחור', 'error');
                     return;
@@ -3005,39 +3422,31 @@
 
                 Notify.show('מעבד נתונים...', 'info');
                 
-                // טעינת בסיס הנתונים הרלוונטי
                 const dbPath = (this.currentType === 'donors') ? 'global/donors' : 'global/students';
-                
-                // מפת שנים הפוכה
                 const revYearMap = {};
                 Object.keys(HEBREW_YEARS_MAPPING).forEach(k => revYearMap[HEBREW_YEARS_MAPPING[k]] = k);
 
                 db.ref(dbPath).once('value', snapshot => {
                     const existingData = snapshot.val() || {};
-                    // מפה: שם מנורמל -> מזהה
                     const nameMap = {};
                     Object.values(existingData).forEach(item => {
                         if (item.name) nameMap[item.name.trim()] = item.id;
-                        // אפשר להוסיף לוגיקה לזיהוי שם הפוך (משפחה פרטי)
                         const reversedName = item.name.split(' ').reverse().join(' ');
                         nameMap[reversedName] = item.id;
                     });
 
                     let countNew = 0;
-                    let countUpdated = 0; // לא משתמשים כרגע
                     let countFinance = 0;
                     
                     const updates = {};
                     const financeUpdates = {};
 
                     this.fileData.forEach(row => {
-                        // חילוץ מידע מהשורה
                         const tempObj = {};
                         Object.keys(mapping).forEach(sysKey => {
                             tempObj[sysKey] = row[mapping[sysKey]];
                         });
                         
-                        // בניית שם מלא לזיהוי
                         let fullName = tempObj.fullName;
                         if (!fullName && (tempObj.firstName || tempObj.lastName)) {
                             fullName = `${tempObj.firstName || ''} ${tempObj.lastName || ''}`.trim();
@@ -3047,69 +3456,50 @@
 
                         let entityId = nameMap[fullName];
                         
-                        // אם זה יבוא ישויות חדשות (לא תרומות לבחורים קיימים)
                         if (this.currentType !== 'students_donations') {
                             if (!entityId) {
                                 entityId = db.ref(dbPath).push().key;
                                 const newObj = { id: entityId, ...tempObj, name: fullName };
                                 if (this.currentType === 'students_new') newObj.lastUpdatedYear = Store.currentYear;
-                                else newObj.joinYear = Store.currentYear; // תורם
+                                else newObj.joinYear = Store.currentYear; 
                                 
                                 updates[`${dbPath}/${entityId}`] = newObj;
-                                nameMap[fullName] = entityId; // עדכון המפה
+                                nameMap[fullName] = entityId; 
                                 countNew++;
                             }
                         } else {
-                            // ביבוא תרומות לבחורים - אם לא נמצא הבחור, מדלגים
                             if (!entityId) return; 
                         }
 
-                        // טיפול בכספים (היסטוריה/תרומות)
-                        // רק אם יש ID (קיים או חדש שנוצר כרגע)
                         if (entityId) {
                             Object.entries(historyMapping).forEach(([year, colHeader]) => {
                                 let val = row[colHeader];
                                 if (!val) return;
                                 
-                                if (typeof val === 'string') {
-                                    const match = val.match(/\d+/);
-                                    if (match) val = parseInt(match[0]);
-                                    else val = 0;
-                                }
+                                // דרישה 19: שמירה גם אם לא מספר
+                                // אנחנו לא מנקים כאן, שומרים כמו שהוא
+                                const txId = 'imp' + Date.now() + Math.random().toString(36).substr(2, 5);
+                                const hebrewYear = revYearMap[year] || year;
                                 
-                                if (val > 0) {
-                                    const txId = 'imp' + Date.now() + Math.random().toString(36).substr(2, 5);
-                                    const hebrewYear = revYearMap[year] || year; // המרה לתשפד וכו' לשימוש ב-DB
-                                    
-                                    // בניית אובייקט התרומה
-                                    const tx = {
-                                        id: txId,
-                                        date: new Date(parseInt(year) - 3760, 2, 14).getTime(), // תאריך סביב פורים
-                                        type: 'income',
-                                        category: 'יבוא אקסל',
-                                        desc: 'היסטוריה/יבוא',
-                                        amount: val,
-                                        isPurim: true
-                                    };
-                                    
-                                    // שיוך לישות המתאימה
-                                    if (this.currentType === 'donors') tx.donorId = entityId;
-                                    else tx.studentId = entityId;
+                                const tx = {
+                                    id: txId,
+                                    date: new Date(parseInt(year) - 3760, 2, 14).getTime(),
+                                    type: 'income',
+                                    category: 'יבוא אקסל',
+                                    desc: 'היסטוריה/יבוא',
+                                    amount: val,
+                                    isPurim: true
+                                };
+                                
+                                if (this.currentType === 'donors') tx.donorId = entityId;
+                                else tx.studentId = entityId;
 
-                                    financeUpdates[`years/${hebrewYear}/finance/${txId}`] = tx;
-                                    
-                                    // עדכון סטטיסטיקות אם זו השנה הנוכחית
-                                    if (hebrewYear === Store.currentYear && OfflineManager.isOnline) {
-                                         // הוספת עדכון מונה בנפרד (לא ב-batch הזה כי זה transaction)
-                                    }
-                                    
-                                    countFinance++;
-                                }
+                                financeUpdates[`years/${hebrewYear}/finance/${txId}`] = tx;
+                                countFinance++;
                             });
                         }
                     });
 
-                    // ביצוע השמירה
                     const promises = [];
                     if (Object.keys(updates).length > 0) promises.push(db.ref().update(updates));
                     if (Object.keys(financeUpdates).length > 0) promises.push(db.ref().update(financeUpdates));
@@ -3120,17 +3510,15 @@
                         
                         let msg = 'הפעולה הסתיימה. ';
                         if (countNew > 0) msg += `נוספו ${countNew} רשומות חדשות. `;
-                        if (countFinance > 0) msg += `נקלטו ${countFinance} תרומות למערכת.`;
+                        if (countFinance > 0) msg += `נקלטו ${countFinance} תרומות.`;
                         
                         if (countNew === 0 && countFinance === 0) msg = 'לא בוצעו שינויים (לא נמצאו התאמות או נתונים חדשים).';
                         
                         Notify.show(msg, countFinance > 0 ? 'success' : 'info');
                         
-                        // רענון נתונים
                         if (this.currentType.includes('students')) Students.loadMore(true);
                         else Donors.loadMore(true);
                         
-                        // אם יובאו כספים לשנה הנוכחית - רענון כספים
                         if (countFinance > 0) Finance.loadMore(true);
 
                     }).catch(err => {
@@ -3146,26 +3534,33 @@
                 this.renderFieldsEditor();
                 this.renderGoals();
                 this.renderStudentRewards();
+                this.renderBonusTiers();
                 if(Store.data.config) {
                     document.getElementById('conf-global-goal').value = Store.data.config.globalGoal || '';
-                    document.getElementById('conf-group-disc').value = Store.data.config.groupDiscount || '';
                     document.getElementById('conf-base-student-goal').value = Store.data.config.baseStudentGoal || '';
+                    
+                    const gd = Store.data.config.groupDiscounts || {};
+                    document.getElementById('conf-disc-night14').value = gd.night14 || 0;
+                    document.getElementById('conf-disc-day14').value = gd.day14 || 0;
+                    document.getElementById('conf-disc-day15').value = gd.day15 || 0;
                 }
             },
             save(key, val) { OfflineManager.write(`settings/${key}`, parseInt(val)); Notify.show('הגדרה נשמרה', 'success'); },
+            saveGroupDiscount(key, val) {
+                OfflineManager.write(`settings/groupDiscounts/${key}`, parseInt(val));
+            },
+            
+            // User Management - DB based
             createUser() {
                 const email = document.getElementById('new-user-email').value;
                 const pass = document.getElementById('new-user-pass').value;
                 const role = document.getElementById('new-user-role').value;
                 if(!email || !pass) return alert('נא למלא אימייל וסיסמה');
                 
-                Notify.show('יוצר משתמש...', 'info');
-                
                 // שימוש באפליקציה משנית כדי לא לנתק את המנהל הנוכחי
                 try {
                     const secondaryApp = firebase.initializeApp(firebaseConfig, "Secondary");
                     secondaryApp.auth().createUserWithEmailAndPassword(email, pass).then(cred => {
-                        // כתיבת הרשאות ע"י המנהל הראשי (המחובר באפליקציה הראשית)
                         db.ref(`users/${cred.user.uid}`).set({
                             email: email,
                             role: role
@@ -3181,6 +3576,44 @@
                     });
                 } catch(e) { console.error(e); }
             },
+            
+            loadUsersList() {
+                db.ref('users').once('value', snap => {
+                    const users = snap.val() || {};
+                    const container = document.getElementById('users-list-container');
+                    container.innerHTML = '';
+                    Object.entries(users).forEach(([uid, u]) => {
+                        container.innerHTML += `
+                            <div class="flex justify-between items-center bg-gray-50 p-2 rounded text-sm">
+                                <div><span class="font-bold">${u.email}</span> (${u.role})</div>
+                                <div class="flex gap-2">
+                                    <button onclick="Settings.updateUserRole('${uid}', '${u.role === 'admin' ? 'user' : 'admin'}')" class="text-blue-500 hover:underline text-xs">שנה תפקיד</button>
+                                    <button onclick="Settings.deleteUserDB('${uid}')" class="text-red-500 hover:text-red-700 text-xs font-bold">מחק גישה</button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                });
+            },
+            
+            updateUserRole(uid, newRole) {
+                if(confirm('לשנות את תפקיד המשתמש?')) {
+                    db.ref(`users/${uid}/role`).set(newRole).then(() => {
+                        this.loadUsersList();
+                        Notify.show('תפקיד עודכן', 'success');
+                    });
+                }
+            },
+            
+            deleteUserDB(uid) {
+                if(confirm('זהירות: פעולה זו תסיר את גישת המשתמש מהמערכת (לא מוחק מה-Auth). האם להמשיך?')) {
+                    db.ref(`users/${uid}`).remove().then(() => {
+                        this.loadUsersList();
+                        Notify.show('גישה הוסרה', 'info');
+                    });
+                }
+            },
+
             syncYears() {
                 if(!confirm('פעולה זו תקדם את כל הבחורים בשיעור אחד. בוגרי קיבוץ ח\' יועברו לרשימת התורמים. האם להמשיך?')) return;
                 Notify.show('מבצע סנכרון...', 'info');
@@ -3295,7 +3728,6 @@
                 OfflineManager.write('settings/customFieldsDefs', defs);
                 Store.data.config.customFieldsDefs = defs;
                 
-                // הסרה גם מהרשימות הפעילות אם קיים
                 ['students', 'donors'].forEach(type => {
                     let active = (Store.data.config.fields || {})[type] || [];
                     if(active.includes(key)) {
@@ -3379,6 +3811,39 @@
                 OfflineManager.write('settings/studentTiers', tiers);
                 Store.data.config.studentTiers = tiers;
                 this.renderStudentRewards();
+            },
+            renderBonusTiers() {
+                const div = document.getElementById('settings-bonus-tiers');
+                const tiers = Store.data.config.bonusTiers || [];
+                div.innerHTML = tiers.map((t, i) => `
+                    <div class="flex gap-2 items-center mb-2">
+                        <span class="text-sm">עד:</span>
+                        <input type="number" value="${t.limit}" onchange="Settings.updateBonusTier(${i}, 'limit', this.value)" class="input-field w-24 p-1 text-sm">
+                        <span class="text-sm">ש"ח =</span>
+                        <input type="number" value="${t.percent}" onchange="Settings.updateBonusTier(${i}, 'percent', this.value)" class="input-field w-16 p-1 text-sm">
+                        <span class="text-sm">%</span>
+                        <button onclick="Settings.removeBonusTier(${i})" class="text-red-500"><i class="fas fa-times"></i></button>
+                    </div>
+                `).join('');
+            },
+            addBonusTier() {
+                const tiers = Store.data.config.bonusTiers || [];
+                tiers.push({limit: 1000, percent: 10});
+                OfflineManager.write('settings/bonusTiers', tiers);
+                Store.data.config.bonusTiers = tiers;
+                this.renderBonusTiers();
+            },
+            updateBonusTier(i, k, v) {
+                const tiers = [...Store.data.config.bonusTiers];
+                tiers[i][k] = parseFloat(v);
+                OfflineManager.write('settings/bonusTiers', tiers);
+            },
+            removeBonusTier(i) {
+                const tiers = Store.data.config.bonusTiers || [];
+                tiers.splice(i, 1);
+                OfflineManager.write('settings/bonusTiers', tiers);
+                Store.data.config.bonusTiers = tiers;
+                this.renderBonusTiers();
             }
         };
 
@@ -3465,6 +3930,7 @@
                         const arr = Object.values(val).sort((a,b)=>b.date-a.date);
                         logs.innerHTML = arr.map(t => {
                             const icon = t.type==='income' ? 'fa-arrow-down text-emerald-500' : 'fa-arrow-up text-rose-500';
+                            const displayAmt = isNaN(parseFloat(t.amount)) ? t.amount : `₪${t.amount}`;
                             return `
                             <div class="p-3 border-b flex justify-between items-center text-sm hover:bg-slate-50">
                                 <div class="flex items-center gap-2">
@@ -3472,7 +3938,7 @@
                                     <span class="font-medium">${t.category}</span>
                                     <span class="text-xs text-gray-400">${t.desc||''}</span>
                                 </div>
-                                <span class="font-bold">₪${t.amount}</span>
+                                <span class="font-bold">${displayAmt}</span>
                             </div>`;
                         }).join('');
                     });
