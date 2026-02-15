@@ -313,6 +313,8 @@
 
     <!-- אלמנט נסתר ליבוא קבצים -->
     <input type="file" id="excel-upload-input" accept=".xlsx, .xls" class="hidden" onchange="Importer.handleFileSelect(this)">
+    <!-- אלמנט נסתר ליבוא JSON -->
+    <input type="file" id="json-import-input" accept=".json" class="hidden" onchange="Settings.importDataFromJSON(this)">
 
     <!-- אזור הדפסה -->
     <div id="print-area"></div>
@@ -617,18 +619,21 @@
                         </div>
                     </div>
                     <div class="flex-1 overflow-y-auto p-4 custom-scroll" id="students-container">
-                        <table class="w-full text-sm">
-                            <thead class="bg-slate-50 text-slate-600 sticky top-0 shadow-sm z-10">
-                                <tr>
-                                    <th class="p-3 text-right rounded-r-lg bg-slate-50">שם מלא</th>
-                                    <th class="p-3 text-right bg-slate-50">שיעור</th>
-                                    <th class="p-3 text-right bg-slate-50">שנת כניסה</th>
-                                    <th class="p-3 text-right bg-slate-50">יעד אישי (<span class="curr-year"></span>)</th>
-                                    <th class="p-3 text-center rounded-l-lg bg-slate-50">פעולות</th>
-                                </tr>
-                            </thead>
-                            <tbody id="students-tbody" class="divide-y divide-slate-100"></tbody>
-                        </table>
+                        <!-- תיקון: גלילה רוחבית לטבלה -->
+                        <div class="overflow-x-auto w-full">
+                            <table class="w-full text-sm min-w-[600px]">
+                                <thead class="bg-slate-50 text-slate-600 sticky top-0 shadow-sm z-10">
+                                    <tr>
+                                        <th class="p-3 text-right rounded-r-lg bg-slate-50">שם מלא</th>
+                                        <th class="p-3 text-right bg-slate-50">שיעור</th>
+                                        <th class="p-3 text-right bg-slate-50">שנת כניסה</th>
+                                        <th class="p-3 text-right bg-slate-50">יעד אישי (<span class="curr-year"></span>)</th>
+                                        <th class="p-3 text-center rounded-l-lg bg-slate-50">פעולות</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="students-tbody" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
                         <div id="students-loader-more" class="p-6 text-center mt-2 hidden">
                             <button onclick="Students.loadMore()" class="bg-slate-100 text-slate-600 hover:bg-slate-200 px-6 py-2 rounded-full text-sm font-bold transition shadow-sm">
                                 <i class="fas fa-chevron-down ml-2"></i> טען עוד בחורים
@@ -673,18 +678,21 @@
 
                     <!-- מסך רגיל: רשימת תורמים (טבלה) -->
                     <div id="donors-list-view" class="flex-1 overflow-y-auto p-4 custom-scroll">
-                        <table class="w-full text-sm">
-                            <thead class="bg-slate-50 text-slate-600 sticky top-0 shadow-sm z-10">
-                                <tr>
-                                    <th class="p-3 text-right rounded-r-lg bg-slate-50">שם מלא</th>
-                                    <th class="p-3 text-right bg-slate-50">כתובת</th>
-                                    <th class="p-3 text-right bg-slate-50">טלפון</th>
-                                    <th class="p-3 text-right bg-slate-50">קבוצה</th>
-                                    <th class="p-3 text-center rounded-l-lg bg-slate-50">פעולות</th>
-                                </tr>
-                            </thead>
-                            <tbody id="donors-tbody" class="divide-y divide-slate-100"></tbody>
-                        </table>
+                        <!-- תיקון: גלילה רוחבית לטבלה -->
+                        <div class="overflow-x-auto w-full">
+                            <table class="w-full text-sm min-w-[600px]">
+                                <thead class="bg-slate-50 text-slate-600 sticky top-0 shadow-sm z-10">
+                                    <tr>
+                                        <th class="p-3 text-right rounded-r-lg bg-slate-50">שם מלא</th>
+                                        <th class="p-3 text-right bg-slate-50">כתובת</th>
+                                        <th class="p-3 text-right bg-slate-50">טלפון</th>
+                                        <th class="p-3 text-right bg-slate-50">קבוצה</th>
+                                        <th class="p-3 text-center rounded-l-lg bg-slate-50">פעולות</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="donors-tbody" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
                         <div id="donors-loader-more" class="p-4 text-center hidden">
                             <button onclick="Donors.loadMore()" class="bg-slate-200 text-slate-600 px-6 py-2 rounded-full font-bold text-sm">טען עוד...</button>
                         </div>
@@ -819,19 +827,22 @@
                     
                     <div class="flex-1 overflow-hidden flex flex-col" id="finance-main-view">
                         <div class="overflow-y-auto flex-1 p-4 custom-scroll" id="finance-scroll-container">
-                            <table class="w-full text-sm text-right border-collapse">
-                                <thead class="bg-slate-100 text-slate-600 sticky top-0 shadow-sm z-10">
-                                    <tr>
-                                        <th class="p-3 rounded-r-lg bg-slate-100">תאריך</th>
-                                        <th class="p-3 bg-slate-100">סוג</th>
-                                        <th class="p-3 bg-slate-100">קטגוריה</th>
-                                        <th class="p-3 bg-slate-100">תיאור / משוייך ל...</th>
-                                        <th class="p-3 bg-slate-100">סכום</th>
-                                        <th class="p-3 rounded-l-lg bg-slate-100">פעולות</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="finance-tbody" class="divide-y divide-slate-100"></tbody>
-                            </table>
+                             <!-- תיקון: גלילה רוחבית לטבלה -->
+                            <div class="overflow-x-auto w-full">
+                                <table class="w-full text-sm text-right border-collapse min-w-[600px]">
+                                    <thead class="bg-slate-100 text-slate-600 sticky top-0 shadow-sm z-10">
+                                        <tr>
+                                            <th class="p-3 rounded-r-lg bg-slate-100">תאריך</th>
+                                            <th class="p-3 bg-slate-100">סוג</th>
+                                            <th class="p-3 bg-slate-100">קטגוריה</th>
+                                            <th class="p-3 bg-slate-100">תיאור / משוייך ל...</th>
+                                            <th class="p-3 bg-slate-100">סכום</th>
+                                            <th class="p-3 rounded-l-lg bg-slate-100">פעולות</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="finance-tbody" class="divide-y divide-slate-100"></tbody>
+                                </table>
+                            </div>
                             <div id="finance-loader-more" class="p-4 text-center mt-2 hidden">
                                 <button onclick="Finance.loadMore()" class="text-indigo-600 hover:underline font-bold">טען היסטוריה ישנה יותר...</button>
                             </div>
@@ -927,6 +938,25 @@
                                     <button onclick="Settings.loadUsersList()" class="text-sm text-blue-600 font-bold hover:underline mt-2">טען רשימת משתמשים</button>
                                 </div>
                             </div>
+                        </div>
+                        
+                        <!-- JSON IMPORT / EXPORT -->
+                        <div class="bg-white p-8 rounded-2xl shadow-sm border border-indigo-100">
+                             <h3 class="font-bold text-xl mb-6 text-indigo-800 border-b pb-2">גיבוי וייצוא מלא (JSON)</h3>
+                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                 <div>
+                                     <button onclick="Settings.exportDataAsJSON()" class="w-full bg-indigo-600 text-white p-4 rounded-xl shadow hover:bg-indigo-700 flex items-center justify-center gap-2">
+                                         <i class="fas fa-download"></i> הורד גיבוי מלא (JSON)
+                                     </button>
+                                     <p class="text-xs text-gray-500 mt-2">מוריד את כל הנתונים של המערכת לקובץ אחד.</p>
+                                 </div>
+                                 <div>
+                                     <button onclick="document.getElementById('json-import-input').click()" class="w-full bg-white border-2 border-indigo-200 text-indigo-700 p-4 rounded-xl hover:bg-indigo-50 flex items-center justify-center gap-2">
+                                         <i class="fas fa-upload"></i> שחזר / ייבא מגיבוי (JSON)
+                                     </button>
+                                     <p class="text-xs text-gray-500 mt-2 text-red-500 font-bold"><i class="fas fa-exclamation-triangle"></i> הפעולה לא דורסת נתונים קיימים, אלא מוסיפה רק חוסרים.</p>
+                                 </div>
+                             </div>
                         </div>
 
                         <!-- ניהול שדות מותאמים -->
@@ -1075,7 +1105,7 @@
         </div>
     </div>
 
-    <!-- תיקון מס' 9: בועת AI למנהל -->
+    <!-- תיקון מס' 9 + AI Offline: בועת AI למנהל -->
     <div id="ai-bubble-container" class="hidden-screen">
         <div id="ai-chat-window">
             <div class="chat-header">
@@ -1083,11 +1113,16 @@
                 <button onclick="document.getElementById('ai-chat-window').style.display='none'"><i class="fas fa-times"></i></button>
             </div>
             <div class="chat-body" id="ai-messages">
-                <div class="p-2 bg-indigo-50 rounded mb-2 text-xs">שלום המנהל! אני כאן לעזור בהגדרות המערכת ושאלות נפוצות.</div>
+                <div class="p-2 bg-indigo-50 rounded mb-2 text-xs">
+                    שלום! אני העוזר האישי. אני מבין שפה טבעית ועובד גם ללא אינטרנט.<br>
+                    נסה לבקש דוחות, לחפש בחורים ("נתונים על יוסי"), או לשאול על מצב הקופה.<br>
+                    אם לא אבין, אשאל שאלות הכוונה.<br>
+                    <b>הקש "עזרה" לרשימת פקודות.</b>
+                </div>
             </div>
             <div class="p-2 border-t bg-gray-50 flex">
-                <input type="text" placeholder="הקלד שאלה..." class="flex-1 border rounded px-2 py-1 text-sm outline-none">
-                <button class="ml-2 text-indigo-600 font-bold"><i class="fas fa-paper-plane"></i></button>
+                <input type="text" id="ai-input" placeholder="הקלד שאלה (למשל: תן לי דוח כספי)..." class="flex-1 border rounded px-2 py-1 text-sm outline-none" onkeypress="if(event.key === 'Enter') OfflineAI.send()">
+                <button class="ml-2 text-indigo-600 font-bold" onclick="OfflineAI.send()"><i class="fas fa-paper-plane"></i></button>
             </div>
         </div>
         <div id="ai-fab" onclick="const w=document.getElementById('ai-chat-window'); w.style.display = w.style.display==='flex'?'none':'flex'">
@@ -1194,9 +1229,17 @@
 
         const OfflineManager = {
             isOnline: navigator.onLine,
-            queue: JSON.parse(localStorage.getItem('offlineQueue') || '[]'),
+            queue: [],
             
             init() {
+                try {
+                    const q = localStorage.getItem('offlineQueue');
+                    this.queue = q ? JSON.parse(q) : [];
+                } catch (e) {
+                    console.error("Error parsing offline queue:", e);
+                    this.queue = [];
+                }
+                
                 window.addEventListener('online', () => this.updateStatus(true));
                 window.addEventListener('offline', () => this.updateStatus(false));
                 this.updateStatus(this.isOnline);
@@ -1205,12 +1248,13 @@
             saveState(key, data) {
                 try {
                     localStorage.setItem('cache_' + key, JSON.stringify(data));
-                } catch(e) { console.error('Cache full', e); }
+                } catch(e) { console.error('Cache full or invalid', e); }
             },
             
             loadState(key) {
                 try {
-                    return JSON.parse(localStorage.getItem('cache_' + key));
+                    const item = localStorage.getItem('cache_' + key);
+                    return item ? JSON.parse(item) : null;
                 } catch(e) { return null; }
             },
 
@@ -1257,8 +1301,23 @@
                 let storeKey = null;
                 let itemId = null;
 
+                // זיהוי לאיזה Store שייך הנתיב
                 if (path.includes('global/students')) { storeKey = 'students'; itemId = parts[2]; }
                 else if (path.includes('global/donors')) { storeKey = 'donors'; itemId = parts[2]; }
+                else if (path.includes('/finance/')) {
+                    // טיפול מיוחד בfinance - הנתיב הוא years/YEAR/finance/ID
+                    // data הוא העסקה המלאה
+                    const txId = parts[parts.length - 1];
+                    if (type === 'remove') {
+                        if (Finance.financeData[txId]) delete Finance.financeData[txId];
+                    } else {
+                         // עדכון מקומי של financeData כדי שיוצג מיד בטבלה
+                         const txData = type === 'update' ? { ...(Finance.financeData[txId]||{}), ...data } : data;
+                         Finance.financeData[txId] = txData;
+                    }
+                    if (Router.current === 'finance') Finance.render();
+                    return; // finance handled
+                }
 
                 if (storeKey && itemId) {
                     if (type === 'remove') {
@@ -1709,6 +1768,112 @@
             }
         };
 
+        // --- NEW: Offline AI Assistant Logic ---
+        const OfflineAI = {
+            context: null, // "report_type", "search_student"
+            
+            addMsg(text, isUser = false) {
+                const div = document.createElement('div');
+                div.className = `p-2 rounded mb-2 text-xs ${isUser ? 'bg-indigo-100 self-end text-left' : 'bg-gray-100 self-start'}`;
+                div.innerHTML = text;
+                const container = document.getElementById('ai-messages');
+                container.appendChild(div);
+                container.scrollTop = container.scrollHeight;
+            },
+            
+            send() {
+                const inp = document.getElementById('ai-input');
+                const txt = inp.value.trim();
+                if(!txt) return;
+                this.addMsg(txt, true);
+                inp.value = '';
+                
+                setTimeout(() => {
+                    const response = this.processQuery(txt);
+                    this.addMsg(response);
+                }, 600);
+            },
+            
+            processQuery(txt) {
+                txt = txt.toLowerCase();
+
+                // Help Command
+                if (txt.includes('עזרה') || txt.includes('help') || txt.includes('פקודות')) {
+                    return `
+                        <b>פקודות אפשריות:</b><br>
+                        - "דוח כספי" (להורדת דוח אקסל)<br>
+                        - "דוח תצוגה" (לפתיחת עורך הדוחות)<br>
+                        - "נתונים על [שם הבחור]" (למידע ופעולות על בחור)<br>
+                        - "כמה כסף בקופה" (לצפייה ביתרה)<br>
+                        - "כמה בחורים יש" (לספירת בחורים)<br>
+                    `;
+                }
+
+                // 1. טיפול בהקשר (Context) - שאלות המשך
+                if (this.context === 'report_type') {
+                    this.context = null;
+                    if (txt.includes('כספ') || txt.includes('הכנס') || txt.includes('קופה')) {
+                        Reports.generateStandard();
+                        return "בבקשה, הפקתי עבורך דוח תנועות כספיות באקסל.";
+                    }
+                    if (txt.includes('תצוג') || txt.includes('משוקלל') || txt.includes('פורים')) {
+                         Reports.openEditor();
+                         return "פתחתי את עורך הדוחות המשוקלל (תצוגה).";
+                    }
+                    if (txt.includes('תורם')) return "עבור דוח תורמים, תוכל לייצא מהמסך 'תורמים' באקסל.";
+                }
+
+                // 2. זיהוי בקשות דוח כלליות - יצירת דיאלוג
+                if (txt.includes('דוח') && !txt.includes('בחור') && !txt.includes('תורם') && !txt.includes('כספ')) {
+                    this.context = 'report_type';
+                    return "איזה דוח תרצה להפיק? (כספי, תצוגה/פורים, או תורמים?)";
+                }
+
+                // 3. זיהוי חיפוש ומידע על בחור ספציפי
+                if (txt.includes('על') || txt.includes('בחור') || txt.includes('נתונים')) {
+                    // חיפוש שם בטקסט
+                    const students = Object.values(Store.data.students);
+                    const found = students.find(s => {
+                        const fullName = s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : s.name;
+                        return txt.includes(fullName) || (fullName && txt.includes(fullName.split(' ')[0]) && txt.includes(fullName.split(' ')[1]));
+                    });
+
+                    if (found) {
+                        const fullName = found.firstName && found.lastName ? `${found.firstName} ${found.lastName}` : found.name;
+                        return `מצאתי את הבחור <b>${fullName}</b>.<br>
+                                <button onclick="Reports.generateIndividual('${found.id}', '${fullName}')" class="text-blue-600 underline">לחץ כאן להפקת דוח אישי</button><br>
+                                <button onclick="Students.openEdit('${found.id}')" class="text-blue-600 underline">לחץ לעריכת פרטים</button>`;
+                    } else if (txt.includes('בחור')) {
+                         return "לא זיהיתי את שם הבחור בבקשה שלך. נסה לכתוב 'נתונים על [שם הבחור]'.";
+                    }
+                }
+
+                // 4. פקודות ישירות
+                if(txt.includes('דוח') && (txt.includes('הכנס') || txt.includes('כספ'))) {
+                    Reports.generateStandard();
+                    return "מפיק דוח כספי, אנא המתן...";
+                }
+                
+                // 5. שאלות כלליות
+                if(txt.includes('כמה') && (txt.includes('כסף') || txt.includes('קופה') || txt.includes('הכנסות'))) {
+                    const inc = Store.data.stats.income || 0;
+                    return `סך ההכנסות בקופה לשנה זו: ₪${inc.toLocaleString()}`;
+                }
+                if(txt.includes('כמה') && (txt.includes('בחורים') || txt.includes('תלמידים'))) {
+                    const count = Object.keys(Store.data.students).length;
+                    return `ישנם כרגע ${count} בחורים במערכת (חלקם בזיכרון המקומי).`;
+                }
+                if(txt.includes('כמה') && txt.includes('תורמים')) {
+                    const count = Object.keys(Store.data.donors).length;
+                    return `ישנם כרגע ${count} תורמים במערכת.`;
+                }
+
+                if(txt.includes('שלום') || txt.includes('היי')) return "שלום רב! אני כאן לעזור. נסה לשאול 'כמה כסף בקופה' או לבקש דוח על בחור מסוים.";
+                
+                return "מצטער, לא הבנתי בדיוק. נסה לשאול על 'דוח', 'מצב קופה', או חפש שם של בחור. הקש 'עזרה' לרשימת פקודות.";
+            }
+        };
+
         // --- 6. STUDENTS LOGIC ---
         const Students = {
             limit: 30,
@@ -1834,7 +1999,8 @@
             },
             openAddModal() {
                 Modal.render('הוספת בחור חדש', this.getFormFields(), (data) => {
-                    const id = db.ref('global/students').push().key;
+                    // ID Generation fallback
+                    const id = db.ref('global/students').push().key || ('stu' + Date.now());
                     if(data.firstName && data.lastName) data.name = `${data.firstName} ${data.lastName}`;
                     const studentData = { id, lastUpdatedYear: Store.currentYear, ...data };
                     OfflineManager.write(`global/students/${id}`, studentData);
@@ -1855,7 +2021,7 @@
                     if(lines.length === 0) return;
                     const batch = {};
                     lines.forEach(line => {
-                        const id = db.ref('global/students').push().key;
+                        const id = db.ref('global/students').push().key || ('stu' + Math.random().toString(36).substr(2, 9));
                         const parts = line.split(' ');
                         const firstName = parts[0];
                         const lastName = parts.slice(1).join(' ');
@@ -2270,7 +2436,7 @@
                     </div>
                 `;
                 Modal.render('הוספת תורם חדש', this.getFormFields(), (data) => {
-                    const id = db.ref('global/donors').push().key;
+                    const id = db.ref('global/donors').push().key || ('don' + Date.now());
                     // יצירת שדה name אחוד לתאימות
                     if(data.firstName || data.lastName) data.name = `${data.firstName || ''} ${data.lastName || ''}`.trim();
                     if(!data.name) data.name = 'ללא שם';
@@ -2867,9 +3033,6 @@
                     if(this.currentFilter === 'purim') raw = raw.filter(tx => tx.isPurim);
                     else raw = raw.filter(tx => tx.type === this.currentFilter);
                 }
-                // תיקון מס' 8: לא להציג 'הערות' (NaN) ברשימה הרגילה אם לא רוצים, או להציג בצורה מיוחדת
-                // כאן אני אציג אותן, אבל בצורה ברורה שהן לא משפיעות על החישוב
-                // אם אתה רוצה להסתיר לגמרי: raw = raw.filter(tx => !isNaN(tx.amount));
                 
                 raw.sort((a,b) => b.date - a.date);
                 tbody.innerHTML = raw.map(tx => {
@@ -2883,7 +3046,7 @@
                         entityName = `קבוצה: ${tx.groupName || tx.groupId}`;
                     }
 
-                    // תיקון מס' 8: טיפול בסכום שהוא טקסט
+                    // תיקון מס' 8: טיפול בסכום שהוא טקסט (למניעת באגים)
                     const isNote = isNaN(parseFloat(tx.amount));
                     const displayAmount = isNote ? `<span class="text-xs text-gray-500">${tx.amount}</span>` : `₪${parseInt(tx.amount).toLocaleString()}`;
                     const rowClass = isNote ? 'bg-gray-50 italic' : 'hover:bg-slate-50';
@@ -3116,7 +3279,7 @@
                     }
                     Notify.show('פעולה נרשמה בהצלחה', 'success');
                     Modal.close();
-                    setTimeout(() => Finance.loadMore(true), 500);
+                    // setTimeout(() => Finance.loadMore(true), 500); // כבר לא נדרש הודות לתיקון ב-OfflineManager
                 });
             },
             editTx(id) {
@@ -3167,7 +3330,7 @@
 
                          Notify.show('תנועה עודכנה', 'success');
                          Modal.close();
-                         setTimeout(() => Finance.loadMore(true), 500);
+                         // setTimeout(() => Finance.loadMore(true), 500);
                     };
                 }, 100);
             },
@@ -3201,8 +3364,8 @@
                     if(OfflineManager.isOnline && !isNaN(amount)) {
                         db.ref(`years/${Store.currentYear}/stats/${type}`).transaction(curr => (curr || 0) - amount);
                     }
-                    delete this.financeData[id];
-                    this.render();
+                    // delete this.financeData[id]; // מבוצע כבר ב-OfflineManager
+                    // this.render();
                     Notify.show('תנועה נמחקה', 'info');
                 }
             }
@@ -3816,7 +3979,6 @@
                             const isMatch = header.includes(hYear) || header.includes(hYear.replace(/['"]/g, ''));
                             options += `<option value="${header}" ${isMatch ? 'selected' : ''}>${header}</option>`;
                         });
-                        
                         html += `
                         <div class="grid grid-cols-2 gap-4 items-center mb-1">
                             <div class="text-sm">תרומות ${hYear} (${numYear})</div>
@@ -3967,221 +4129,293 @@
             }
         };
 
-        const Settings = {
-            init() {
-                this.renderFieldsEditor();
-                this.renderGoals();
-                this.renderStudentRewards();
-                this.renderBonusTiers();
-                this.renderVouchers(); // תיקון מס' 4: טעינת תלושים
-                if(Store.data.config) {
-                    document.getElementById('conf-global-goal').value = Store.data.config.globalGoal || '';
-                    document.getElementById('conf-base-student-goal').value = Store.data.config.baseStudentGoal || '';
-                    document.getElementById('conf-enable-ai').checked = Store.data.config.enableAI || false;
-                    
-                    const gd = Store.data.config.groupDiscounts || {};
-                    document.getElementById('conf-disc-night14').value = gd.night14 || 0;
-                    document.getElementById('conf-disc-day14').value = gd.day14 || 0;
-                    document.getElementById('conf-disc-day15').value = gd.day15 || 0;
-                }
-            },
-            save(key, val) { OfflineManager.write(`settings/${key}`, parseInt(val)); Notify.show('הגדרה נשמרה', 'success'); },
-            saveGroupDiscount(key, val) {
-                OfflineManager.write(`settings/groupDiscounts/${key}`, parseInt(val));
-            },
-            
-            // User Management - DB based
-            createUser() {
-                const email = document.getElementById('new-user-email').value;
-                const pass = document.getElementById('new-user-pass').value;
-                const role = document.getElementById('new-user-role').value;
-                if(!email || !pass) return alert('נא למלא אימייל וסיסמה');
+       const Settings = {
+        init() {
+            this.renderFieldsEditor();
+            this.renderGoals();
+            this.renderStudentRewards();
+            this.renderBonusTiers();
+            this.renderVouchers(); // תיקון מס' 4: טעינת תלושים
+            if(Store.data.config) {
+                document.getElementById('conf-global-goal').value = Store.data.config.globalGoal || '';
+                document.getElementById('conf-base-student-goal').value = Store.data.config.baseStudentGoal || '';
+                document.getElementById('conf-enable-ai').checked = Store.data.config.enableAI || false;
                 
-                try {
-                    const secondaryApp = firebase.initializeApp(firebaseConfig, "Secondary");
-                    secondaryApp.auth().createUserWithEmailAndPassword(email, pass).then(cred => {
-                        db.ref(`users/${cred.user.uid}`).set({
-                            email: email,
-                            role: role
-                        });
-                        secondaryApp.auth().signOut();
-                        secondaryApp.delete(); 
-                        Notify.show('משתמש נוצר בהצלחה!', 'success');
-                        document.getElementById('new-user-email').value = '';
-                        document.getElementById('new-user-pass').value = '';
-                    }).catch(err => {
-                        alert("שגיאה ביצירת משתמש: " + err.message);
-                        if(secondaryApp) secondaryApp.delete();
-                    });
-                } catch(e) { console.error(e); }
-            },
+                const gd = Store.data.config.groupDiscounts || {};
+                document.getElementById('conf-disc-night14').value = gd.night14 || 0;
+                document.getElementById('conf-disc-day14').value = gd.day14 || 0;
+                document.getElementById('conf-disc-day15').value = gd.day15 || 0;
+            }
+        },
+        save(key, val) { OfflineManager.write(`settings/${key}`, parseInt(val)); Notify.show('הגדרה נשמרה', 'success'); },
+        saveGroupDiscount(key, val) {
+            OfflineManager.write(`settings/groupDiscounts/${key}`, parseInt(val));
+        },
+        
+        // User Management - DB based
+        createUser() {
+            const email = document.getElementById('new-user-email').value;
+            const pass = document.getElementById('new-user-pass').value;
+            const role = document.getElementById('new-user-role').value;
+            if(!email || !pass) return alert('נא למלא אימייל וסיסמה');
             
-            loadUsersList() {
-                db.ref('users').once('value', snap => {
-                    const users = snap.val() || {};
-                    const container = document.getElementById('users-list-container');
-                    container.innerHTML = '';
-                    Object.entries(users).forEach(([uid, u]) => {
-                        container.innerHTML += `
-                            <div class="flex justify-between items-center bg-gray-50 p-2 rounded text-sm">
-                                <div><span class="font-bold">${u.email}</span> (${u.role})</div>
-                                <div class="flex gap-2">
-                                    <button onclick="Settings.sendPasswordReset('${u.email}')" class="text-orange-500 hover:text-orange-700 text-xs">אפס סיסמה</button>
-                                    <button onclick="Settings.updateUserRole('${uid}', '${u.role === 'admin' ? 'user' : 'admin'}')" class="text-blue-500 hover:underline text-xs">שנה תפקיד</button>
-                                    <button onclick="Settings.deleteUserDB('${uid}')" class="text-red-500 hover:text-red-700 text-xs font-bold">מחק גישה</button>
-                                </div>
+            try {
+                const secondaryApp = firebase.initializeApp(firebaseConfig, "Secondary");
+                secondaryApp.auth().createUserWithEmailAndPassword(email, pass).then(cred => {
+                    db.ref(`users/${cred.user.uid}`).set({
+                        email: email,
+                        role: role
+                    });
+                    secondaryApp.auth().signOut();
+                    secondaryApp.delete(); 
+                    Notify.show('משתמש נוצר בהצלחה!', 'success');
+                    document.getElementById('new-user-email').value = '';
+                    document.getElementById('new-user-pass').value = '';
+                }).catch(err => {
+                    alert("שגיאה ביצירת משתמש: " + err.message);
+                    if(secondaryApp) secondaryApp.delete();
+                });
+            } catch(e) { console.error(e); }
+        },
+        
+        loadUsersList() {
+            db.ref('users').once('value', snap => {
+                const users = snap.val() || {};
+                const container = document.getElementById('users-list-container');
+                container.innerHTML = '';
+                Object.entries(users).forEach(([uid, u]) => {
+                    container.innerHTML += `
+                        <div class="flex justify-between items-center bg-gray-50 p-2 rounded text-sm">
+                            <div><span class="font-bold">${u.email}</span> (${u.role})</div>
+                            <div class="flex gap-2">
+                                <button onclick="Settings.sendPasswordReset('${u.email}')" class="text-orange-500 hover:text-orange-700 text-xs">אפס סיסמה</button>
+                                <button onclick="Settings.updateUserRole('${uid}', '${u.role === 'admin' ? 'user' : 'admin'}')" class="text-blue-500 hover:underline text-xs">שנה תפקיד</button>
+                                <button onclick="Settings.deleteUserDB('${uid}')" class="text-red-500 hover:text-red-700 text-xs font-bold">מחק גישה</button>
                             </div>
-                        `;
-                    });
-                });
-            },
-            
-            // פונקציה חדשה לאיפוס סיסמה
-            sendPasswordReset(email) {
-                if(confirm('לשלוח למשתמש מייל לאיפוס סיסמה?')) {
-                    auth.sendPasswordResetEmail(email).then(() => {
-                        Notify.show('מייל איפוס נשלח בהצלחה', 'success');
-                    }).catch(error => {
-                        Notify.show('שגיאה בשליחת מייל: ' + error.message, 'error');
-                    });
-                }
-            },
-            
-            updateUserRole(uid, newRole) {
-                if(confirm('לשנות את תפקיד המשתמש?')) {
-                    db.ref(`users/${uid}/role`).set(newRole).then(() => {
-                        this.loadUsersList();
-                        Notify.show('תפקיד עודכן', 'success');
-                    });
-                }
-            },
-            
-            deleteUserDB(uid) {
-                if(confirm('זהירות: פעולה זו תסיר את גישת המשתמש מהמערכת (לא מוחק מה-Auth). האם להמשיך?')) {
-                    db.ref(`users/${uid}`).remove().then(() => {
-                        this.loadUsersList();
-                        Notify.show('גישה הוסרה', 'info');
-                    });
-                }
-            },
-
-            syncYears() {
-                if(!confirm('פעולה זו תקדם את כל הבחורים בשיעור אחד. בוגרי קיבוץ ח\' יועברו לרשימת התורמים. האם להמשיך?')) return;
-                Notify.show('מבצע סנכרון...', 'info');
-                db.ref('global/students').once('value', s => {
-                    const allStudents = s.val() || {};
-                    const updates = {};
-                    const newDonors = {};
-                    let movedCount = 0;
-                    Object.values(allStudents).forEach(st => {
-                        const currentGrade = st.grade;
-                        if(!currentGrade) return;
-                        const idx = SHIURIM_ORDER.indexOf(currentGrade);
-                        if(idx === -1) return; 
-                        if(idx < SHIURIM_ORDER.length - 1) {
-                            updates[`global/students/${st.id}/grade`] = SHIURIM_ORDER[idx + 1];
-                        } else {
-                            movedCount++;
-                            updates[`global/students/${st.id}`] = null; 
-                            const n = st.firstName && st.lastName ? `${st.firstName} ${st.lastName}` : st.name;
-                            newDonors[`global/donors/${st.id}`] = {
-                                id: st.id,
-                                name: n,
-                                phone: st.phone,
-                                address: st.city || '',
-                                joinYear: Store.currentYear,
-                                notes: 'בוגר (הועבר אוטומטית)',
-                                isAlumni: true
-                            };
-                        }
-                    });
-                    db.ref().update(updates).then(() => {
-                         if(movedCount > 0) db.ref().update(newDonors);
-                         Notify.show(`סנכרון הושלם. ${movedCount} בוגרים הועברו לתורמים.`, 'success');
-                         setTimeout(() => location.reload(), 2000);
-                    });
-                });
-            },
-            renderFieldsEditor() {
-                const type = document.getElementById('settings-field-type').value;
-                const list = document.getElementById('settings-active-fields');
-                const customList = document.getElementById('settings-custom-list');
-                const select = document.getElementById('settings-predefined-field');
-                
-                const defs = PREDEFINED_FIELDS[type] || [];
-                select.innerHTML = '';
-                defs.forEach(d => select.innerHTML += `<option value="${d.k}">${d.l}</option>`);
-                
-                const customDefs = Store.data.config.customFieldsDefs || {};
-                customList.innerHTML = '';
-                Object.entries(customDefs).forEach(([k, def]) => {
-                     select.innerHTML += `<option value="${k}" class="text-indigo-600">${def.l} (מותאם)</option>`;
-                     customList.innerHTML += `
-                        <div class="flex justify-between items-center text-xs bg-gray-50 p-1 border rounded">
-                            <span>${def.l} (${k})</span>
-                            <button onclick="Settings.deleteCustomFieldDef('${k}')" class="text-red-500 hover:text-red-700 px-2" title="מחק שדה מהמערכת"><i class="fas fa-trash"></i></button>
-                        </div>
-                     `;
-                });
-                if(Object.keys(customDefs).length === 0) customList.innerHTML = '<span class="text-gray-400 text-xs">אין שדות מותאמים</span>';
-                
-                const active = (Store.data.config.fields || {})[type] || DEFAULT_ACTIVE_FIELDS[type];
-                list.innerHTML = '';
-                active.forEach(k => {
-                    let def = defs.find(d => d.k === k);
-                    if (!def && customDefs[k]) def = {l: customDefs[k].l};
-                    const label = def ? def.l : k;
-                    list.innerHTML += `
-                        <div class="flex justify-between items-center bg-gray-50 p-2 rounded border text-sm">
-                            <span>${label}</span>
-                            <button onclick="Settings.removeField('${type}','${k}')" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
                         </div>
                     `;
                 });
-            },
-            addField() {
-                const type = document.getElementById('settings-field-type').value;
-                const key = document.getElementById('settings-predefined-field').value;
-                const active = (Store.data.config.fields || {})[type] || [];
-                if(!active.includes(key)) {
-                    active.push(key);
-                    OfflineManager.write(`settings/fields/${type}`, active);
-                    if(!Store.data.config.fields) Store.data.config.fields = {};
-                    Store.data.config.fields[type] = active;
-                    this.renderFieldsEditor();
+            });
+        },
+        
+        // פונקציה חדשה לאיפוס סיסמה
+        sendPasswordReset(email) {
+            if(confirm('לשלוח למשתמש מייל לאיפוס סיסמה?')) {
+                auth.sendPasswordResetEmail(email).then(() => {
+                    Notify.show('מייל איפוס נשלח בהצלחה', 'success');
+                }).catch(error => {
+                    Notify.show('שגיאה בשליחת מייל: ' + error.message, 'error');
+                });
+            }
+        },
+        
+        updateUserRole(uid, newRole) {
+            if(confirm('לשנות את תפקיד המשתמש?')) {
+                db.ref(`users/${uid}/role`).set(newRole).then(() => {
+                    this.loadUsersList();
+                    Notify.show('תפקיד עודכן', 'success');
+                });
+            }
+        },
+        
+        deleteUserDB(uid) {
+            if(confirm('זהירות: פעולה זו תסיר את גישת המשתמש מהמערכת (לא מוחק מה-Auth). האם להמשיך?')) {
+                db.ref(`users/${uid}`).remove().then(() => {
+                    this.loadUsersList();
+                    Notify.show('גישה הוסרה', 'info');
+                });
+            }
+        },
+        
+        // --- תיקון: ייצוא וייבוא JSON למניעת כפילויות ---
+        exportDataAsJSON() {
+            Notify.show('מכין גיבוי מלא...', 'info');
+            db.ref('/').once('value', snap => {
+                const fullData = snap.val();
+                const dataStr = JSON.stringify(fullData, null, 2);
+                const blob = new Blob([dataStr], {type: "application/json"});
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `backup_ezer_${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                Notify.show('הגיבוי ירד למחשב', 'success');
+            });
+        },
+        
+        importDataFromJSON(input) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            if(!confirm('אזהרה: פעולה זו תייבא נתונים מהקובץ. המערכת תוסיף רק נתונים חסרים ולא תדרוס נתונים קיימים. להמשיך?')) return;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    Notify.show('מנתח נתונים...', 'info');
+                    
+                    db.ref('/').once('value', snap => {
+                        const currentData = snap.val() || {};
+                        const updates = {};
+                        let addedCount = 0;
+                        
+                        // Recursive merge function
+                        function processMerge(path, incoming, existing) {
+                            if (typeof incoming === 'object' && incoming !== null) {
+                                Object.keys(incoming).forEach(key => {
+                                    const newPath = path ? `${path}/${key}` : key;
+                                    if (!existing || !existing.hasOwnProperty(key)) {
+                                        // New data found
+                                        updates[newPath] = incoming[key];
+                                        addedCount++;
+                                    } else if (typeof incoming[key] === 'object' && incoming[key] !== null) {
+                                        // Deep dive
+                                        processMerge(newPath, incoming[key], existing[key]);
+                                    }
+                                });
+                            }
+                        }
+                        
+                        processMerge('', importedData, currentData);
+                        
+                        if (Object.keys(updates).length > 0) {
+                            db.ref().update(updates).then(() => {
+                                Notify.show(`השחזור הצליח! נוספו ${addedCount} רשומות חדשות.`, 'success');
+                                setTimeout(() => location.reload(), 2000);
+                            }).catch(err => {
+                                console.error(err);
+                                Notify.show('שגיאה בשמירת הנתונים', 'error');
+                            });
+                        } else {
+                            Notify.show('לא נמצאו נתונים חדשים לייבוא.', 'info');
+                        }
+                    });
+                } catch(err) {
+                    alert('קובץ לא תקין');
                 }
-            },
-            addCustomField() {
-                const key = document.getElementById('custom-field-key').value.trim();
-                const label = document.getElementById('custom-field-label').value.trim();
-                if(!key || !label) return alert('חובה למלא מזהה (באנגלית) ותווית (בעברית)');
-                const defs = Store.data.config.customFieldsDefs || {};
-                defs[key] = { l: label };
-                OfflineManager.write(`settings/customFieldsDefs`, defs);
-                Store.data.config.customFieldsDefs = defs;
-                const type = document.getElementById('settings-field-type').value;
-                const active = (Store.data.config.fields || {})[type] || [];
-                if(!active.includes(key)) {
-                    active.push(key);
-                    OfflineManager.write(`settings/fields
-/${type}`, active);
-if(!Store.data.config.fields) Store.data.config.fields = {};
-Store.data.config.fields[type] = active;
-}
-document.getElementById('custom-field-key').value = '';
-document.getElementById('custom-field-label').value = '';
-Notify.show('שדה מותאם נוסף בהצלחה', 'success');
-this.renderFieldsEditor();
-},
-deleteCustomFieldDef(key) {
-if(!confirm('האם אתה בטוח שברצונך למחוק שדה זה מהמערכת? פעולה זו תסיר אותו מהקבוצות בשנה הנוכחית.')) return;
-const defs = Store.data.config.customFieldsDefs || {};
-delete defs[key];
-OfflineManager.write('settings/customFieldsDefs', defs);
-Store.data.config.customFieldsDefs = defs;
-code
-Code
-['students', 'donors'].forEach(type => {
+            };
+            reader.readAsText(file);
+        },
+
+        syncYears() {
+            if(!confirm('פעולה זו תקדם את כל הבחורים בשיעור אחד. בוגרי קיבוץ ח\' יועברו לרשימת התורמים. האם להמשיך?')) return;
+            Notify.show('מבצע סנכרון...', 'info');
+            db.ref('global/students').once('value', s => {
+                const allStudents = s.val() || {};
+                const updates = {};
+                const newDonors = {};
+                let movedCount = 0;
+                Object.values(allStudents).forEach(st => {
+                    const currentGrade = st.grade;
+                    if(!currentGrade) return;
+                    const idx = SHIURIM_ORDER.indexOf(currentGrade);
+                    if(idx === -1) return; 
+                    if(idx < SHIURIM_ORDER.length - 1) {
+                        updates[`global/students/${st.id}/grade`] = SHIURIM_ORDER[idx + 1];
+                    } else {
+                        movedCount++;
+                        updates[`global/students/${st.id}`] = null; 
+                        const n = st.firstName && st.lastName ? `${st.firstName} ${st.lastName}` : st.name;
+                        newDonors[`global/donors/${st.id}`] = {
+                            id: st.id,
+                            name: n,
+                            phone: st.phone,
+                            address: st.city || '',
+                            joinYear: Store.currentYear,
+                            notes: 'בוגר (הועבר אוטומטית)',
+                            isAlumni: true
+                        };
+                    }
+                });
+                db.ref().update(updates).then(() => {
+                     if(movedCount > 0) db.ref().update(newDonors);
+                     Notify.show(`סנכרון הושלם. ${movedCount} בוגרים הועברו לתורמים.`, 'success');
+                     setTimeout(() => location.reload(), 2000);
+                });
+            });
+        },
+        renderFieldsEditor() {
+            const type = document.getElementById('settings-field-type').value;
+            const list = document.getElementById('settings-active-fields');
+            const customList = document.getElementById('settings-custom-list');
+            const select = document.getElementById('settings-predefined-field');
+            
+            const defs = PREDEFINED_FIELDS[type] || [];
+            select.innerHTML = '';
+            defs.forEach(d => select.innerHTML += `<option value="${d.k}">${d.l}</option>`);
+            
+            const customDefs = Store.data.config.customFieldsDefs || {};
+            customList.innerHTML = '';
+            Object.entries(customDefs).forEach(([k, def]) => {
+                 select.innerHTML += `<option value="${k}" class="text-indigo-600">${def.l} (מותאם)</option>`;
+                 customList.innerHTML += `
+                    <div class="flex justify-between items-center text-xs bg-gray-50 p-1 border rounded">
+                        <span>${def.l} (${k})</span>
+                        <button onclick="Settings.deleteCustomFieldDef('${k}')" class="text-red-500 hover:text-red-700 px-2" title="מחק שדה מהמערכת"><i class="fas fa-trash"></i></button>
+                    </div>
+                 `;
+            });
+            if(Object.keys(customDefs).length === 0) customList.innerHTML = '<span class="text-gray-400 text-xs">אין שדות מותאמים</span>';
+            
+            const active = (Store.data.config.fields || {})[type] || DEFAULT_ACTIVE_FIELDS[type];
+            list.innerHTML = '';
+            active.forEach(k => {
+                let def = defs.find(d => d.k === k);
+                if (!def && customDefs[k]) def = {l: customDefs[k].l};
+                const label = def ? def.l : k;
+                list.innerHTML += `
+                    <div class="flex justify-between items-center bg-gray-50 p-2 rounded border text-sm">
+                        <span>${label}</span>
+                        <button onclick="Settings.removeField('${type}','${k}')" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
+                    </div>
+                `;
+            });
+        },
+        addField() {
+            const type = document.getElementById('settings-field-type').value;
+            const key = document.getElementById('settings-predefined-field').value;
+            const active = (Store.data.config.fields || {})[type] || [];
+            if(!active.includes(key)) {
+                active.push(key);
+                OfflineManager.write(`settings/fields/${type}`, active);
+                if(!Store.data.config.fields) Store.data.config.fields = {};
+                Store.data.config.fields[type] = active;
+                this.renderFieldsEditor();
+            }
+        },
+        addCustomField() {
+            const key = document.getElementById('custom-field-key').value.trim();
+            const label = document.getElementById('custom-field-label').value.trim();
+            if(!key || !label) return alert('חובה למלא מזהה (באנגלית) ותווית (בעברית)');
+            const defs = Store.data.config.customFieldsDefs || {};
+            defs[key] = { l: label };
+            OfflineManager.write(`settings/customFieldsDefs`, defs);
+            Store.data.config.customFieldsDefs = defs;
+            const type = document.getElementById('settings-field-type').value;
+            const active = (Store.data.config.fields || {})[type] || [];
+            if(!active.includes(key)) {
+                active.push(key);
+                OfflineManager.write(`settings/fields/${type}`, active);
+                if(!Store.data.config.fields) Store.data.config.fields = {};
+                Store.data.config.fields[type] = active;
+            }
+            document.getElementById('custom-field-key').value = '';
+            document.getElementById('custom-field-label').value = '';
+            Notify.show('שדה מותאם נוסף בהצלחה', 'success');
+            this.renderFieldsEditor();
+        },
+        deleteCustomFieldDef(key) {
+            if(!confirm('האם אתה בטוח שברצונך למחוק שדה זה מהמערכת? פעולה זו תסיר אותו מהקבוצות בשנה הנוכחית.')) return;
+            const defs = Store.data.config.customFieldsDefs || {};
+            delete defs[key];
+            OfflineManager.write('settings/customFieldsDefs', defs);
+            Store.data.config.customFieldsDefs = defs;
+            
+            ['students', 'donors'].forEach(type => {
                 let active = (Store.data.config.fields || {})[type] || [];
                 if(active.includes(key)) {
                     active = active.filter(k => k !== key);
@@ -4423,16 +4657,28 @@ Code
             document.getElementById('dash-total-balance').innerText = `₪${(inc - exp).toLocaleString()}`;
             const goal = Store.data.config.globalGoal || 100000;
             const pct = Math.min(100, Math.round((inc / goal) * 100));
-            setTimeout(() => { document.getElementById('dash-bar').style.width = pct + '%'; }, 100);
+            setTimeout(() => { 
+                const bar = document.getElementById('dash-bar');
+                if(bar) bar.style.width = pct + '%'; 
+            }, 100);
             document.getElementById('dash-goal-progress').innerText = pct + '%';
             
             // עדכון מספרי משתמשים ותורמים מלאים (אמיתיים) מהשרת
-            db.ref('global/students').once('value', s => document.getElementById('dash-stat-students').innerText = s.numChildren());
-            db.ref('global/donors').once('value', s => document.getElementById('dash-stat-donors').innerText = s.numChildren());
+            db.ref('global/students').once('value', s => {
+                const count = s.numChildren();
+                const el = document.getElementById('dash-stat-students');
+                if(el) el.innerText = count;
+            });
+            db.ref('global/donors').once('value', s => {
+                const count = s.numChildren();
+                const el = document.getElementById('dash-stat-donors');
+                if(el) el.innerText = count;
+            });
 
             if (Store.role !== 'user') {
                 db.ref(`years/${Store.currentYear}/finance`).orderByChild('date').limitToLast(5).once('value', s => {
                     const logs = document.getElementById('dash-logs');
+                    if(!logs) return;
                     const val = s.val();
                     if(!val) { logs.innerHTML = '<div class="text-center text-gray-400 mt-4">אין תנועות אחרונות</div>'; return; }
                     const arr = Object.values(val).sort((a,b)=>b.date-a.date);
@@ -4451,7 +4697,8 @@ Code
                     }).join('');
                 });
             } else {
-                 document.getElementById('dash-logs').innerHTML = '<div class="text-center text-gray-400 mt-4">אין גישה לנתונים כספיים</div>';
+                 const logs = document.getElementById('dash-logs');
+                 if(logs) logs.innerHTML = '<div class="text-center text-gray-400 mt-4">אין גישה לנתונים כספיים</div>';
             }
         }
     };
