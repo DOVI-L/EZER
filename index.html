@@ -1832,7 +1832,7 @@
                 // 3. זיהוי חיפוש ומידע על בחור ספציפי
                 if (txt.includes('על') || txt.includes('בחור') || txt.includes('נתונים')) {
                     // חיפוש שם בטקסט
-                    const students = Object.values(Store.data.students);
+                    const students = Object.values(Store.data.students).filter(s => s);
                     const found = students.find(s => {
                         const fullName = s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : s.name;
                         return txt.includes(fullName) || (fullName && txt.includes(fullName.split(' ')[0]) && txt.includes(fullName.split(' ')[1]));
@@ -1925,8 +1925,8 @@
                 const term = searchTerm || document.getElementById('student-search').value.trim();
                 const tbody = document.getElementById('students-tbody');
                 tbody.innerHTML = '';
-                // תיקון מס' 1: הצגת בחורים בארכיון אך בנפרד
-                let list = Object.values(Store.data.students).map(s => {
+                // תיקון מס' 1: הצגת בחורים בארכיון אך בנפרד + הגנה מקריסה
+                let list = Object.values(Store.data.students).filter(s => s).map(s => {
                     const fullName = s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : (s.name || 'ללא שם');
                     return { ...s, displayName: fullName };
                 });
@@ -2218,7 +2218,8 @@
                 
                 tbody.innerHTML = '';
                 
-                let list = Object.values(Store.data.donors).sort((a,b) => (a.name||'').localeCompare(b.name||''));
+                // הגנה על sort מפני null (תיקון)
+                let list = Object.values(Store.data.donors).filter(d => d).sort((a,b) => (a.name||'').localeCompare(b.name||''));
                 
                 // סינון לפי טאב
                 if(this.viewTab === 'unassigned') {
@@ -2292,7 +2293,8 @@
                 
                 // Unassigned logic based on current mapping
                 const assignedDonors = new Set(Object.keys(Store.data.donorGroupMap));
-                const unassigned = Object.values(Store.data.donors).filter(d => !assignedDonors.has(d.id));
+                // תיקון: הגנה מקריסה
+                const unassigned = Object.values(Store.data.donors).filter(d => d && !assignedDonors.has(d.id));
                 
                 document.getElementById('pool-count').innerText = unassigned.length;
                 unassigned.sort((a,b) => a.name.localeCompare(b.name)).forEach(d => {
@@ -2614,8 +2616,8 @@
             filterStudents(term) {
                 const pool = document.getElementById('pool-students');
                 pool.innerHTML = '';
-                // תיקון מס' 1: סינון ארכיון מרשימת הוספה לקבוצות
-                let list = Object.values(Store.data.students).filter(s => !s.isArchived);
+                // תיקון מס' 1: סינון ארכיון מרשימת הוספה לקבוצות + הגנה מקריסה
+                let list = Object.values(Store.data.students).filter(s => s && !s.isArchived);
                 list = list.map(s => ({
                     ...s, 
                     fullName: s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : (s.name || '')
@@ -3155,11 +3157,12 @@
 
             openTransactionModal(type) {
                 const cats = type==='income' ? ['תרומה כללית','מזומן','צק','אשראי'] : ['אוכל','ציוד','שיווק','אחר','תלושים'];
-                const studentsOpts = Object.values(Store.data.students).map(s => {
+                // תיקון קריטי: הגנה מקריסה בעת בניית רשימת בחורים/תורמים
+                const studentsOpts = Object.values(Store.data.students).filter(s => s).map(s => {
                     const n = s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : s.name;
                     return `<option value="${s.id}">${n}</option>`;
                 }).join('');
-                const donorsOpts = Object.values(Store.data.donors).map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+                const donorsOpts = Object.values(Store.data.donors).filter(d => d).map(d => `<option value="${d.id}">${d.name}</option>`).join('');
                 
                 // תיקון מס' 4: הכנת רשימת תלושים לבחירה
                 const vouchers = Store.data.config.vouchers || [];
@@ -3378,11 +3381,12 @@
                 res.innerHTML = '';
                 if(v.length < 2) { res.classList.add('hidden'); return; }
                 res.classList.remove('hidden');
-                const students = Object.values(Store.data.students).filter(s => {
+                // תיקון: הגנה מקריסה בעת חיפוש
+                const students = Object.values(Store.data.students).filter(s => s).filter(s => {
                     const n = s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : s.name;
-                    return n.includes(v);
+                    return n && n.includes(v);
                 }).slice(0,5);
-                const donors = Object.values(Store.data.donors).filter(d => d.name.includes(v)).slice(0,5);
+                const donors = Object.values(Store.data.donors).filter(d => d && d.name && d.name.includes(v)).slice(0,5);
                 students.forEach(s => {
                     const n = s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : s.name;
                     res.innerHTML += `<div class="p-2 hover:bg-gray-100 cursor-pointer text-sm" onclick="Reports.selectEntity('${s.id}','${n}','student')"><i class="fas fa-user-graduate text-blue-500"></i> ${n} <span class="text-xs text-gray-500">(בחור)</span></div>`;
@@ -3573,7 +3577,8 @@
 
                 let list = [];
 
-                Object.values(Store.data.students).filter(s => !s.isArchived).forEach(student => {
+                // תיקון קריטי: הגנה מקריסה בלולאה
+                Object.values(Store.data.students).filter(s => s && !s.isArchived).forEach(student => {
                     let actual = 0;
                     let extra = 0;
                     // הכנסות בפועל
@@ -3592,7 +3597,7 @@
                     });
 
                     // תיקון: בונוס לפי תרומה של תורם (מדרגות טווח)
-                    const donorsBrought = Object.values(Store.data.donors).filter(d => d.referrerId === student.id);
+                    const donorsBrought = Object.values(Store.data.donors).filter(d => d && d.referrerId === student.id);
                     donorsBrought.forEach(d => {
                         let donorTotal = 0;
                         finances.filter(f => f.donorId === d.id && f.type === 'income').forEach(f => {
@@ -4033,8 +4038,10 @@
                     const nameMap = {};
                     Object.values(existingData).forEach(item => {
                         if (item.name) nameMap[item.name.trim()] = item.id;
-                        const reversedName = item.name.split(' ').reverse().join(' ');
-                        nameMap[reversedName] = item.id;
+                        // תיקון קריטי: הגנה על split מפני undefined
+                        const reversedName = (item.name || '').split(' ').reverse().join(' ');
+                        nameMap
+nameMap[reversedName] = item.id;
                     });
 
                     let countNew = 0;
@@ -4319,7 +4326,7 @@
                     } else {
                         movedCount++;
                         updates[`global/students/${st.id}`] = null; 
-                        const n = st.firstName && st.lastName ? `${st.firstName} ${st.lastName}` : st.name;
+                        const n = st.firstName && st.lastName ? `${st.firstName} ${st.lastName}` : (st.name || '');
                         newDonors[`global/donors/${st.id}`] = {
                             id: st.id,
                             name: n,
