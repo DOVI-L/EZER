@@ -1,6 +1,6 @@
 const Settings = {
- init() {
-        // וידוא שהאלמנטים קיימים לפני שמנסים לשנות אותם
+    // 1 אתחול הגדרות
+    init() {
         if(document.getElementById('settings-active-fields')) {
             this.renderFieldsEditor();
             this.renderGoals();
@@ -16,6 +16,9 @@ const Settings = {
             const elBase = document.getElementById('conf-base-student-goal');
             if(elBase) elBase.value = Store.data.config.baseStudentGoal || '';
             
+            const elPreview = document.getElementById('conf-preview-import');
+            if(elPreview) elPreview.checked = Store.data.config.previewImport || false;
+            
             const elAI = document.getElementById('conf-enable-ai');
             if(elAI) elAI.checked = Store.data.config.enableAI || false;
             
@@ -28,10 +31,28 @@ const Settings = {
             if(elD3) elD3.value = gd.day15 || 0;
         }
     },
-    save(key, val) { OfflineManager.write(`settings/${key}`, parseInt(val)); Notify.show('הגדרה נשמרה', 'success'); },
+    
+    // 2 שמירת הגדרה (1)
+    save(key, val) { 
+        let finalVal = val;
+        if (val === true || val === false) finalVal = val;
+        else finalVal = parseInt(val);
+        
+        OfflineManager.write(`settings/${key}`, finalVal); 
+        if (!Store.data.config) Store.data.config = {};
+        Store.data.config[key] = finalVal;
+        
+        if (key === 'enableAI') System.toggleAI(finalVal);
+        
+        Notify.show('הגדרה נשמרה', 'success'); 
+    },
+    
+    // 3 שמירת הנחת קבוצה (1)
     saveGroupDiscount(key, val) {
         OfflineManager.write(`settings/groupDiscounts/${key}`, parseInt(val));
     },
+    
+    // 4 יצירת משתמש
     createUser() {
         const email = document.getElementById('new-user-email').value;
         const pass = document.getElementById('new-user-pass').value;
@@ -52,6 +73,8 @@ const Settings = {
             });
         } catch(e) { console.error(e); }
     },
+    
+    // 5 טעינת רשימת משתמשים
     loadUsersList() {
         db.ref('users').once('value', snap => {
             const users = snap.val() || {};
@@ -70,6 +93,8 @@ const Settings = {
             });
         });
     },
+    
+    // 6 איפוס סיסמה (5)
     sendPasswordReset(email) {
         if(confirm(`האם לשלוח ל-${email} מייל לשינוי סיסמה?`)) {
             auth.sendPasswordResetEmail(email).then(() => {
@@ -79,6 +104,8 @@ const Settings = {
             });
         }
     },
+    
+    // 7 עדכון תפקיד (5)
     updateUserRole(uid, newRole) {
         if(confirm('לשנות את תפקיד המשתמש?')) {
             db.ref(`users/${uid}/role`).set(newRole).then(() => {
@@ -87,6 +114,8 @@ const Settings = {
             });
         }
     },
+    
+    // 8 מחיקת משתמש (5)
     deleteUserDB(uid) {
         if(confirm('פעולה זו תסיר את גישת המשתמש מהמערכת. האם להמשיך?')) {
             db.ref(`users/${uid}`).remove().then(() => {
@@ -95,6 +124,8 @@ const Settings = {
             });
         }
     },
+    
+    // 9 הורדת גיבוי
     exportDataAsJSON() {
         Notify.show('מכין גיבוי מלא...', 'info');
         db.ref('/').once('value', snap => {
@@ -109,6 +140,8 @@ const Settings = {
             Notify.show('הגיבוי ירד למחשב', 'success');
         });
     },
+    
+    // 10 העלאת גיבוי
     importDataFromJSON(input) {
         const file = input.files[0];
         if (!file) return;
@@ -149,6 +182,8 @@ const Settings = {
         };
         reader.readAsText(file);
     },
+    
+    // 11 סנכרון שנתי
     syncYears() {
         if(!confirm('פעולה זו תקדם את כל הבחורים בשיעור אחד. בוגרי קיבוץ ח\' יועברו לתורמים. להמשיך?')) return;
         Notify.show('מבצע סנכרון...', 'info');
@@ -181,6 +216,8 @@ const Settings = {
             });
         });
     },
+    
+    // 12 רינדור שדות (1)
     renderFieldsEditor() {
         const type = document.getElementById('settings-field-type').value;
         const list = document.getElementById('settings-active-fields');
@@ -196,7 +233,7 @@ const Settings = {
              customList.innerHTML += `
                 <div class="flex justify-between items-center text-xs bg-gray-50 p-1 border rounded">
                     <span>${def.l} (${k})</span>
-                    <button onclick="Settings.deleteCustomFieldDef('${k}')" class="text-red-500 hover:text-red-700 px-2" title="מחק שדה מהמערכת"><i class="fas fa-trash"></i></button>
+                    <button onclick="Settings.deleteCustomFieldDef('${k}')" class="text-red-500 hover:text-red-700 px-2" title="מחק שדה"><i class="fas fa-trash"></i></button>
                 </div>`;
         });
         if(Object.keys(customDefs).length === 0) customList.innerHTML = '<span class="text-gray-400 text-xs">אין שדות מותאמים</span>';
@@ -213,6 +250,8 @@ const Settings = {
                 </div>`;
         });
     },
+    
+    // 13 הוספת שדה (12)
     addField() {
         const type = document.getElementById('settings-field-type').value;
         const key = document.getElementById('settings-predefined-field').value;
@@ -225,10 +264,12 @@ const Settings = {
             this.renderFieldsEditor();
         }
     },
+    
+    // 14 יצירת שדה מותאם (12)
     addCustomField() {
         const key = document.getElementById('custom-field-key').value.trim();
         const label = document.getElementById('custom-field-label').value.trim();
-        if(!key || !label) return alert('חובה למלא מזהה (באנגלית) ותווית (בעברית)');
+        if(!key || !label) return alert('חובה למלא מזהה ותווית');
         const defs = Store.data.config.customFieldsDefs || {};
         defs[key] = { l: label };
         OfflineManager.write(`settings/customFieldsDefs`, defs);
@@ -246,6 +287,8 @@ const Settings = {
         Notify.show('שדה מותאם נוסף בהצלחה', 'success');
         this.renderFieldsEditor();
     },
+    
+    // 15 מחיקת שדה מותאם (12)
     deleteCustomFieldDef(key) {
         if(!confirm('האם אתה בטוח שברצונך למחוק שדה זה מהמערכת?')) return;
         const defs = Store.data.config.customFieldsDefs || {};
@@ -261,8 +304,10 @@ const Settings = {
             }
         });
         this.renderFieldsEditor();
-        Notify.show('השדה נמחק מהמערכת', 'info');
+        Notify.show('השדה נמחק', 'info');
     },
+    
+    // 16 הסרת שדה מרשימה (12)
     removeField(type, key) {
         if(!confirm('האם להסיר את השדה מהרשימה הפעילה?')) return;
         let active = (Store.data.config.fields || {})[type] || [];
@@ -271,6 +316,8 @@ const Settings = {
         Store.data.config.fields[type] = active;
         this.renderFieldsEditor();
     },
+    
+    // 17 רינדור יעדים (1)
     renderGoals() {
         const div = document.getElementById('settings-goals-tiers');
         const tiers = Store.data.config.tiers || [];
@@ -302,11 +349,13 @@ const Settings = {
         Store.data.config.tiers = tiers;
         this.renderGoals();
     },
+    
+    // 18 רינדור תגמולי בחורים (1)
     renderStudentRewards() {
         const div = document.getElementById('settings-student-rewards');
         const tiers = Store.data.config.studentTiers || [];
         div.innerHTML = tiers.map((t, i) => `
-            <div class="flex gap-2 items-center bg-white p-2 rounded border border-amber-100">
+            <div class="flex gap-2 items-center bg-white p-2 rounded border border-amber-100 mb-2">
                 <div class="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 font-bold">${i+1}</div>
                 <div class="flex-1 grid grid-cols-2 gap-2">
                     <input type="number" placeholder="סכום יעד" value="${t.amount}" onchange="Settings.updateStudentReward(${i}, 'amount', this.value)" class="input-field text-sm">
@@ -335,6 +384,8 @@ const Settings = {
         Store.data.config.studentTiers = tiers;
         this.renderStudentRewards();
     },
+    
+    // 19 רינדור מדרגות בונוס (1)
     renderBonusTiers() {
         const div = document.getElementById('settings-bonus-tiers');
         const tiers = Store.data.config.bonusTiers || [];
@@ -370,6 +421,8 @@ const Settings = {
         Store.data.config.bonusTiers = tiers;
         this.renderBonusTiers();
     },
+    
+    // 20 רינדור תלושים (1)
     renderVouchers() {
         const div = document.getElementById('settings-vouchers-list');
         if(!div) return;
@@ -379,10 +432,10 @@ const Settings = {
             return;
         }
         div.innerHTML = vouchers.map((v, i) => `
-            <div class="flex gap-2 items-center bg-white p-2 rounded border border-purple-100 shadow-sm">
+            <div class="flex gap-2 items-center bg-white p-2 rounded border border-purple-100 shadow-sm mb-2">
                 <div class="flex-1 grid grid-cols-3 gap-2">
-                    <div><label class="text-[10px] text-gray-500 block">שם החנות</label><input type="text" value="${v.storeName}" onchange="Settings.updateVoucher(${i}, 'storeName', this.value)" class="input-field text-sm w-full py-1"></div>
-                    <div><label class="text-[10px] text-gray-500 block">שווי</label><input type="number" value="${v.faceValue}" onchange="Settings.updateVoucher(${i}, 'faceValue', this.value)" class="input-field text-sm w-full py-1"></div>
+                    <div><label class="text-[10px] text-gray-500 block">שם החנות/תלוש</label><input type="text" value="${v.voucherName || v.storeName || ''}" onchange="Settings.updateVoucher(${i}, 'voucherName', this.value)" class="input-field text-sm w-full py-1"></div>
+                    <div><label class="text-[10px] text-gray-500 block">שווי ללקוח</label><input type="number" value="${v.faceValue}" onchange="Settings.updateVoucher(${i}, 'faceValue', this.value)" class="input-field text-sm w-full py-1"></div>
                     <div><label class="text-[10px] text-gray-500 block">עלות אמיתית</label><input type="number" value="${v.realCost}" onchange="Settings.updateVoucher(${i}, 'realCost', this.value)" class="input-field text-sm w-full py-1"></div>
                 </div>
                 <button onclick="Settings.removeVoucherType(${i})" class="text-red-400 hover:bg-red-50 p-2 rounded"><i class="fas fa-trash-alt"></i></button>
@@ -391,7 +444,7 @@ const Settings = {
     },
     addVoucherType() {
         const vouchers = Store.data.config.vouchers || [];
-        vouchers.push({ id: 'v' + Date.now(), storeName: '', faceValue: 0, realCost: 0 });
+        vouchers.push({ id: 'v' + Date.now(), voucherName: '', storeName: 'כללי', faceValue: 0, realCost: 0 });
         OfflineManager.write('settings/vouchers', vouchers);
         Store.data.config.vouchers = vouchers;
         this.renderVouchers();

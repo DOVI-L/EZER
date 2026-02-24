@@ -2,10 +2,10 @@ const Donors = {
     limit: 40,
     viewMode: 'list', 
     viewTab: 'all',
-    kanbanDay: 'night14', 
     donorSortables: [], 
     poolSortable: null,
     
+    // 1 טעינת תורמים
     loadMore(reset = false) {
         return new Promise((resolve) => {
             if(reset) { Store.cursors.donors = null; Store.loadedAll.donors = false; }
@@ -34,15 +34,14 @@ const Donors = {
                     Store.loadedAll.donors = true;
                     if(loader) loader.style.display = 'none';
                 } else {
-                    if(loader) loader.innerHTML = `
-                        <button onclick="Donors.loadMore()" class="bg-slate-200 text-slate-600 px-6 py-2 rounded-full font-bold text-sm">טען עוד...</button>
-                    `;
+                    if(loader) loader.innerHTML = `<button onclick="Donors.loadMore()" class="bg-slate-200 text-slate-600 px-6 py-2 rounded-full font-bold text-sm">טען עוד...</button>`;
                 }
                 resolve();
             });
         });
     },
     
+    // 2 סנכרון תורמים (1)
     syncNewest() {
         db.ref('global/donors').orderByKey().limitToLast(10).once('value', snap => {
             const data = snap.val();
@@ -54,6 +53,7 @@ const Donors = {
         });
     },
     
+    // 3 רינדור מסך
     render(searchTerm = null) {
         try {
             const listView = document.getElementById('donors-list-view');
@@ -61,6 +61,8 @@ const Donors = {
 
             if(listView) listView.style.display = '';
             if(managerView) managerView.style.display = '';
+
+            this.buildTopMenu();
 
             if(this.viewMode === 'list') {
                 if(listView) listView.classList.remove('hidden');
@@ -75,53 +77,147 @@ const Donors = {
             console.error("Error in Donors.render:", e);
         }
     },
-    
-    toggleQuickManager() {
-        this.viewMode = this.viewMode === 'list' ? 'manager' : 'list';
-        this.render();
+
+    // 4 בניית תפריט (3)
+    buildTopMenu() {
+        const topBar = document.getElementById('donors-top-bar');
+        if(!topBar) {
+            const container = document.getElementById('view-donors');
+            const headerHtml = `
+                <div id="donors-top-bar" class="p-4 bg-white rounded-t-2xl shadow-sm border-b flex flex-col gap-3 shrink-0 z-20 relative">
+                    <div class="flex justify-between items-center w-full flex-wrap gap-2">
+                        <div class="flex gap-2 items-center">
+                            <button onclick="Donors.openAddModal()" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow hover:bg-emerald-700 transition">
+                                <i class="fas fa-plus"></i> <span class="hidden sm:inline">הוספה</span>
+                            </button>
+                            <button onclick="Donors.toggleQuickManager()" id="donor-view-toggle-btn" class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-lg text-sm font-bold hover:bg-emerald-100 transition">
+                                <i class="fas fa-th"></i> <span class="hidden sm:inline">מצב שיבוץ ומסלול</span>
+                            </button>
+                            <button onclick="Importer.init('donors')" class="bg-white text-green-600 border border-green-200 px-3 py-1.5 rounded-lg text-sm font-bold hover:bg-green-50 transition">
+                                <i class="fas fa-file-excel"></i> <span class="hidden sm:inline">אקסל</span>
+                            </button>
+                            <select id="donor-group-select" onchange="Donors.renderList()" class="hidden border-emerald-300 border text-emerald-800 bg-emerald-50 text-sm rounded-lg px-2 py-1.5 outline-none font-bold min-w-[120px]">
+                                <option value="">- כל הקבוצות -</option>
+                            </select>
+                            <button id="donor-expand-btn" onclick="Groups.expandGroupDetails(Donors.viewTab, document.getElementById('donor-group-select').value)" class="hidden bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow hover:bg-indigo-700 transition">
+                                <i class="fas fa-expand-arrows-alt"></i> <span class="hidden sm:inline">הרחבה מפורטת</span>
+                            </button>
+                        </div>
+                        <div class="relative w-full sm:w-56 mt-2 sm:mt-0" id="donor-search-wrapper">
+                            <input type="text" id="donor-search-input" oninput="Donors.renderList(this.value)" placeholder="חפש תורם..." class="input-field w-full pl-4 pr-10 py-1.5 text-sm">
+                            <i class="fas fa-search absolute left-3 top-2.5 text-gray-400 text-xs"></i>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 border-t pt-3 overflow-x-auto whitespace-nowrap custom-scroll" id="donors-tabs-container">
+                        <button onclick="Donors.setViewTab('all')" class="tab-modern donor-view-tab active text-xs px-3 py-1.5" data-tab="all">כל התורמים</button>
+                        <button onclick="Donors.setViewTab('unassigned')" class="tab-modern donor-view-tab text-xs px-3 py-1.5" data-tab="unassigned">לא משובצים</button>
+                        <button onclick="Donors.setViewTab('night14')" class="tab-modern donor-view-tab text-xs px-3 py-1.5" data-tab="night14">ליל י"ד</button>
+                        <button onclick="Donors.setViewTab('day14')" class="tab-modern donor-view-tab text-xs px-3 py-1.5" data-tab="day14">יום י"ד</button>
+                        <button onclick="Donors.setViewTab('day15')" class="tab-modern donor-view-tab text-xs px-3 py-1.5" data-tab="day15">יום ט"ו</button>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('afterbegin', headerHtml);
+            const oldHeader = container.querySelector('.p-4.bg-white.rounded-t-2xl.shadow-sm.border-b.flex.flex-col.gap-4.mb-0');
+            if(oldHeader && oldHeader.id !== 'donors-top-bar') oldHeader.remove();
+        }
     },
     
+    // 5 החלפת תצוגה (3)
+    toggleQuickManager() {
+        this.viewMode = this.viewMode === 'list' ? 'manager' : 'list';
+        
+        const toggleBtn = document.getElementById('donor-view-toggle-btn');
+        const searchWrap = document.getElementById('donor-search-wrapper');
+        const expandBtn = document.getElementById('donor-expand-btn');
+        const groupSelect = document.getElementById('donor-group-select');
+        
+        if (this.viewMode === 'manager') {
+            toggleBtn.innerHTML = '<i class="fas fa-list"></i> <span class="hidden sm:inline">חזור לרשימה</span>';
+            toggleBtn.classList.replace('bg-emerald-50', 'bg-indigo-50');
+            toggleBtn.classList.replace('text-emerald-700', 'text-indigo-700');
+            toggleBtn.classList.replace('border-emerald-200', 'border-indigo-200');
+            if(searchWrap) searchWrap.style.display = 'none';
+            if(expandBtn) expandBtn.style.display = 'none';
+            if(groupSelect) groupSelect.style.display = 'none';
+            
+            if (this.viewTab === 'all' || this.viewTab === 'unassigned') {
+                this.setViewTab('night14'); 
+            } else {
+                this.render();
+            }
+        } else {
+            toggleBtn.innerHTML = '<i class="fas fa-th"></i> <span class="hidden sm:inline">מצב שיבוץ ומסלול</span>';
+            toggleBtn.classList.replace('bg-indigo-50', 'bg-emerald-50');
+            toggleBtn.classList.replace('text-indigo-700', 'text-emerald-700');
+            toggleBtn.classList.replace('border-indigo-200', 'border-emerald-200');
+            if(searchWrap) searchWrap.style.display = 'block';
+            if(groupSelect && this.viewTab !== 'all' && this.viewTab !== 'unassigned') groupSelect.style.display = 'inline-block';
+            this.render();
+        }
+    },
+    
+    // 6 בחירת כרטיסייה (3)
     setViewTab(tab) {
         try {
             this.viewTab = tab;
-            
             document.querySelectorAll('.donor-view-tab').forEach(b => {
                 if(b.dataset.tab === tab) b.classList.add('active');
                 else b.classList.remove('active');
             });
             
-            const subFilter = document.getElementById('donors-groups-filter');
             const subSelect = document.getElementById('donor-group-select');
-            if(subSelect) subSelect.innerHTML = '<option value="">הכל</option>';
-            
-            if (tab !== 'all' && tab !== 'unassigned') {
-                if(subFilter) {
-                    subFilter.classList.remove('hidden');
-                    subFilter.classList.add('flex');
+            const expandBtn = document.getElementById('donor-expand-btn');
+
+            if (this.viewMode === 'manager') {
+                if(subSelect) subSelect.style.display = 'none';
+                if(expandBtn) expandBtn.style.display = 'none';
+                if (tab === 'all' || tab === 'unassigned') {
+                    Notify.show('במצב שיבוץ יש לבחור יום ספציפי', 'info');
+                    this.setViewTab('night14');
+                    return;
                 }
-                const groupsInDay = (Store.data.yearData[Store.currentYear]?.groups || {})[tab] || {};
-                Object.entries(groupsInDay).forEach(([gid, g]) => {
-                    if(subSelect) subSelect.innerHTML += `<option value="${gid}">${g.name}</option>`;
-                });
-            } else {
-                if(subFilter) {
-                    subFilter.classList.add('hidden');
-                    subFilter.classList.remove('flex');
+                this.renderManager();
+                return;
+            }
+
+            if(subSelect) {
+                subSelect.innerHTML = '<option value="">- כל הקבוצות -</option>';
+                if (tab !== 'all' && tab !== 'unassigned') {
+                    subSelect.style.display = 'inline-block';
+                    subSelect.classList.remove('hidden');
+                    const groupsInDay = (Store.data.yearData[Store.currentYear]?.groups || {})[tab] || {};
+                    Object.entries(groupsInDay).forEach(([gid, g]) => {
+                        subSelect.innerHTML += `<option value="${gid}">${g.name}</option>`;
+                    });
+                } else {
+                    subSelect.style.display = 'none';
+                    if(expandBtn) expandBtn.style.display = 'none';
                 }
             }
-            
             this.renderList();
-        } catch(e) {
-            console.error("Error in Donors.setViewTab:", e);
-        }
+        } catch(e) { console.error(e); }
     },
     
+    // 7 רינדור רשימה (3)
     renderList(searchTerm) {
         const term = searchTerm || (document.getElementById('donor-search-input') ? document.getElementById('donor-search-input').value.trim() : '');
         const tbody = document.getElementById('donors-tbody');
         if(!tbody) return;
+        
         const groupSelectEl = document.getElementById('donor-group-select');
         const selectedGroupId = groupSelectEl ? groupSelectEl.value : '';
+        const expandBtn = document.getElementById('donor-expand-btn');
+        
+        if (expandBtn) {
+            if (selectedGroupId && this.viewTab !== 'all' && this.viewTab !== 'unassigned' && this.viewMode === 'list') {
+                expandBtn.classList.remove('hidden');
+                expandBtn.style.display = 'inline-block';
+            }
+            else {
+                expandBtn.style.display = 'none';
+            }
+        }
         
         tbody.innerHTML = '';
         let list = Object.values(Store.data.donors).filter(d => d).sort((a,b) => (a.name||'').localeCompare(b.name||''));
@@ -144,12 +240,9 @@ const Donors = {
             }
         }
 
-        if(term) {
-            list = list.filter(d => (d.name || '').includes(term) || (d.address||'').includes(term) || (d.city||'').includes(term));
-        }
+        if(term) list = list.filter(d => (d.name || '').includes(term) || (d.address||'').includes(term) || (d.city||'').includes(term));
         
         const displayList = list.slice(0, 50);
-        
         if(displayList.length === 0) {
              tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-gray-400">לא נמצאו תורמים</td></tr>';
              return;
@@ -163,129 +256,104 @@ const Donors = {
                 <td class="p-3 text-right font-medium text-slate-800">
                      ${d.name} ${d.vip ? '<span class="mr-2 text-[10px] bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-100">VIP</span>' : ''}
                 </td>
-                <td class="p-3 text-right text-gray-500 text-sm">
-                     ${d.city || ''} ${d.street || d.address || ''} ${d.floor ? '(קומה '+d.floor+')' : ''}
-                </td>
+                <td class="p-3 text-right text-gray-500 text-sm">${d.city || ''} ${d.street || d.address || ''} ${d.floor ? '(קומה '+d.floor+')' : ''}</td>
                 <td class="p-3 text-right text-gray-500 text-sm">${d.phone || ''}</td>
-                <td class="p-3 text-right text-sm">
-                    ${groupName ? `<span class="bg-amber-50 text-amber-700 px-2 py-0.5 rounded font-bold border border-amber-100">${groupName}</span>` : '-'}
-                </td>
+                <td class="p-3 text-right text-sm">${groupName ? `<span class="bg-amber-50 text-amber-700 px-2 py-0.5 rounded font-bold border border-amber-100">${groupName}</span>` : '-'}</td>
                 <td class="p-3 text-center flex items-center justify-center gap-2">
-                    <button onclick="Donors.openBatchDonation('${d.id}', '${d.name}')" class="bg-green-100 text-green-600 hover:bg-green-200 hover:text-green-800 transition p-2 rounded-full font-bold" title="הוסף תרומות ברצף"><i class="fas fa-plus"></i></button>
+                    <button onclick="Donors.openBatchDonation('${d.id}', '${d.name}')" class="bg-green-100 text-green-600 hover:bg-green-200 hover:text-green-800 transition p-2 rounded-full font-bold" title="הוסף תרומות"><i class="fas fa-plus"></i></button>
                     <button onclick="Donors.openEdit('${d.id}')" class="text-indigo-400 hover:text-indigo-600 bg-indigo-50 hover:bg-indigo-100 p-2 rounded-full transition"><i class="fas fa-pen"></i></button>
-                    <button onclick="Donors.delete('${d.id}')" class="text-red-300 hover:text-red-600 hover:bg-red-50 p-2 rounded-full transition" title="מחק תורם"><i class="fas fa-trash"></i></button>
+                    <button onclick="Donors.delete('${d.id}')" class="text-red-300 hover:text-red-600 hover:bg-red-50 p-2 rounded-full transition"><i class="fas fa-trash"></i></button>
                 </td>
             `;
             tbody.appendChild(tr);
         });
     },
 
+    // 8 תבנית תרומה
     getBatchRowHtml() {
         return `
             <tr class="border-b last:border-0">
-                <td class="p-2"><input type="number" class="input-amount border rounded p-1 w-full" placeholder="₪"></td>
+                <td class="p-2"><input type="text" class="input-amount border rounded p-1 w-full text-sm" placeholder="סכום / טקסט"></td>
                 <td class="p-2">
                     <select class="input-method border rounded p-1 w-full text-sm">
-                        <option>תרומה כללית</option>
-                        <option>מזומן</option>
-                        <option>צק</option>
-                        <option>אשראי</option>
+                        <option>תרומה כללית</option><option>מזומן</option><option>צק</option><option>אשראי</option>
                     </select>
                 </td>
-                <td class="p-2"><input type="text" class="input-notes border rounded p-1 w-full" placeholder="הערה..."></td>
+                <td class="p-2"><input type="text" class="input-notes border rounded p-1 w-full text-sm" placeholder="הערה..."></td>
                 <td class="p-2 text-center"><button onclick="this.closest('tr').remove()" class="text-red-400 hover:text-red-600"><i class="fas fa-times"></i></button></td>
             </tr>
         `;
     },
 
+    // 9 חלון תרומות (8)
     openBatchDonation(id, name) {
         const html = `
             <div class="space-y-4">
                 <div class="bg-green-50 p-3 rounded-lg border border-green-200 flex justify-between items-center">
                     <div>
-                        <div class="font-bold text-green-900">הוספת תרומות עבור: ${name}</div>
-                        <div class="text-xs text-green-700">כל שורה מייצגת תרומה נפרדת</div>
+                        <div class="font-bold text-green-900">הוספת נתונים עבור: ${name}</div>
+                        <div class="text-xs text-green-700">ניתן להזין סכום כספי, או טקסט שיישמר כהערה.</div>
                     </div>
                 </div>
-                
                 <table class="w-full text-right" id="batch-add-table">
-                    <thead>
-                        <tr class="text-xs text-gray-500 border-b">
-                            <th class="p-2">סכום</th>
-                            <th class="p-2">אמצעי תשלום / מקור</th>
-                            <th class="p-2">הערות</th>
-                            <th class="p-2 w-8"></th>
-                        </tr>
-                    </thead>
-                    <tbody id="batch-add-tbody">
-                        ${this.getBatchRowHtml()}
-                        ${this.getBatchRowHtml()}
-                    </tbody>
+                    <thead><tr class="text-xs text-gray-500 border-b"><th class="p-2">סכום / טקסט</th><th class="p-2">מקור</th><th class="p-2">הערות</th><th class="p-2 w-8"></th></tr></thead>
+                    <tbody id="batch-add-tbody">${this.getBatchRowHtml()}${this.getBatchRowHtml()}</tbody>
                 </table>
                 <button onclick="Donors.addBatchRow()" class="text-indigo-600 text-sm font-bold hover:underline">+ הוסף שורה</button>
             </div>
         `;
-
-        Modal.renderRaw(`הוספת תרומות - ${name}`, html, () => {
+        Modal.renderRaw(`הוספת תרומות/הערות - ${name}`, html, () => {
             const rows = document.querySelectorAll('#batch-add-tbody tr');
-            let count = 0;
-            const now = Date.now();
-            
+            let count = 0; const now = Date.now();
             rows.forEach(tr => {
-                const amount = parseFloat(tr.querySelector('.input-amount').value);
-                if (!amount) return;
+                const rawVal = tr.querySelector('.input-amount').value.trim();
+                if (!rawVal) return;
+                const amount = parseFloat(rawVal); const isText = isNaN(amount);
                 const method = tr.querySelector('.input-method').value;
                 const notes = tr.querySelector('.input-notes').value;
                 const txId = 'tx' + Date.now() + Math.random().toString(36).substr(2,5);
-                
                 const txData = {
-                    id: txId, date: now, type: 'income', amount: amount,
-                    category: method, desc: notes, donorId: id, isPurim: true
+                    id: txId, date: now, type: isText ? 'note' : 'income', 
+                    amount: isText ? rawVal : amount, category: isText ? 'הערת מסלול' : method, 
+                    desc: notes || (isText ? rawVal : ''), donorId: id, isPurim: true
                 };
                 OfflineManager.write(`years/${Store.currentYear}/finance/${txId}`, txData);
-                if(OfflineManager.isOnline) {
-                     db.ref(`years/${Store.currentYear}/stats/income`).transaction(curr => (curr || 0) + amount);
-                }
+                if(OfflineManager.isOnline && !isText) db.ref(`years/${Store.currentYear}/stats/income`).transaction(curr => (curr || 0) + amount);
                 count++;
             });
-            if (count > 0) { Notify.show(`${count} תרומות נוספו בהצלחה`, 'success'); Modal.close(); } 
-            else { alert('לא הוזנו סכומים'); }
+            if (count > 0) { Notify.show(`${count} רשומות נוספו בהצלחה`, 'success'); Modal.close(); } 
+            else { alert('לא הוזנו נתונים'); }
         }, 'max-w-3xl w-full');
     },
     
-    addBatchRow() {
-        const tbody = document.getElementById('batch-add-tbody');
-        tbody.insertAdjacentHTML('beforeend', this.getBatchRowHtml());
-    },
+    // 10 הוספת שורה (9)
+    addBatchRow() { document.getElementById('batch-add-tbody').insertAdjacentHTML('beforeend', this.getBatchRowHtml()); },
     
-    setKanbanDay(day) {
-        try {
-            this.kanbanDay = day;
-            document.querySelectorAll('.kanban-tab').forEach(b => {
-                if(b.dataset.day === day) b.classList.add('active');
-                else b.classList.remove('active');
-            });
-            this.renderManager();
-        } catch(e) {
-            console.error("Error in Donors.setKanbanDay:", e);
+    // 11 הוספת הערת מסלול (14)
+    addRouteNoteManager(day, gid) {
+        const text = prompt("הכנס טקסט להערה במסלול (לדוגמה: 'הפסקה', 'מעבר לרחוב הבא'):");
+        if(text) {
+             const path = `years/${Store.currentYear}/groups/${day}/${gid}/route`;
+             db.ref(path).once('value', s => {
+                const list = s.val() || [];
+                list.push(`NOTE:${text}`);
+                OfflineManager.write(path, list);
+                setTimeout(() => this.renderManager(), 300);
+             });
         }
     },
 
+    // 12 שיבוץ מהיר (3)
     quickAssignModal(donorId, donorName) {
+        const currentDay = this.viewTab;
         const groupsData = Store.data.yearData[Store.currentYear]?.groups || {};
-        const dayGroups = groupsData[this.kanbanDay] || {};
+        const dayGroups = groupsData[currentDay] || {};
         
-        if(Object.keys(dayGroups).length === 0) {
-            return Notify.show('אין קבוצות ביום זה לשיבוץ', 'error');
-        }
+        if(Object.keys(dayGroups).length === 0) return Notify.show('אין קבוצות ביום זה לשיבוץ', 'error');
 
-        let html = `<div class="space-y-2">
-            <p class="text-sm mb-3 text-gray-600">בחר לאיזו קבוצה להעביר את <b>${donorName}</b>:</p>`;
-        
+        let html = `<div class="space-y-2"><p class="text-sm mb-3 text-gray-600">בחר לאיזו קבוצה להעביר את <b>${donorName}</b>:</p>`;
         Object.entries(dayGroups).forEach(([gid, g]) => {
-            html += `<button onclick="Donors.assignToGroup('${donorId}', '${this.kanbanDay}', '${gid}')" class="w-full text-right p-3 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded font-bold text-indigo-900 transition">
-                <i class="fas fa-plus-circle ml-2"></i> ${g.name}
-            </button>`;
+            html += `<button onclick="Donors.assignToGroup('${donorId}', '${currentDay}', '${gid}')" class="w-full text-right p-3 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded font-bold text-indigo-900 transition"><i class="fas fa-plus-circle ml-2"></i> ${g.name}</button>`;
         });
         html += `</div>`;
 
@@ -293,6 +361,7 @@ const Donors = {
         document.querySelector('#modal-form .btn-primary').parentElement.style.display = 'none';
     },
 
+    // 13 שמירת שיבוץ (12)
     assignToGroup(donorId, day, gid) {
         const path = `years/${Store.currentYear}/groups/${day}/${gid}/route`;
         db.ref(path).once('value', s => {
@@ -300,34 +369,31 @@ const Donors = {
             if(!list.includes(donorId)) {
                 list.push(donorId);
                 OfflineManager.write(path, list);
-                Notify.show('שובץ בהצלחה', 'success');
+                Notify.show('שובץ בהצלחה (לסוף המסלול)', 'success');
                 Modal.close();
                 setTimeout(() => this.renderManager(), 300);
             }
         });
     },
     
+    // 14 מסך מנהל (3)
     renderManager() {
-        if(this.poolSortable) {
-            try { this.poolSortable.destroy(); } catch(e){}
-            this.poolSortable = null;
-        }
+        if(this.poolSortable) { try { this.poolSortable.destroy(); } catch(e){} this.poolSortable = null; }
         if(this.donorSortables && this.donorSortables.length > 0) {
-            this.donorSortables.forEach(s => {
-                try { s.destroy(); } catch(e){}
-            });
+            this.donorSortables.forEach(s => { try { s.destroy(); } catch(e){} });
         }
         this.donorSortables = [];
 
         const poolEl = document.getElementById('donor-pool-list');
         if(!poolEl) return;
         
+        const currentDay = this.viewTab;
         poolEl.innerHTML = '';
         const currentDayGroups = [];
         const groupsData = Store.data.yearData[Store.currentYear]?.groups || {};
-        if (groupsData[this.kanbanDay]) {
-             Object.entries(groupsData[this.kanbanDay]).forEach(([gid, g]) => {
-                currentDayGroups.push({id: gid, day: this.kanbanDay, ...g});
+        if (groupsData[currentDay]) {
+             Object.entries(groupsData[currentDay]).forEach(([gid, g]) => {
+                currentDayGroups.push({id: gid, day: currentDay, ...g});
             });
         }
         
@@ -354,55 +420,50 @@ const Donors = {
         if(!container) return;
         
         container.innerHTML = '';
-        if (currentDayGroups.length === 0) container.innerHTML = `<div class="text-gray-400 text-sm">אין קבוצות מוגדרות ליממה זו</div>`;
+        if (currentDayGroups.length === 0) container.innerHTML = `<div class="text-gray-400 text-sm">אין קבוצות מוגדרות ליום זה</div>`;
 
         currentDayGroups.forEach(g => {
             const col = document.createElement('div');
-            col.className = "shrink-0 w-72 h-full bg-white rounded-lg shadow-sm border flex flex-col";
+            col.className = "shrink-0 w-80 h-full bg-white rounded-lg shadow-sm border flex flex-col";
             col.innerHTML = `
-                <div class="p-2 border-b bg-indigo-50 font-bold text-sm text-indigo-900 flex justify-between shrink-0 cursor-pointer hover:bg-indigo-100 transition" onclick="Donors.showGroupDetails('${g.id}', '${g.day}')">
-                    <span>${g.name}</span> <i class="fas fa-info-circle text-indigo-400"></i>
+                <div class="p-3 border-b bg-indigo-50 flex justify-between items-center shrink-0">
+                    <span class="font-bold text-sm text-indigo-900">${g.name}</span>
+                    <div class="flex gap-1">
+                        <button onclick="Donors.addRouteNoteManager('${g.day}', '${g.id}')" class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded hover:bg-indigo-200 transition" title="הוסף הערת מסלול"><i class="fas fa-sticky-note"></i></button>
+                        <button onclick="Groups.expandGroupDetails('${g.day}', '${g.id}')" class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded hover:bg-indigo-200 transition" title="הרחבה ועריכת סדר במספרים"><i class="fas fa-expand-arrows-alt"></i></button>
+                    </div>
                 </div>
+                <div class="p-1 bg-gray-100 text-[10px] text-center text-gray-500 border-b">גרור כדי לשנות סדר. הסדר נשמר אוטומטית.</div>
                 <div class="flex-1 overflow-y-auto p-2 space-y-2 bg-slate-50 kanban-group-list custom-scroll" data-gid="${g.id}"></div>
             `;
             const listEl = col.querySelector('.kanban-group-list');
-            (g.route || []).forEach(did => {
+            (g.route || []).forEach((did, i) => {
                 if(did.startsWith('NOTE:')) {
                     const noteText = did.substring(5);
                     const item = document.createElement('div');
-                    item.className = "bg-yellow-50 p-2 border border-yellow-200 rounded shadow-sm text-sm cursor-grab flex flex-col justify-between group";
+                    item.className = "bg-yellow-50 p-2 border border-yellow-200 rounded shadow-sm text-sm flex flex-col justify-between cursor-grab hover:border-yellow-300 transition group";
                     item.dataset.id = did;
-                    item.innerHTML = `
-                        <div class="flex justify-between items-start font-bold text-yellow-800">
-                            <span class="truncate w-40"><i class="fas fa-sticky-note ml-1"></i> ${noteText}</span>
-                            <button onclick="Groups.removeFromRoute('${g.day}','${g.id}','${did}')" class="text-red-300 hover:text-red-500 hidden group-hover:block"><i class="fas fa-times"></i></button>
-                        </div>
-                    `;
+                    item.innerHTML = `<div class="flex justify-between items-center font-bold text-yellow-800"><span class="truncate w-56"><i class="fas fa-sticky-note ml-1 text-yellow-600"></i> ${noteText}</span><button onclick="Groups.removeFromRoute('${g.day}','${g.id}','${did}')" class="text-red-400 hover:text-red-600 hidden group-hover:block"><i class="fas fa-times"></i></button></div>`;
                     listEl.appendChild(item);
                 } else {
                     const d = Store.data.donors[did];
                     if(d) {
                         const item = document.createElement('div');
-                        item.className = "bg-white p-2 border rounded shadow-sm text-sm cursor-grab flex flex-col justify-between group";
+                        item.className = "bg-white p-2 border rounded shadow-sm text-sm flex flex-col justify-between cursor-grab hover:border-emerald-200 transition group";
                         item.dataset.id = did;
-                        item.innerHTML = `
-                            <div class="flex justify-between items-start">
-                                <span class="truncate w-40 font-bold">${d.name}</span>
-                                <button onclick="Groups.removeFromRoute('${g.day}','${g.id}','${did}')" class="text-red-300 hover:text-red-500 hidden group-hover:block"><i class="fas fa-times"></i></button>
-                            </div>
-                            <div class="text-xs text-gray-500 mt-1 truncate">${d.city||''} ${d.street||d.address||''}</div>
-                        `;
+                        item.innerHTML = `<div class="flex justify-between items-start"><div class="flex items-center gap-2"><span class="bg-emerald-100 text-emerald-700 w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-bold">${i+1}</span><span class="truncate w-48 font-bold">${d.name}</span></div><button onclick="Groups.removeFromRoute('${g.day}','${g.id}','${did}')" class="text-red-400 hover:text-red-600 hidden group-hover:block"><i class="fas fa-times"></i></button></div><div class="text-xs text-gray-500 mt-1 truncate mr-7">${d.city||''} ${d.street||d.address||''}</div>`;
                         listEl.appendChild(item);
                     }
                 }
             });
             container.appendChild(col);
-            
+
             try {
                 const sInst = new Sortable(listEl, {
                     animation: 150,
+                    ghostClass: 'bg-emerald-50',
                     handle: '.cursor-grab',
-                    onUpdate: () => {
+                    onEnd: () => {
                          const newOrder = Array.from(listEl.children).map(c => c.dataset.id);
                          OfflineManager.write(`years/${Store.currentYear}/groups/${g.day}/${g.id}/route`, newOrder);
                     }
@@ -412,31 +473,14 @@ const Donors = {
         });
     },
     
-    showGroupDetails(gid, day) {
-        const g = ((Store.data.yearData[Store.currentYear]?.groups || {})[day] || {})[gid];
-        if (!g) return;
-        
-        Reports.getAllHistory().then(historyData => {
-            const donors = (g.route || []).filter(x => !x.startsWith('NOTE:')).map(did => Store.data.donors[did]).filter(x => x);
-            const years = Object.keys(HEBREW_YEARS_MAPPING).sort().slice(-3);
-            let html = `<div class="overflow-x-auto"><table class="w-full text-sm border-collapse"><thead class="bg-gray-100"><tr><th class="p-2 border">שם</th><th class="p-2 border">כתובת</th>${years.map(y => `<th class="p-2 border text-center">${y}</th>`).join('')}<th class="p-2 border"></th></tr></thead><tbody>`;
-            donors.forEach(d => {
-                html += `<tr><td class="p-2 border">${d.name}</td><td class="p-2 border">${d.city||''}</td>${years.map(()=>'<td class="p-2 border">...</td>').join('')}<td class="p-2 border"><button onclick="Groups.removeFromRoute('${day}','${gid}','${d.id}');Modal.close();" class="text-red-500">הסר</button></td></tr>`;
-            });
-            html += `</tbody></table></div>`;
-            Modal.renderRaw(`פרטי קבוצה: ${g.name}`, html, () => Modal.close());
-            document.querySelector('#modal-form .btn-primary').parentElement.style.display = 'none';
-        });
-    },
-    
+    // 15 סינון רשימה (14)
     filterPool(v) {
         const list = document.getElementById('donor-pool-list');
         if(!list) return;
-        Array.from(list.children).forEach(el => {
-            el.style.display = el.innerText.includes(v) ? 'flex' : 'none';
-        });
+        Array.from(list.children).forEach(el => { el.style.display = el.innerText.includes(v) ? 'flex' : 'none'; });
     },
     
+    // 16 שדות הוספה
     getFormFields() {
         const activeKeys = (Store.data.config.fields || {}).donors || DEFAULT_ACTIVE_FIELDS.donors;
         const fields = [];
@@ -450,15 +494,13 @@ const Donors = {
         return fields;
     },
     
+    // 17 טופס הוספה
     openAddModal() {
         let preselectDay = null, preselectGid = null;
-        
         if (this.viewTab !== 'all' && this.viewTab !== 'unassigned') {
             preselectDay = this.viewTab;
             const groupSelect = document.getElementById('donor-group-select');
-            if(groupSelect && groupSelect.value) {
-                preselectGid = groupSelect.value;
-            }
+            if(groupSelect && groupSelect.value) preselectGid = groupSelect.value;
         } else if (Router.current === 'groups' && window.Groups && Groups.activeGroupId) {
             preselectDay = Groups.currentDay; preselectGid = Groups.activeGroupId;
         }
@@ -471,13 +513,9 @@ const Donors = {
             <div class="mb-3 p-3 bg-emerald-50 rounded border border-emerald-100">
                 <label class="block text-sm font-bold text-emerald-800 mb-1">שיוך לקבוצה (אופציונלי)</label>
                 <select id="new-donor-group" class="w-full border p-2 rounded bg-white text-sm">
-                    <option value="">-- ללא שיוך למסלול (יופיע בלא משובצים) --</option>
-                    ${allGroups.map(g => {
-                        const isSelected = (g.day === preselectDay && g.id === preselectGid) ? 'selected' : '';
-                        return `<option value="${g.day}|${g.id}" ${isSelected}>${g.name} (${g.day})</option>`;
-                    }).join('')}
+                    <option value="">-- ללא שיוך למסלול --</option>
+                    ${allGroups.map(g => `<option value="${g.day}|${g.id}" ${(g.day === preselectDay && g.id === preselectGid) ? 'selected' : ''}>${g.name} (${g.day})</option>`).join('')}
                 </select>
-                <p class="text-[10px] text-emerald-700 mt-1">במידה ותבחר קבוצה, התורם ישובץ למסלול זה באופן אוטומטי.</p>
             </div>
         `;
         
@@ -503,6 +541,7 @@ const Donors = {
         }, groupSelectHtml);
     },
     
+    // 18 טופס עריכה
     openEdit(id) {
         const d = Store.data.donors[id];
         if (!d) return Notify.show('תורם לא נמצא', 'error');
@@ -514,6 +553,7 @@ const Donors = {
         });
     },
     
+    // 19 מחיקת תורם
     delete(id) {
         if(confirm('אזהרה: למחוק תורם זה?')) {
             OfflineManager.write(`global/donors/${id}`, null, 'remove');
@@ -523,5 +563,4 @@ const Donors = {
         }
     }
 };
-
 window.Donors = Donors;

@@ -1,4 +1,5 @@
 const Reports = {
+    // 1 חיפוש אישות (2)
     searchEntity(v) {
         const res = document.getElementById('rep-entity-results');
         res.innerHTML = '';
@@ -22,12 +23,14 @@ const Reports = {
         });
     },
 
+    // 2 בחירת אישות (1)
     selectEntity(id, name, type) {
         document.getElementById('rep-entity-search').value = name;
         document.getElementById('rep-entity-id').value = id + '|' + type;
         document.getElementById('rep-entity-results').classList.add('hidden');
     },
     
+    // 3 קבלת היסטוריה (4)
     async getAllHistory(studentId = null) {
         let years = Object.keys(HEBREW_YEARS_MAPPING);
         if (Store.currentYear && !years.includes(Store.currentYear)) {
@@ -48,11 +51,12 @@ const Reports = {
         });
         
         if (studentId) {
-            return allTx.filter(t => t.studentId == studentId && t.type === 'income');
+            return allTx.filter(t => t.studentId == studentId && (t.type === 'income' || t.type === 'note'));
         }
         return allTx; 
     },
 
+    // 4 הפקת דוח אישי
     async generateIndividual(id, name) {
         Notify.show('מלקט נתונים מכל השנים...', 'info');
         const data = await this.getAllHistory(id);
@@ -64,8 +68,8 @@ const Reports = {
             "תאריך": System.toHebrewDate(t.date),
             "קטגוריה": t.category,
             "תיאור": t.desc,
-            "סכום": parseFloat(t.amount) || 0
-        })) : [{ "שנה": Store.currentYear, "תאריך": "", "קטגוריה": "", "תיאור": "אין נתונים לבחור זה", "סכום": 0 }];
+            "סכום/הערה": isNaN(parseFloat(t.amount)) ? t.amount : parseFloat(t.amount) || 0
+        })) : [{ "שנה": Store.currentYear, "תאריך": "", "קטגוריה": "", "תיאור": "אין נתונים", "סכום/הערה": 0 }];
 
         const ws = XLSX.utils.json_to_sheet(rows);
         if(!ws['!views']) ws['!views'] = [];
@@ -78,6 +82,7 @@ const Reports = {
         Notify.show('הדוח הורד בהצלחה', 'success');
     },
 
+    // 5 הדפסת דף בחור
     async printStudentSlip(id, name) {
         Notify.show('מכין דף בחור להדפסה...', 'info');
         const data = await this.getAllHistory(id);
@@ -88,10 +93,11 @@ const Reports = {
         data.sort((a,b) => b.date - a.date);
         
         data.forEach(t => {
-            const amt = isNaN(parseFloat(t.amount)) ? 0 : parseFloat(t.amount);
-            total += amt;
+            const isText = isNaN(parseFloat(t.amount));
+            const amt = isText ? t.amount : parseFloat(t.amount);
+            if(!isText) total += amt;
             rowsHtml += `<tr>
-                <td>₪${amt.toLocaleString()}</td>
+                <td>${isText ? amt : '₪'+amt.toLocaleString()}</td>
                 <td>${t.desc || '-'}</td>
                 <td>${t.category}</td>
                 <td>${System.toHebrewDate(t.date)}</td>
@@ -114,18 +120,15 @@ const Reports = {
                 </div>
                 <h3 style="text-align:center; margin-bottom:10px;">פירוט תרומות והכנסות</h3>
                 <table class="print-table" style="width:100%;">
-                    <thead>
-                        <tr><th>סכום</th><th>תיאור</th><th>קטגוריה</th><th>תאריך</th><th>שנה</th></tr>
-                    </thead>
+                    <thead><tr><th>סכום/הערה</th><th>תיאור</th><th>קטגוריה</th><th>תאריך</th><th>שנה</th></tr></thead>
                     <tbody>${rowsHtml}</tbody>
                     <tfoot>
                         <tr style="background:#e0f2fe; font-weight:bold;">
                             <td>₪${total.toLocaleString()}</td>
-                            <td colspan="4">סה״כ לתשלום / זיכוי</td>
+                            <td colspan="4">סה״כ לתשלום (לא כולל הערות)</td>
                         </tr>
                     </tfoot>
                 </table>
-                <div style="margin-top: 30px; text-align: center; font-size: 12px;">הופק על ידי מערכת עזר חתנים בתאריך ${new Date().toLocaleDateString('he-IL')}</div>
             </div>`;
 
         const pa = document.getElementById('print-area');
@@ -133,12 +136,12 @@ const Reports = {
         window.print();
     },
 
+    // 6 ייצוא דוח כללי
     async generateStandard() {
         if(Store.role === 'user') return Notify.show('אין הרשאה להפקת דוח כספי מלא', 'error');
-        
         await Store.ensureAllLoaded(['students', 'donors']);
-
         Notify.show('מייצא נתונים...', 'info');
+        
         db.ref(`years/${Store.currentYear}/finance`).once('value', snap => {
             const type = document.getElementById('rep-type').value;
             const entVal = document.getElementById('rep-entity-id').value;
@@ -166,15 +169,16 @@ const Reports = {
                 return {
                     "תאריך": System.toHebrewDate(t.date),
                     "שם משוייך": entityName,
-                    "סוג תנועה": t.type === 'income' ? 'הכנסה' : 'הוצאה',
+                    "סוג תנועה": t.type === 'income' ? 'הכנסה' : (t.type === 'expense' ? 'הוצאה' : 'הערה'),
                     "קטגוריה": t.category,
+                    "תת קטגוריה": t.subCategory || '',
                     "תיאור / הערות": t.desc,
-                    "סכום בש״ח": parseFloat(t.amount) || 0
+                    "סכום/ערך": isNaN(parseFloat(t.amount)) ? t.amount : parseFloat(t.amount) || 0
                 };
             });
 
             const ws = XLSX.utils.json_to_sheet(rows);
-            ws['!cols'] = [{wch: 15}, {wch: 25}, {wch: 10}, {wch: 15}, {wch: 40}, {wch: 12}];
+            ws['!cols'] = [{wch: 15}, {wch: 25}, {wch: 10}, {wch: 15}, {wch: 15}, {wch: 40}, {wch: 12}];
             if(!ws['!views']) ws['!views'] = [];
             ws['!views'].push({ rightToLeft: true });
             const wb = XLSX.utils.book_new();
@@ -185,26 +189,22 @@ const Reports = {
         });
     },
     
+    // 7 משתני עורך
     editorState: {
         bgImg: null, bgOpacity: 0.2, title: 'דוח תצוגה משוקלל',
-        images: [], zoom: 0.6,
-        headers: [], 
-        colsVisible: [],
-        headersOrder: [],
-        orientation: 'portrait', 
-        rowsPerPage: 30, 
-        mode: 'visual',
-        customHtml: '',
-        routeData: null, 
-        marginPadding: 20,
-        sortBy: 'amount_desc'
+        images: [], zoom: 0.6, headers: [], colsVisible: [],
+        headersOrder: [], orientation: 'portrait', rowsPerPage: 30, 
+        mode: 'visual', customHtml: '', routeData: null, 
+        marginPadding: 20, sortBy: 'amount_desc'
     },
     
+    // 8 שינוי שורות לדף (7)
     setRowsPerPage(val) {
         this.editorState.rowsPerPage = parseInt(val) || 30;
         this.renderEditorCanvas();
     },
     
+    // 9 פתיחת עורך (7)
     openEditor(mode = 'visual', payload = '') {
         this.editorState.mode = mode;
         this.editorState.headers = [];
@@ -242,10 +242,10 @@ const Reports = {
         this.renderEditorCanvas();
     },
 
-    closeEditor() {
-        document.getElementById('report-editor-screen').classList.add('hidden-screen');
-    },
+    // 10 סגירת עורך
+    closeEditor() { document.getElementById('report-editor-screen').classList.add('hidden-screen'); },
 
+    // 11 רינדור כותרות (9)
     renderHeadersEditor() {
         const container = document.getElementById('editor-headers-container');
         container.innerHTML = '';
@@ -280,11 +280,10 @@ const Reports = {
         });
     },
 
-    setSort(val) {
-        this.editorState.sortBy = val;
-        this.renderEditorCanvas();
-    },
+    // 12 הגדרת מיון (11)
+    setSort(val) { this.editorState.sortBy = val; this.renderEditorCanvas(); },
 
+    // 13 הזזת כותרת (11)
     moveHeader(currIdx, direction) {
         const newIdx = currIdx + direction;
         const arr = this.editorState.headersOrder;
@@ -296,6 +295,7 @@ const Reports = {
         this.renderEditorCanvas();
     },
     
+    // 14 רינדור קנבס עורך (9)
     async renderEditorCanvas() {
         const container = document.getElementById('report-canvas-container');
         
@@ -311,19 +311,12 @@ const Reports = {
             sidebarDiv.insertBefore(div, sidebarDiv.children[4]);
         }
 
-        if (this.editorState.mode === 'custom') {
-            this.renderCustomMode(container);
-            return;
-        }
-
-        if (this.editorState.mode === 'route') {
-            this.renderRouteMode(container);
-            return;
-        }
-
+        if (this.editorState.mode === 'custom') { this.renderCustomMode(container); return; }
+        if (this.editorState.mode === 'route') { this.renderRouteMode(container); return; }
         await this.renderVisualMode(container);
     },
 
+    // 15 רינדור חופשי (14)
     renderCustomMode(container) {
         container.innerHTML = '';
         const bgStyle = this.editorState.bgImg ? `background-image: url('${this.editorState.bgImg}');` : '';
@@ -334,10 +327,8 @@ const Reports = {
             <div class="print-layer-bg bg-contain bg-center bg-no-repeat" style="${bgStyle} opacity: ${this.editorState.bgOpacity};"></div>
             <div class="print-layer-content h-full flex flex-col relative">
                     ${this.editorState.customHtml}
-                    
                     <div class="draggable-item" id="default-logo" style="top: 10px; left: 10px; width: 80px;">
-                    <img src="1.JPG" class="w-full h-full object-contain pointer-events-none">
-                    <div class="resize-handle"></div>
+                    <img src="1.JPG" class="w-full h-full object-contain pointer-events-none"><div class="resize-handle"></div>
                     </div>
             </div>
             <div class="print-layer-decor absolute inset-0 overflow-hidden pointer-events-auto" id="decor-layer-0"></div>
@@ -352,6 +343,7 @@ const Reports = {
         }, 100);
     },
 
+    // 16 רינדור מסלול (14)
     renderRouteMode(container) {
         container.innerHTML = '';
         const data = this.editorState.routeData || []; 
@@ -395,9 +387,7 @@ const Reports = {
                              else if (headerText === 'הערות') widthStyle = 'width: 25%;';
                              else if (headerText === '#') widthStyle = 'width: 3%;';
                              
-                             contentHtml += `<th class="border border-black p-0 text-center font-bold align-top">
-                                <div style="resize: horizontal; overflow: hidden; padding: 4px; min-width: 30px; ${widthStyle}">${headerText}</div>
-                             </th>`;
+                             contentHtml += `<th class="border border-black p-0 text-center font-bold align-top"><div style="resize: horizontal; overflow: hidden; padding: 4px; min-width: 30px; ${widthStyle}">${headerText}</div></th>`;
                         }
                     });
                     contentHtml += '</tr></thead><tbody>';
@@ -413,16 +403,7 @@ const Reports = {
                     openTable();
                     let tds = '';
                     const r = item.data;
-                    
-                    const values = [
-                         item.index + 1,
-                         `<b>${r.name}</b>`,
-                         r.street,
-                         r.floor,
-                         r.notes,
-                         r.hist3, r.hist2, r.hist1,
-                         r.currentYearBlank
-                    ];
+                    const values = [item.index + 1, `<b>${r.name}</b>`, r.street, r.floor, r.notes, r.hist3, r.hist2, r.hist1, r.currentYearBlank];
                     
                     this.editorState.headersOrder.forEach(idx => {
                         if (this.editorState.colsVisible[idx]) {
@@ -440,15 +421,12 @@ const Reports = {
                 <div class="print-layer-content h-full flex flex-col relative">
                     <div class="print-header mb-4 relative">
                          <div class="draggable-item" style="position: absolute; right: 0; top: 0; width: 60px;">
-                             <img src="1.JPG" alt="לוגו" class="w-full h-full object-contain pointer-events-none">
-                             <div class="resize-handle"></div>
+                             <img src="1.JPG" alt="לוגו" class="w-full h-full object-contain pointer-events-none"><div class="resize-handle"></div>
                         </div>
                         <h1 class="text-2xl font-black text-center" id="canvas-title">${this.editorState.title}</h1>
                         <h3 class="text-center">${this.editorState.subTitle || ''} | עמוד ${pageIdx+1}</h3>
                     </div>
-                    <div class="flex-1 text-right" dir="rtl">
-                        ${contentHtml}
-                    </div>
+                    <div class="flex-1 text-right" dir="rtl">${contentHtml}</div>
                 </div>
                 <div class="print-layer-decor absolute inset-0 overflow-hidden pointer-events-auto" id="decor-layer-${pageIdx}"></div>
             </div>`;
@@ -458,17 +436,14 @@ const Reports = {
             container.appendChild(pageEl.firstElementChild);
         });
         
-        setTimeout(() => {
-            document.querySelectorAll('.draggable-item').forEach(el => this.makeDraggable(el));
-        }, 100);
+        setTimeout(() => { document.querySelectorAll('.draggable-item').forEach(el => this.makeDraggable(el)); }, 100);
     },
 
+    // 17 רינדור חזותי (14)
     async renderVisualMode(container) {
         container.innerHTML = '<div class="absolute inset-0 flex flex-col items-center justify-center text-indigo-500"><i class="fas fa-spinner fa-spin text-4xl mb-4"></i><span class="font-bold">מעבד נתונים לדוח...</span></div>';
-        
         try {
             await Store.ensureAllLoaded(['students', 'donors']);
-
             const [finSnap, grpSnap] = await Promise.all([
                 db.ref(`years/${Store.currentYear}/finance`).once('value'),
                 db.ref(`years/${Store.currentYear}/groups`).once('value')
@@ -481,17 +456,12 @@ const Reports = {
             const bonusTiers = config.bonusTiers || [];
 
             let list = [];
-
             Object.values(Store.data.students).forEach(student => {
                 if (!student || student.isArchived) return; 
-                
-                let actual = 0;
-                let extra = 0;
-                
+                let actual = 0; let extra = 0;
                 finances.filter(f => f.studentId == student.id && f.type === 'income').forEach(f => {
                      if (!isNaN(parseFloat(f.amount))) actual += parseFloat(f.amount);
                 });
-
                 Object.keys(groupsData).forEach(day => {
                     Object.values(groupsData[day]).forEach(g => {
                         if((g.members||[]).some(m => m.id == student.id)) {
@@ -500,7 +470,6 @@ const Reports = {
                         }
                     });
                 });
-
                 const donorsBrought = Object.values(Store.data.donors).filter(d => d && d.referrerId == student.id);
                 donorsBrought.forEach(d => {
                     let donorTotal = 0;
@@ -517,20 +486,15 @@ const Reports = {
                 const yData = (Store.data.yearData[Store.currentYear]?.students || {})[student.id] || {};
                 const goal = (yData.personalGoal !== undefined && yData.personalGoal !== null && yData.personalGoal !== '') ? parseInt(yData.personalGoal) : (config.baseStudentGoal || 0);
                 const name = student.firstName && student.lastName ? `${student.firstName} ${student.lastName}` : (student.name || 'ללא שם');
-                const lastName = student.lastName || '';
-                const grade = student.grade || '';
                 const totalDisplay = Math.round(actual + extra);
-
                 const studentTiers = config.studentTiers || [];
                 const rewardTier = studentTiers.sort((a,b) => b.amount - a.amount).find(t => totalDisplay >= t.amount);
                 const reward = rewardTier ? rewardTier.reward : '-';
 
                 list.push({
-                    name, lastName, grade, 
-                    goal: goal, 
-                    totalDisplay: totalDisplay, 
-                    pct: goal > 0 ? Math.round((totalDisplay/goal)*100) : 0, 
-                    reward
+                    name, lastName: student.lastName || '', grade: student.grade || '', 
+                    goal: goal, totalDisplay: totalDisplay, 
+                    pct: goal > 0 ? Math.round((totalDisplay/goal)*100) : 0, reward
                 });
             });
 
@@ -545,22 +509,17 @@ const Reports = {
 
             const ROWS_PER_PAGE = this.editorState.rowsPerPage || (this.editorState.orientation === 'landscape' ? 22 : 35);
             const chunks = [];
-            for (let i = 0; i < list.length; i += ROWS_PER_PAGE) {
-                chunks.push(list.slice(i, i + ROWS_PER_PAGE));
-            }
+            for (let i = 0; i < list.length; i += ROWS_PER_PAGE) chunks.push(list.slice(i, i + ROWS_PER_PAGE));
             if (chunks.length === 0) chunks.push([]); 
 
             container.innerHTML = ''; 
-
             const bgStyle = this.editorState.bgImg ? `background-image: url('${this.editorState.bgImg}');` : '';
             const h = this.editorState.headers || [];
             const pageClass = this.editorState.orientation === 'landscape' ? 'page-landscape' : 'page-portrait';
             
             let tableHeaderHTML = '<tr class="bg-slate-200">';
             (this.editorState.headersOrder || [0,1,2,3,4]).forEach(idx => {
-                if (this.editorState.colsVisible && this.editorState.colsVisible[idx]) {
-                     tableHeaderHTML += `<th class="border border-black p-1 text-center font-bold">${h[idx] || ''}</th>`;
-                }
+                if (this.editorState.colsVisible && this.editorState.colsVisible[idx]) tableHeaderHTML += `<th class="border border-black p-1 text-center font-bold">${h[idx] || ''}</th>`;
             });
             tableHeaderHTML += '</tr>';
 
@@ -571,8 +530,7 @@ const Reports = {
                     <div class="print-layer-content h-full flex flex-col relative">
                         <div class="print-header mb-4 relative">
                             <div class="draggable-item" style="position: absolute; right: 0; top: 0; width: 60px;">
-                                 <img src="1.JPG" alt="לוגו" class="w-full h-full object-contain pointer-events-none">
-                                 <div class="resize-handle"></div>
+                                 <img src="1.JPG" alt="לוגו" class="w-full h-full object-contain pointer-events-none"><div class="resize-handle"></div>
                             </div>
                             <h1 class="text-2xl font-black text-center" id="canvas-title">${this.editorState.title || 'דוח'}</h1>
                             <h3 class="text-center">שנה: ${Store.currentYear} | עמוד ${pageIdx+1} מתוך ${chunks.length}</h3>
@@ -607,30 +565,14 @@ const Reports = {
                 pageEl.innerHTML = pageHtml;
                 container.appendChild(pageEl.firstElementChild);
             });
-
-            setTimeout(() => {
-                document.querySelectorAll('.draggable-item').forEach(el => this.makeDraggable(el));
-            }, 100);
-
-        } catch (e) {
-            console.error("שגיאה בעורך דוחות:", e);
-            container.innerHTML = `<div class="p-10 text-center text-red-500 font-bold">שגיאה בהפקת הדוח. ודא שקיימים נתונים במערכת.<br>${e.message}</div>`;
-        }
+            setTimeout(() => { document.querySelectorAll('.draggable-item').forEach(el => this.makeDraggable(el)); }, 100);
+        } catch (e) { container.innerHTML = `<div class="p-10 text-center text-red-500 font-bold">שגיאה בהפקת הדוח.<br>${e.message}</div>`; }
     },
     
-    updateTitle(val) {
-        this.editorState.title = val;
-        const els = document.querySelectorAll('#canvas-title');
-        els.forEach(el => el.innerText = val);
-    },
-    updateHeader(originalIdx, val) {
-        this.editorState.headers[originalIdx] = val;
-        this.renderEditorCanvas();
-    },
-    toggleCol(originalIdx, isChecked) {
-        this.editorState.colsVisible[originalIdx] = isChecked;
-        this.renderEditorCanvas();
-    },
+    // 18 עדכון תכונות (7)
+    updateTitle(val) { this.editorState.title = val; document.querySelectorAll('#canvas-title').forEach(el => el.innerText = val); },
+    updateHeader(originalIdx, val) { this.editorState.headers[originalIdx] = val; this.renderEditorCanvas(); },
+    toggleCol(originalIdx, isChecked) { this.editorState.colsVisible[originalIdx] = isChecked; this.renderEditorCanvas(); },
     updateBackground(input) {
         if (input.files && input.files[0]) {
             const reader = new FileReader();
@@ -641,18 +583,9 @@ const Reports = {
             reader.readAsDataURL(input.files[0]);
         }
     },
-    updateBgOpacity(val) {
-        this.editorState.bgOpacity = val;
-        document.querySelectorAll('.print-layer-bg').forEach(el => el.style.opacity = val);
-    },
-    updateMargin(val) {
-        this.editorState.marginPadding = val;
-        document.querySelectorAll('.report-page').forEach(el => el.style.padding = `${val}px`);
-    },
-    setZoom(val) {
-        this.editorState.zoom = val;
-        document.querySelectorAll('.report-page').forEach(el => el.style.transform = `scale(${val})`);
-    },
+    updateBgOpacity(val) { this.editorState.bgOpacity = val; document.querySelectorAll('.print-layer-bg').forEach(el => el.style.opacity = val); },
+    updateMargin(val) { this.editorState.marginPadding = val; document.querySelectorAll('.report-page').forEach(el => el.style.padding = `${val}px`); },
+    setZoom(val) { this.editorState.zoom = val; document.querySelectorAll('.report-page').forEach(el => el.style.transform = `scale(${val})`); },
     setOrientation(val) {
         this.editorState.orientation = val;
         const styleEl = document.getElementById('dynamic-print-style') || document.createElement('style');
@@ -661,79 +594,68 @@ const Reports = {
         document.head.appendChild(styleEl);
         this.renderEditorCanvas();
     },
+    
+    // 19 תמונה נגררת
     addDecorImage(input) {
         if (input.files && input.files[0]) {
             const reader = new FileReader();
             reader.onload = (e) => {
-                const imgId = 'decor-' + Date.now();
                 const imgContainer = document.createElement('div');
                 imgContainer.className = 'draggable-item';
-                imgContainer.id = imgId;
-                imgContainer.style.top = '100px';
-                imgContainer.style.left = '100px';
-                imgContainer.style.width = '150px';
+                imgContainer.id = 'decor-' + Date.now();
+                imgContainer.style.top = '100px'; imgContainer.style.left = '100px'; imgContainer.style.width = '150px';
                 imgContainer.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-contain pointer-events-none"><div class="resize-handle"></div>`;
                 const firstPageLayer = document.querySelector('[id^="decor-layer-"]');
-                if (firstPageLayer) {
-                    firstPageLayer.appendChild(imgContainer);
-                    this.makeDraggable(imgContainer);
-                }
+                if (firstPageLayer) { firstPageLayer.appendChild(imgContainer); this.makeDraggable(imgContainer); }
             };
             reader.readAsDataURL(input.files[0]);
         }
     },
+    
+    // 20 מנגנון גרירה (19)
     makeDraggable(elmnt) {
         let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
         elmnt.onmousedown = function(e) {
             if (e.target.classList.contains('resize-handle')) return; 
             document.querySelectorAll('.draggable-item').forEach(el => el.classList.remove('selected'));
             elmnt.classList.add('selected');
-            dragMouseDown(e);
+            e.preventDefault();
+            pos3 = e.clientX; pos4 = e.clientY;
+            document.onmouseup = () => { document.onmouseup = null; document.onmousemove = null; }; 
+            document.onmousemove = (e) => {
+                e.preventDefault();
+                const zoom = Reports.editorState.zoom || 1;
+                pos1 = pos3 - e.clientX; pos2 = pos4 - e.clientY;
+                pos3 = e.clientX; pos4 = e.clientY;
+                elmnt.style.top = (elmnt.offsetTop - pos2 / zoom) + "px";
+                elmnt.style.left = (elmnt.offsetLeft - pos1 / zoom) + "px";
+            };
         };
         const resizeHandle = elmnt.querySelector('.resize-handle');
         if (resizeHandle) {
             resizeHandle.onmousedown = function(e) {
-                e.stopPropagation();
-                e.preventDefault();
+                e.stopPropagation(); e.preventDefault();
                 let startX = e.clientX;
                 let startWidth = parseInt(document.defaultView.getComputedStyle(elmnt).width, 10);
-                document.onmouseup = function() {
-                    document.onmouseup = null; document.onmousemove = null;
-                };
-                document.onmousemove = function(e) {
+                document.onmouseup = () => { document.onmouseup = null; document.onmousemove = null; };
+                document.onmousemove = (e) => {
                     let newW = startWidth + (e.clientX - startX) / Reports.editorState.zoom; 
                     elmnt.style.width = newW + 'px';
                 };
             };
         }
-        function dragMouseDown(e) {
-            e.preventDefault();
-            pos3 = e.clientX; pos4 = e.clientY;
-            document.onmouseup = closeDragElement; document.onmousemove = elementDrag;
-        }
-        function elementDrag(e) {
-            e.preventDefault();
-            const zoom = Reports.editorState.zoom || 1;
-            pos1 = pos3 - e.clientX; pos2 = pos4 - e.clientY;
-            pos3 = e.clientX; pos4 = e.clientY;
-            elmnt.style.top = (elmnt.offsetTop - pos2 / zoom) + "px";
-            elmnt.style.left = (elmnt.offsetLeft - pos1 / zoom) + "px";
-        }
-        function closeDragElement() {
-            document.onmouseup = null; document.onmousemove = null;
-        }
     },
+    
+    // 21 הדפסת עורך
     printEditor() {
         const container = document.getElementById('report-canvas-container');
         const printArea = document.getElementById('print-area');
         const clones = [];
         container.querySelectorAll('.report-page').forEach(page => {
              const c = page.cloneNode(true);
-             c.style.transform = 'none'; 
-             c.style.marginBottom = '0';
+             c.style.transform = 'none'; c.style.marginBottom = '0';
              c.querySelectorAll('.draggable-item').forEach(el => {
-                el.classList.remove('selected');
-                el.style.border = 'none';
+                el.classList.remove('selected'); el.style.border = 'none';
                 const handle = el.querySelector('.resize-handle');
                 if(handle) handle.style.display = 'none';
              });

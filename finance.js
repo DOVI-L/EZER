@@ -3,6 +3,7 @@ const Finance = {
     limit: 30,
     financeData: {},
     
+    // 1 איפוס מידע
     reset() { 
         this.financeData = {}; 
         Store.cursors.finance = null; 
@@ -10,6 +11,7 @@ const Finance = {
         this.loadMore(); 
     },
     
+    // 2 טעינת קופה (1)
     loadMore(reset = false) {
         if(reset) this.reset();
         let q = db.ref(`years/${Store.currentYear}/finance`).orderByChild('date').limitToLast(this.limit);
@@ -30,8 +32,11 @@ const Finance = {
         });
     },
     
+    // 3 רינדור רשימה (2)
     render() {
         const tbody = document.getElementById('finance-tbody');
+        if(!tbody) return;
+        
         tbody.innerHTML = ''; 
         let raw = Object.values(this.financeData);
         if(this.currentFilter !== 'all') {
@@ -51,30 +56,39 @@ const Finance = {
                 entityName = `קבוצה: ${tx.groupName || tx.groupId}`;
             }
 
-            const isNote = isNaN(parseFloat(tx.amount));
-            const displayAmount = isNote ? `<span class="text-xs text-gray-500">${tx.amount}</span>` : `₪${parseInt(tx.amount).toLocaleString()}`;
-            const rowClass = isNote ? 'bg-gray-50 italic' : 'hover:bg-slate-50';
+            const isNote = tx.type === 'note' || isNaN(parseFloat(tx.amount));
+            const displayAmount = isNote ? `<span class="text-xs text-gray-500">${tx.amount || tx.desc}</span>` : `₪${parseInt(tx.amount).toLocaleString()}`;
+            const rowClass = isNote ? 'bg-yellow-50/50 italic' : 'hover:bg-slate-50';
             const displayDate = System.toHebrewDate(tx.date);
+
+            let typeBadge = '';
+            if (isNote) typeBadge = '<span class="px-2 py-1 rounded text-xs font-bold bg-yellow-100 text-yellow-700">הערת מסלול</span>';
+            else if (tx.type === 'income') typeBadge = '<span class="px-2 py-1 rounded text-xs font-bold bg-emerald-50 text-emerald-700">הכנסה</span>';
+            else typeBadge = '<span class="px-2 py-1 rounded text-xs font-bold bg-rose-50 text-rose-700">הוצאה</span>';
 
             return `
             <tr class="${rowClass} border-b border-slate-50 transition">
                 <td class="p-3 text-gray-500 text-xs">${displayDate}</td>
-                <td class="p-3"><span class="px-2 py-1 rounded text-xs font-bold ${tx.type==='income'?'bg-emerald-50 text-emerald-700':'bg-rose-50 text-rose-700'}">${tx.type==='income'?'הכנסה':'הוצאה'}</span></td>
-                <td class="p-3 font-medium text-slate-700">${tx.category}</td>
+                <td class="p-3">${typeBadge}</td>
+                <td class="p-3 font-medium text-slate-700">
+                    ${tx.category}
+                    ${tx.subCategory ? `<div class="text-[10px] text-gray-400 font-normal truncate">>> ${tx.subCategory}</div>` : ''}
+                </td>
                 <td class="p-3">
                     <div class="text-sm">${tx.desc || ''}</div>
                     ${entityName !== '-' ? `<div class="text-xs text-gray-400"><i class="fas fa-user-tag"></i> ${entityName}</div>` : ''}
                     ${tx.addedBy ? `<div class="text-[10px] text-gray-400">נוסף ע״י: ${tx.addedBy}</div>` : ''}
                 </td>
-                <td class="p-3 font-bold ${tx.type==='income'?'text-emerald-600':'text-rose-600'}" dir="ltr">${displayAmount}</td>
+                <td class="p-3 font-bold ${isNote ? 'text-gray-600' : (tx.type==='income'?'text-emerald-600':'text-rose-600')}" dir="ltr">${displayAmount}</td>
                 <td class="p-3 flex gap-2 justify-center">
-                    <button onclick="Finance.editTx('${tx.id}')" class="text-gray-300 hover:text-indigo-500 transition"><i class="fas fa-pen"></i></button>
-                    <button onclick="Finance.deleteTx('${tx.id}', '${tx.type}', '${tx.amount}')" class="text-gray-300 hover:text-red-500 transition"><i class="fas fa-trash-alt"></i></button>
+                    <button onclick="Finance.editTx('${tx.id}')" class="text-gray-400 hover:text-indigo-500 transition bg-white px-2 rounded border hover:border-indigo-200"><i class="fas fa-pen"></i></button>
+                    <button onclick="Finance.deleteTx('${tx.id}', '${tx.type}', '${tx.amount}')" class="text-gray-400 hover:text-red-500 transition bg-white px-2 rounded border hover:border-red-200"><i class="fas fa-trash-alt"></i></button>
                 </td>
             </tr>`;
         }).join('');
     },
     
+    // 4 בחירת תצוגה
     setFilter(f) {
         this.currentFilter = f;
         document.querySelectorAll('.finance-filter').forEach(b => {
@@ -84,35 +98,151 @@ const Finance = {
             b.classList.toggle('text-white', active);
             b.classList.toggle('shadow-md', active);
         });
-        this.render();
+        
+        if (f === 'purim') {
+            document.getElementById('finance-main-view').classList.add('hidden');
+            document.getElementById('finance-store-debts-view').classList.add('hidden');
+            document.getElementById('finance-vouchers-view').classList.add('hidden');
+            document.getElementById('finance-purim-view').classList.remove('hidden');
+            this.renderPurimManager();
+        } else {
+            document.getElementById('finance-purim-view').classList.add('hidden');
+            document.getElementById('finance-main-view').classList.remove('hidden');
+            this.render();
+        }
     },
     
+    // 5 ניהול קטגוריות פורים (4)
+    renderPurimManager() {
+        const container = document.getElementById('finance-purim-view');
+        if(!container) return;
+        
+        container.innerHTML = `<div class="text-center text-gray-500 py-10"><i class="fas fa-spinner fa-spin text-3xl mb-4"></i><br>מעבד נתוני קטגוריות פורים...</div>`;
+
+        db.ref(`years/${Store.currentYear}/finance`).orderByChild('isPurim').equalTo(true).once('value', s => {
+            const data = s.val() || {};
+            const txs = Object.values(data).filter(t => t.type === 'expense' || t.type === 'income');
+            
+            const categories = { income: {}, expense: {} };
+            let totalIncome = 0;
+            let totalExpense = 0;
+
+            txs.forEach(tx => {
+                const amt = isNaN(parseFloat(tx.amount)) ? 0 : parseFloat(tx.amount);
+                const type = tx.type;
+                const cat = tx.category || 'כללי';
+                const subCat = tx.subCategory || 'ללא תת קטגוריה';
+                
+                if(type === 'income') totalIncome += amt;
+                if(type === 'expense') totalExpense += amt;
+                
+                if (!categories[type][cat]) categories[type][cat] = { total: 0, subs: {} };
+                categories[type][cat].total += amt;
+                
+                if (!categories[type][cat].subs[subCat]) categories[type][cat].subs[subCat] = { total: 0, items: [] };
+                categories[type][cat].subs[subCat].total += amt;
+                categories[type][cat].subs[subCat].items.push(tx);
+            });
+
+            const renderCatBox = (title, typeMap, typeStr) => {
+                if(Object.keys(typeMap).length === 0) return `<div class="text-gray-400 text-sm text-center py-4">אין נתונים בפורים בקטגוריה זו.</div>`;
+                
+                let html = '';
+                Object.entries(typeMap).sort((a,b)=>b[1].total-a[1].total).forEach(([catName, catData]) => {
+                    let subsHtml = '';
+                    Object.entries(catData.subs).forEach(([subName, subData]) => {
+                        let itemsHtml = '';
+                        subData.items.forEach(item => {
+                            const dateStr = System.toHebrewDate(item.date);
+                            itemsHtml += `
+                            <div class="flex justify-between items-center bg-white border-b last:border-0 p-2 text-xs">
+                                <div class="truncate max-w-[200px]"><b>${item.desc}</b><br><span class="text-[10px] text-gray-500">${dateStr}</span></div>
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold">₪${item.amount.toLocaleString()}</span>
+                                    <button onclick="Finance.editTx('${item.id}')" class="text-indigo-400 hover:text-indigo-600"><i class="fas fa-edit"></i></button>
+                                </div>
+                            </div>`;
+                        });
+                        
+                        subsHtml += `
+                        <div class="ml-4 mb-2 mt-2 border border-gray-100 rounded-lg overflow-hidden shadow-sm bg-gray-50">
+                            <div class="bg-gray-100 p-2 font-bold text-xs flex justify-between cursor-pointer text-gray-600" onclick="this.nextElementSibling.classList.toggle('hidden')">
+                                <span><i class="fas fa-level-down-alt fa-flip-horizontal mr-1 opacity-50"></i> ${subName}</span>
+                                <span>₪${subData.total.toLocaleString()}</span>
+                            </div>
+                            <div class="hidden">${itemsHtml}</div>
+                        </div>`;
+                    });
+
+                    html += `
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-4 overflow-hidden">
+                        <div class="p-3 bg-gradient-to-l from-slate-100 to-white font-bold flex justify-between items-center border-b">
+                            <span class="text-slate-800 text-lg">${catName}</span>
+                            <span class="${typeStr==='income'?'text-emerald-600':'text-rose-600'}">₪${catData.total.toLocaleString()}</span>
+                        </div>
+                        <div class="p-2">${subsHtml}</div>
+                    </div>`;
+                });
+                return html;
+            };
+
+            container.innerHTML = `
+                <div class="max-w-6xl mx-auto space-y-6 pb-10">
+                    <div class="bg-purple-100 border border-purple-200 p-4 rounded-xl flex justify-between items-center shadow-sm">
+                        <div>
+                            <h2 class="font-bold text-xl text-purple-900"><i class="fas fa-mask ml-2"></i> מאזן פורים מפורט</h2>
+                            <p class="text-sm text-purple-700">נהל והעבר תנועות בין קטגוריות ותתי-קטגוריות</p>
+                        </div>
+                        <div class="text-left">
+                            <div class="text-xs text-purple-600 font-bold">סך הכל מאזן:</div>
+                            <div class="text-3xl font-black ${totalIncome-totalExpense >= 0 ? 'text-emerald-600' : 'text-rose-600'}">
+                                ₪${(totalIncome - totalExpense).toLocaleString()}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                        <div class="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
+                            <h3 class="font-bold text-emerald-800 mb-4 border-b border-emerald-200 pb-2"><i class="fas fa-arrow-down ml-1"></i> פירוט הכנסות פורים (₪${totalIncome.toLocaleString()})</h3>
+                            ${renderCatBox('הכנסות', categories.income, 'income')}
+                        </div>
+                        <div class="bg-rose-50/50 p-4 rounded-xl border border-rose-100">
+                            <h3 class="font-bold text-rose-800 mb-4 border-b border-rose-200 pb-2"><i class="fas fa-arrow-up ml-1"></i> פירוט הוצאות פורים (₪${totalExpense.toLocaleString()})</h3>
+                            ${renderCatBox('הוצאות', categories.expense, 'expense')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    },
+
+    // 6 מימוש תלושים (4)
     openVouchersView() {
         document.getElementById('finance-main-view').classList.add('hidden');
+        document.getElementById('finance-purim-view').classList.add('hidden');
         document.getElementById('finance-store-debts-view').classList.add('hidden');
         document.getElementById('finance-vouchers-view').classList.remove('hidden');
         this.renderPendingVouchers();
     },
-    
     closeVouchersView() {
-        document.getElementById('finance-main-view').classList.remove('hidden');
         document.getElementById('finance-vouchers-view').classList.add('hidden');
-        this.loadMore(true);
+        this.setFilter(this.currentFilter); 
     },
     
+    // 7 חובות לחנויות (4)
     openStoreDebtsView() {
         document.getElementById('finance-main-view').classList.add('hidden');
+        document.getElementById('finance-purim-view').classList.add('hidden');
         document.getElementById('finance-vouchers-view').classList.add('hidden');
         document.getElementById('finance-store-debts-view').classList.remove('hidden');
         this.renderStoreDebts();
     },
-    
     closeStoreDebtsView() {
-        document.getElementById('finance-main-view').classList.remove('hidden');
         document.getElementById('finance-store-debts-view').classList.add('hidden');
-        this.loadMore(true);
+        this.setFilter(this.currentFilter);
     },
 
+    // 8 רשימת תלושים (6)
     renderPendingVouchers() {
         const list = document.getElementById('pending-vouchers-list');
         list.innerHTML = '<div class="text-center text-gray-400">טוען תלושים...</div>';
@@ -143,6 +273,7 @@ const Finance = {
         });
     },
 
+    // 9 אישור תלוש (8)
     realizeVoucher(vid) {
         if(!confirm('האם לרשום תלוש זה כמומש? הפעולה תיצור הוצאה בקופה לפי העלות האמיתית.')) return;
         
@@ -175,6 +306,7 @@ const Finance = {
         });
     },
     
+    // 10 רשימת חובות (7)
     renderStoreDebts() {
         const container = document.getElementById('store-debts-container');
         container.innerHTML = '<div class="text-center text-gray-400">מחשב נתונים...</div>';
@@ -189,17 +321,14 @@ const Finance = {
                     
                     const amt = parseFloat(tx.amount) || 0;
                     storeMap[tx.storeName].total += amt;
-                    if (tx.isPaidToStore) {
-                        storeMap[tx.storeName].paid += amt;
-                    } else {
-                        storeMap[tx.storeName].debts += amt;
-                    }
+                    if (tx.isPaidToStore) storeMap[tx.storeName].paid += amt;
+                    else storeMap[tx.storeName].debts += amt;
                     storeMap[tx.storeName].items.push(tx);
                 }
             });
             
             if (Object.keys(storeMap).length === 0) {
-                container.innerHTML = '<div class="text-center text-gray-400">אין נתוני חובות לחנויות. (ודא שתלושים מומשו עם שיוך לחנות)</div>';
+                container.innerHTML = '<div class="text-center text-gray-400">אין נתוני חובות לחנויות.</div>';
                 return;
             }
             
@@ -220,9 +349,7 @@ const Finance = {
                             </div>
                             <div class="flex items-center gap-3">
                                 <span class="font-bold">₪${item.amount}</span>
-                                <button onclick="Finance.toggleStorePayment('${item.id}', ${!item.isPaidToStore})" class="text-xs px-2 py-1 rounded border ${btnClass}">
-                                    ${btnLabel}
-                                </button>
+                                <button onclick="Finance.toggleStorePayment('${item.id}', ${!item.isPaidToStore})" class="text-xs px-2 py-1 rounded border ${btnClass}">${btnLabel}</button>
                             </div>
                         </div>
                      `;
@@ -238,26 +365,25 @@ const Finance = {
                             </div>
                             <i class="fas fa-chevron-down text-gray-400 ml-2"></i>
                         </div>
-                        <div class="hidden bg-white p-2 max-h-60 overflow-y-auto custom-scroll">
-                            ${itemsHtml}
-                        </div>
+                        <div class="hidden bg-white p-2 max-h-60 overflow-y-auto custom-scroll">${itemsHtml}</div>
                     </div>
                  `;
             });
         });
     },
 
+    // 11 שינוי סטטוס חוב (10)
     toggleStorePayment(id, status) {
         OfflineManager.write(`years/${Store.currentYear}/finance/${id}/isPaidToStore`, status);
         setTimeout(() => this.renderStoreDebts(), 200);
     },
 
+    // 12 טופס מרובה (3)
     renderBatchTransactionForm() {
-        // ... (המשך קוד קיים ללא שינוי בפונקציה זו, המודל החדש ישתמש בפונקציה הרגילה) ...
         const today = new Date().toISOString().split('T')[0];
         const studentsList = Object.values(Store.data.students).map(s => {
             const n = s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : s.name;
-            return `<option value="${n} (בחור)">${s.id}</option>`;
+            return `<option value="${n} (בחור) | #${s.studentNum || s.idNum || s.id}">${s.id}</option>`;
         }).join('');
         const donorsList = Object.values(Store.data.donors).map(d => `<option value="${d.name} (תורם)">${d.id}</option>`).join('');
 
@@ -272,8 +398,8 @@ const Finance = {
                         <tr>
                             <th width="80">סוג</th>
                             <th width="120">תאריך</th>
-                            <th width="150">שם (חפש והקלד)</th>
-                            <th width="100">סכום / תלוש</th>
+                            <th width="150">שם או מס' מזהה</th>
+                            <th width="100">סכום / טקסט / תלוש</th>
                             <th width="120">קטגוריה</th>
                             <th>פרטים / הערות</th>
                             <th width="50" class="text-center">פורים</th>
@@ -286,11 +412,11 @@ const Finance = {
             </div>
         `;
 
-        // שינוי כאן: שימוש ברוחב מקסימלי למודל
-        Modal.renderRaw('הוספת תנועות מרוכזת', html, () => Finance.submitBatch(), 'max-w-7xl w-full');
+        Modal.renderRaw('הוספת תנועות מרוכזת (כסף / הערות)', html, () => Finance.submitBatch(), 'max-w-7xl w-full');
         for(let i=0; i<5; i++) Finance.addBatchRow();
     },
 
+    // 13 הוספת שורה (12)
     addBatchRow() {
         const tbody = document.getElementById('batch-tbody');
         const rowId = 'row-' + Date.now() + Math.random().toString(36).substr(2, 5);
@@ -309,31 +435,34 @@ const Finance = {
                 <select class="batch-input" name="type" onchange="Finance.toggleRowType(this)">
                     <option value="income">הכנסה</option>
                     <option value="expense">הוצאה</option>
+                    <option value="note">הערה (מסלול)</option>
                     <option value="voucher">תלוש לבחור</option>
                 </select>
             </td>
             <td><input type="date" class="batch-input" name="date" value="${today}"></td>
             <td>
-                <input type="text" list="entity-list" class="batch-input" name="entityName" placeholder="הקלד שם..." onchange="Finance.resolveEntity(this)">
+                <input type="text" list="entity-list" class="batch-input" name="entityName" placeholder="הקלד שם או מספר..." onchange="Finance.resolveEntity(this)">
                 <input type="hidden" name="entityId">
                 <input type="hidden" name="entityType">
             </td>
             <td>
-                <input type="number" class="batch-input field-amount" name="amount" placeholder="0">
-                <select class="batch-input field-voucher hidden" name="voucherId" onchange="Finance.fillVoucherDetails(this)">${voucherOpts}</select>
+                <input type="text" class="batch-input field-amount" name="amount" placeholder="סכום/ערך">
+                <select class="batch-input field-voucher hidden" name="voucherId">${voucherOpts}</select>
             </td>
             <td>
                 <select class="batch-input field-cat" name="category">
                     <option>תרומה כללית</option><option>מזומן</option><option>צק</option><option>אשראי</option>
                 </select>
+                <input type="text" class="batch-input mt-1 text-xs" name="subCategory" placeholder="תת קטגוריה (למשל: סוכן ג')">
             </td>
-            <td><input type="text" class="batch-input" name="desc"></td>
+            <td><input type="text" class="batch-input" name="desc" placeholder="פירוט נוסף..."></td>
             <td class="text-center"><input type="checkbox" name="isPurim" checked class="h-4 w-4"></td>
             <td class="text-center"><button onclick="document.getElementById('${rowId}').remove()" class="text-red-400 hover:text-red-600"><i class="fas fa-times"></i></button></td>
         `;
         tbody.appendChild(tr);
     },
 
+    // 14 סוג שורה (13)
     toggleRowType(select) {
         const tr = select.closest('tr');
         const type = select.value;
@@ -346,37 +475,56 @@ const Finance = {
             voucherSelect.classList.remove('hidden');
             catSelect.innerHTML = `<option>תלושים/מתנות</option>`;
             catSelect.disabled = true;
+        } else if (type === 'note') {
+            amtInput.classList.remove('hidden');
+            voucherSelect.classList.add('hidden');
+            catSelect.innerHTML = `<option>הערה / טקסט</option>`;
+            catSelect.disabled = false;
         } else {
             amtInput.classList.remove('hidden');
             voucherSelect.classList.add('hidden');
             catSelect.disabled = false;
             if (type === 'income') {
-                catSelect.innerHTML = `<option>תרומה כללית</option><option>מזומן</option><option>צק</option><option>אשראי</option>`;
+                catSelect.innerHTML = `<option>תרומה כללית</option><option>מזומן</option><option>צק</option><option>אשראי</option><option>הו"ק</option>`;
             } else {
                 catSelect.innerHTML = `<option>אוכל</option><option>ציוד</option><option>שיווק</option><option>אחר</option><option>תלושים/מתנות</option>`;
             }
         }
     },
 
+    // 15 זיהוי מזהה (13)
     resolveEntity(input) {
         const val = input.value;
         const tr = input.closest('tr');
         const hiddenId = tr.querySelector('input[name="entityId"]');
         const hiddenType = tr.querySelector('input[name="entityType"]');
         
-        const cleanName = val.replace(' (בחור)', '').replace(' (תורם)', '');
         let foundId = null; 
         let foundType = null;
-
-        const s = Object.values(Store.data.students).find(s => {
-            const n = s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : s.name;
-            return n === cleanName;
-        });
-        if (s) { foundId = s.id; foundType = 'student'; }
         
-        if (!foundId) {
-            const d = Object.values(Store.data.donors).find(d => d.name === cleanName);
-            if (d) { foundId = d.id; foundType = 'donor'; }
+        // נסיון לאתר לפי מספר מזהה
+        const possibleNum = val.trim();
+        const studentByNum = Object.values(Store.data.students).find(s => 
+            (s.studentNum && s.studentNum.toString() === possibleNum) || 
+            (s.idNum && s.idNum.toString() === possibleNum)
+        );
+        
+        if (studentByNum) {
+            foundId = studentByNum.id;
+            foundType = 'student';
+            input.value = (studentByNum.firstName && studentByNum.lastName) ? `${studentByNum.firstName} ${studentByNum.lastName}` : studentByNum.name;
+        } else {
+            const cleanName = val.split('|')[0].replace(' (בחור)', '').replace(' (תורם)', '').trim();
+            const s = Object.values(Store.data.students).find(s => {
+                const n = s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : s.name;
+                return n === cleanName;
+            });
+            if (s) { foundId = s.id; foundType = 'student'; }
+            
+            if (!foundId) {
+                const d = Object.values(Store.data.donors).find(d => d.name === cleanName);
+                if (d) { foundId = d.id; foundType = 'donor'; }
+            }
         }
 
         if (foundId) {
@@ -390,8 +538,7 @@ const Finance = {
         }
     },
 
-    fillVoucherDetails(select) {},
-
+    // 16 שליחת טופס מרוכז (12)
     submitBatch() {
         const rows = document.querySelectorAll('#batch-tbody tr');
         let count = 0;
@@ -403,6 +550,7 @@ const Finance = {
             const entityType = tr.querySelector('input[name="entityType"]').value;
             const entityNameRaw = tr.querySelector('input[name="entityName"]').value;
             const category = tr.querySelector('select[name="category"]').value;
+            const subCategory = tr.querySelector('input[name="subCategory"]').value.trim();
             const desc = tr.querySelector('input[name="desc"]').value;
             const isPurim = tr.querySelector('input[name="isPurim"]').checked;
             
@@ -428,15 +576,19 @@ const Finance = {
                 count++;
                 
             } else {
-                const amount = parseFloat(tr.querySelector('input[name="amount"]').value);
-                if (!amount) return;
+                const rawVal = tr.querySelector('input[name="amount"]').value;
+                if (!rawVal) return;
+                
+                const amount = parseFloat(rawVal);
+                const isText = type === 'note' || isNaN(amount);
 
                 const txData = {
                     id: txId,
                     date: timestamp,
-                    type: type,
-                    amount: amount,
+                    type: isText ? 'note' : type,
+                    amount: isText ? rawVal : amount,
                     category: category,
+                    subCategory: subCategory,
                     desc: (entityId ? '' : `שם: ${entityNameRaw}. `) + desc,
                     isPurim: isPurim
                 };
@@ -448,11 +600,10 @@ const Finance = {
 
                 OfflineManager.write(`years/${Store.currentYear}/finance/${txId}`, txData);
                 
-                if(OfflineManager.isOnline) {
+                if(OfflineManager.isOnline && !isText) {
                      db.ref(`years/${Store.currentYear}/stats/${type}`).transaction(curr => (curr || 0) + amount);
                 }
-                
-                if(type === 'income' && txData.studentId) {
+                if(type === 'income' && txData.studentId && !isText) {
                     System.checkStudentProgress(txData.studentId, amount);
                 }
                 count++;
@@ -463,19 +614,25 @@ const Finance = {
             Notify.show(`${count} שורות נקלטו בהצלחה`, 'success');
             Modal.close();
         } else {
-            alert('לא נקלטו נתונים (ודא שמילאת סכומים ושמות תקינים)');
+            alert('לא נקלטו נתונים (ודא שמילאת סכומים/ערכים ושמות תקינים)');
         }
     },
 
+    // 17 עריכת תנועה (3)
     editTx(id) {
         const tx = this.financeData[id];
         if(!tx) return;
         this.openTransactionModal(tx.type, tx); 
     },
     
-    // שינוי עיקרי כאן: עיצוב מחדש של המודל לרוחב מלא וגדול
+    // 18 חלון תנועה בודדת
     openTransactionModal(type, existingData = null) {
-        const cats = type==='income' ? ['תרומה כללית','מזומן','צק','אשראי'] : ['אוכל','ציוד','שיווק','אחר','תלושים/מתנות'];
+        const isNote = existingData && (existingData.type === 'note' || isNaN(parseFloat(existingData.amount)));
+        let cats = [];
+        if (isNote || type === 'note') cats = ['הערה / טקסט', 'יבוא אקסל'];
+        else if (type === 'income') cats = ['תרומה כללית','מזומן','צק','אשראי','הו"ק','יבוא אקסל'];
+        else cats = ['אוכל','ציוד','שיווק','אחר','תלושים/מתנות'];
+        
         const studentsOpts = Object.values(Store.data.students).filter(s => s).map(s => {
             const n = s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : s.name;
             return `<option value="${s.id}">${n}</option>`;
@@ -500,16 +657,17 @@ const Finance = {
                         <select id="tx-category" class="input-field w-full">
                             ${cats.map(c => `<option ${existingData?.category===c?'selected':''}>${c}</option>`).join('')}
                         </select>
+                        <input type="text" id="tx-sub-category" class="input-field w-full mt-2 text-sm" placeholder="תת קטגוריה..." value="${existingData?.subCategory || ''}">
                     </div>
                 </div>
 
                 <div id="amount-input-container" class="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                    <label class="lbl text-lg text-slate-700">סכום (בש"ח)</label>
-                    <input type="text" id="tx-amount" class="input-field w-full text-3xl font-bold text-center tracking-wider text-slate-800" value="${existingData?.amount || ''}" placeholder="0" required>
+                    <label class="lbl text-lg text-slate-700">סכום או ערך (הערה)</label>
+                    <input type="text" id="tx-amount" class="input-field w-full text-3xl font-bold text-center tracking-wider text-slate-800" value="${existingData?.amount || ''}" placeholder="סכום בש״ח או טקסט" required>
                 </div>
 
                 <div class="bg-slate-50 p-4 rounded-xl border">
-                    <label class="lbl">שיוך ${type==='income'?'הכנסה':'הוצאה'}</label>
+                    <label class="lbl">שיוך</label>
                     <div class="flex gap-4 mb-3">
                         <label class="cursor-pointer flex items-center gap-2 bg-white px-3 py-1 rounded border hover:bg-gray-50"><input type="radio" name="tx-src" value="none" ${(!existingData?.studentId && !existingData?.donorId)?'checked':''} onclick="document.getElementById('src-select-area').classList.add('hidden')"> כללי</label>
                         <label class="cursor-pointer flex items-center gap-2 bg-white px-3 py-1 rounded border hover:bg-gray-50"><input type="radio" name="tx-src" value="student" ${existingData?.studentId?'checked':''} onclick="document.getElementById('src-select-area').classList.remove('hidden'); document.getElementById('sel-student').classList.remove('hidden'); document.getElementById('sel-donor').classList.add('hidden')"> בחור</label>
@@ -522,7 +680,7 @@ const Finance = {
                 </div>
 
                 <div>
-                    <label class="lbl">תיאור / הערות</label>
+                    <label class="lbl">תיאור / פירוט</label>
                     <textarea id="tx-desc" class="input-field w-full h-24" placeholder="פירוט נוסף...">${existingData?.desc || ''}</textarea>
                 </div>
 
@@ -533,28 +691,27 @@ const Finance = {
             </div>
         `;
         
-        // שימוש במודל רחב יותר (max-w-2xl)
         Modal.renderRaw(existingData ? 'עריכת תנועה' : (type === 'income' ? 'הוספת הכנסה' : 'הוספת הוצאה'), html, () => {
             const srcType = document.querySelector('input[name="tx-src"]:checked').value;
             let studentId = null, donorId = null;
             if(srcType === 'student') studentId = document.getElementById('sel-student').value;
             if(srcType === 'donor') donorId = document.getElementById('sel-donor').value;
             
-            let amount = document.getElementById('tx-amount').value;
-            if(!amount) return alert('חובה להזין סכום או ערך');
+            let rawVal = document.getElementById('tx-amount').value;
+            if(!rawVal) return alert('חובה להזין סכום או ערך');
             
-            let isNote = false;
-            if (!isNaN(parseFloat(amount))) amount = parseFloat(amount);
-            else isNote = true;
+            let amount = parseFloat(rawVal);
+            const isTextNow = isNaN(amount);
             
             const dVal = document.getElementById('tx-date').value;
             const timestamp = dVal ? new Date(dVal + 'T12:00:00').getTime() : Date.now();
 
             const id = existingData ? existingData.id : ('tx' + Date.now());
             const newData = {
-                id, date: timestamp, type,
-                amount: amount,
+                id, date: timestamp, type: isTextNow ? 'note' : type,
+                amount: isTextNow ? rawVal : amount,
                 category: document.getElementById('tx-category').value,
+                subCategory: document.getElementById('tx-sub-category').value.trim(),
                 desc: document.getElementById('tx-desc').value,
                 isPurim: document.getElementById('tx-purim').checked,
                 studentId, donorId
@@ -562,18 +719,24 @@ const Finance = {
             
             OfflineManager.write(`years/${Store.currentYear}/finance/${id}`, newData, existingData ? 'update' : 'set');
             
-            if(OfflineManager.isOnline && !isNote && !existingData) {
-                db.ref(`years/${Store.currentYear}/stats/${type}`).transaction(curr => (curr || 0) + amount);
+            if(OfflineManager.isOnline) {
+                if (existingData && !isNote) db.ref(`years/${Store.currentYear}/stats/${type}`).transaction(curr => (curr || 0) - existingData.amount);
+                if (!isTextNow) db.ref(`years/${Store.currentYear}/stats/${type}`).transaction(curr => (curr || 0) + amount);
             }
             
             Notify.show('נשמר בהצלחה', 'success');
             Modal.close();
-        }, 'max-w-3xl w-full'); // Passing explicit width
+            
+            if (document.getElementById('finance-purim-view') && !document.getElementById('finance-purim-view').classList.contains('hidden')) {
+                setTimeout(() => this.renderPurimManager(), 300);
+            }
+        }, 'max-w-3xl w-full'); 
         
         if(existingData?.studentId) document.getElementById('sel-student').value = existingData.studentId;
         if(existingData?.donorId) document.getElementById('sel-donor').value = existingData.donorId;
     },
 
+    // 19 מחיקת תנועה (3)
     deleteTx(id, type, amountVal) {
         if(confirm('למחוק תנועה זו?')) {
             OfflineManager.write(`years/${Store.currentYear}/finance/${id}`, null, 'remove');
@@ -582,6 +745,10 @@ const Finance = {
                 db.ref(`years/${Store.currentYear}/stats/${type}`).transaction(curr => (curr || 0) - amount);
             }
             Notify.show('תנועה נמחקה', 'info');
+            
+            if (document.getElementById('finance-purim-view') && !document.getElementById('finance-purim-view').classList.contains('hidden')) {
+                setTimeout(() => this.renderPurimManager(), 300);
+            }
         }
     }
 };
