@@ -3,7 +3,7 @@ const HybridAI = {
     mode: 'offline',
     keyTimer: null,
     TIMEOUT_MS: 15 * 60 * 1000, 
-    currentAttachment: null, // שומר קובץ שמצורף לצ'אט
+    currentAttachment: null, 
 
     // 2 אתחול
     init() {
@@ -50,14 +50,14 @@ const HybridAI = {
         `;
     },
 
-    // 5 קריאת קובץ המפתח (חווית הפתיחה)
+    // 5 קריאת קובץ המפתח
     handleKeyFileUpload(input) {
         const file = input.files[0];
         if (!file) return;
         const reader = new FileReader();
         reader.onload = (e) => {
             const keyText = e.target.result.trim();
-            if (keyText.length > 20) { // בדיקה בסיסית שאכן יש טקסט שנראה כמו מפתח
+            if (keyText.length > 20) { 
                 localStorage.setItem('gemini_manual_key', keyText);
                 document.getElementById('ai-messages').innerHTML = `
                     <div class="text-center py-10 fade-in">
@@ -67,7 +67,7 @@ const HybridAI = {
                 `;
                 setTimeout(() => {
                     document.getElementById('ai-messages').innerHTML = '';
-                    if(this.checkApiKey()) this.addMsg("התחברתי בהצלחה! אני יכול לקרוא קבצי PDF, תמונות, ולעדכן נתונים במערכת. במה אפשר לעזור?", 'ai');
+                    if(this.checkApiKey()) this.addMsg("התחברתי בהצלחה! אני יכול לקרוא קבצי נתונים, תמונות, ולעדכן נתונים במערכת. במה אפשר לעזור?", 'ai');
                 }, 1500);
             } else {
                 alert("הקובץ לא נראה כמו מפתח תקין.");
@@ -92,7 +92,7 @@ const HybridAI = {
         const dot = document.getElementById('ai-status-dot');
         const text = document.getElementById('ai-status-text');
         if (dot) dot.className = "w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse shadow-lg";
-        if (text) text.innerText = "פעיל (Gemini Pro)";
+        if (text) text.innerText = "פעיל (Gemini AI)";
     },
 
     setOffline(reason) {
@@ -109,14 +109,14 @@ const HybridAI = {
         else this.setOffline("אין חיבור רשת");
     },
 
-    // 7 ניהול קבצים מצורפים לצ'אט (PDF/תמונות)
+    // 7 ניהול קבצים מצורפים לצ'אט
     handleFileUpload(input) {
         const file = input.files[0];
         if (!file) return;
         
         const reader = new FileReader();
         reader.onload = (e) => {
-            const base64Data = e.target.result.split(',')[1]; // מנקה את ה-header
+            const base64Data = e.target.result.split(',')[1]; 
             this.currentAttachment = {
                 mime_type: file.type,
                 data: base64Data,
@@ -163,7 +163,6 @@ const HybridAI = {
                 const dbAction = JSON.parse(dbMatch[1].trim());
                 const actionId = 'db-act-' + Date.now();
                 
-                // שומר את הנתונים בזיכרון זמני בחלון (Data Attribute)
                 const safeData = encodeURIComponent(JSON.stringify(dbAction));
 
                 const approveCard = `
@@ -185,7 +184,6 @@ const HybridAI = {
             }
         }
 
-        // ניווט ודוחות (רגיל)
         const routeMatch = responseHtml.match(/\[ROUTE:(.*?)\]/);
         if (routeMatch) {
             Router.go(routeMatch[1]);
@@ -202,6 +200,18 @@ const HybridAI = {
             responseHtml = responseHtml.replace(reportMatch[0], `<div class="mt-3"><button onclick="Reports.openEditor('visual'); Reports.updateTitle('${title}');" class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-2 rounded-lg font-bold text-xs shadow-md"><i class="fas fa-magic"></i> פתח את העורך שהכנתי לך</button></div>`);
         }
 
+        if (responseHtml.includes('[ACTION:IMPORT_EXCEL]')) {
+            responseHtml = responseHtml.replace('[ACTION:IMPORT_EXCEL]', `
+                <div class="mt-3 bg-green-50 border border-green-200 p-2 rounded-lg">
+                    <p class="text-xs text-green-800 mb-2 font-bold">מערכת הייבוא מוכנה. מה תרצה לעשות?</p>
+                    <div class="flex gap-2">
+                        <button onclick="Importer.init('students')" class="flex-1 bg-green-600 text-white p-1.5 rounded text-xs">ייבוא לבחורים</button>
+                        <button onclick="Importer.init('donors')" class="flex-1 bg-teal-600 text-white p-1.5 rounded text-xs">ייבוא לתורמים</button>
+                    </div>
+                </div>
+            `);
+        }
+
         return responseHtml.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
     },
 
@@ -210,14 +220,12 @@ const HybridAI = {
         try {
             const dbAction = JSON.parse(decodeURIComponent(encodedData));
             
-            // שימוש במערכת האופליין שלנו לשמירה נקיה!
             OfflineManager.write(dbAction.path, System.cleanObject(dbAction.data), dbAction.type || 'set');
             
             document.getElementById(elementId).innerHTML = `<div class="bg-emerald-100 text-emerald-800 p-2 rounded text-xs font-bold text-center w-full"><i class="fas fa-check-circle"></i> נשמר בהצלחה במסד הנתונים!</div>`;
             
-            // רענון מסכים אם צריך
-            if (dbAction.path.includes('students')) Students.render();
-            if (dbAction.path.includes('donors')) Donors.render();
+            if (dbAction.path.includes('students') && Router.current === 'students') Students.render();
+            if (dbAction.path.includes('donors') && Router.current === 'donors') Donors.render();
             if (dbAction.path.includes('finance') && window.Finance) Finance.loadMore(true);
 
         } catch (e) {
@@ -225,7 +233,7 @@ const HybridAI = {
         }
     },
 
-    // 11 תקשורת מול גוגל (יודע לשלוח קבצים מצורפים)
+    // 11 תקשורת מול גוגל (עדכון ל-gemini-2.5-flash)
     async send() {
         const inp = document.getElementById('ai-input');
         const text = inp.value.trim();
@@ -244,7 +252,7 @@ const HybridAI = {
             return;
         }
 
-        this.addMsg('<i class="fas fa-spinner fa-spin text-indigo-500"></i> חושב ומנתח נתונים...', 'ai');
+        this.addMsg('<i class="fas fa-spinner fa-spin text-indigo-500"></i> מנתח נתונים...', 'ai');
         
         try {
             const sysInstruction = `
@@ -252,9 +260,9 @@ const HybridAI = {
             Current screen: ${Router.current}. Current Hebrew Year: ${Store.currentYear}.
             
             ABILITIES & RULES:
-            1. You can read images and PDFs sent by the user. If they upload a file, extract its details.
+            1. You can read images, PDFs, and any file sent by the user. Extract its details if asked.
             2. If the user asks you to ADD or UPDATE a student, donor, or finance transaction, you MUST respond with a JSON block. 
-               Format exactly like this (do not put quotes around the tags):
+               Format exactly like this:
                [DB_UPDATE]
                {
                  "path": "global/students/NEW_ID_OR_EXISTING",
@@ -267,11 +275,11 @@ const HybridAI = {
             3. If the user asks you to update data but crucial info is missing (like what Shiur), ASK THEM FIRST.
             4. Speak ONLY in Hebrew. Be concise.
             5. UI Navigation: Use [ROUTE:page_name] to move screens.
+            6. Excel Import: Use [ACTION:IMPORT_EXCEL] to open the import tool.
             `;
 
             let key = localStorage.getItem('gemini_manual_key') || window.GEMINI_API_KEY;
 
-            // בניית הבקשה ל-API (יודע לקבל טקסט + קובץ)
             const requestBody = {
                 system_instruction: { parts: { text: sysInstruction } },
                 contents: [{ parts: [] }]
@@ -287,13 +295,13 @@ const HybridAI = {
                 });
             }
 
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
+            // עדכון המודל הנכון (2.5 תומך בבטא ללא שגיאות)
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(requestBody)
             });
 
-            // מנקה את התוסף אחרי השליחה
             if (this.currentAttachment) this.clearAttachment();
 
             const data = await response.json();
@@ -310,7 +318,7 @@ const HybridAI = {
                 throw new Error(data.error.message);
             }
             
-            const rawReply = data.candidates?.[0]?.content?.parts?.[0]?.text || "לא הצלחתי לגבש תשובה.";
+            const rawReply = data.candidates?.[0]?.content?.parts?.[0]?.text || "בוצעה פעולה (ללא מלל).";
             const finalHtml = this.executeAICommand(rawReply);
             this.addMsg(finalHtml, 'ai');
 
