@@ -1,5 +1,6 @@
+// 1 ניהול מצב המערכת
 const Store = {
-    currentYear: getHebrewYear(),
+    currentYear: getHebrewYear(), // getHebrewYear(utils.js)
     user: null,
     role: 'user',
     data: {
@@ -13,7 +14,10 @@ const Store = {
     cursors: { students: null, donors: null, finance: null },
     loadedAll: { students: false, donors: false },
 
+    // 2 אתחול ראשי (2)
     init() {
+        this.cleanOldCaches(); // סעיף 2: ניקוי זיכרון מיותר
+        
         const cachedStudents = OfflineManager.loadState('students');
         const cachedDonors = OfflineManager.loadState('donors');
         
@@ -38,17 +42,34 @@ const Store = {
         this.loadGroups();
     },
 
+    // 3 ניקוי מטמון מיותר (2)
+    cleanOldCaches() {
+        // סעיף 2: שומר רק נתונים בסיסיים, אם יש זיכרון ישן מאוד - הוא נמחק.
+        // נתונים של שנים קודמות נמשכים רק לפי דרישה בדוחות ולא נשמרים במטמון.
+        try {
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('cache_year_') && key !== `cache_year_${this.currentYear}`) {
+                    keysToRemove.push(key);
+                }
+            }
+            keysToRemove.forEach(k => localStorage.removeItem(k));
+        } catch(e) { console.warn("Clean cache failed:", e); }
+    },
+
+    // 4 טעינת סטטיסטיקות קופה
     loadStats() {
         if (Store.role === 'user') return; 
         const ref = db.ref(`years/${this.currentYear}/stats`);
-        ListenerManager.add(ref, 'value', s => {
+        ListenerManager.add(ref, 'value', s => { // ListenerManager(utils.js)
             this.data.stats = s.val() || { income: 0, expense: 0 };
             if(Router.current === 'dashboard') Dashboard.render();
         });
     },
     
+    // 5 טעינת קבוצות לשנה הנוכחית (9)
     loadGroups() {
-        // טעינת קבוצות
         const refGroups = db.ref(`years/${this.currentYear}/groups`);
         ListenerManager.add(refGroups, 'value', snap => {
             if(!this.data.yearData[this.currentYear]) this.data.yearData[this.currentYear] = {};
@@ -66,19 +87,19 @@ const Store = {
                 });
             });
             
-            UI.updateIfVisible('groups');
+            UI.updateIfVisible('groups'); // UI(utils.js) סעיף 7
             if(Router.current === 'donors') Donors.render(); 
         });
 
-        // טעינת הנתונים האישיים של הבחורים (יעדים אישיים) כדי שישמרו ברענון
         const refStudents = db.ref(`years/${this.currentYear}/studentData`);
         ListenerManager.add(refStudents, 'value', snap => {
             if(!this.data.yearData[this.currentYear]) this.data.yearData[this.currentYear] = {};
             this.data.yearData[this.currentYear].students = snap.val() || {};
-            if(Router.current === 'students') Students.render();
+            if(Router.current === 'students') Students.render(); // סעיף 7
         });
     },
 
+    // 6 טעינת הגדרות מערכת
     loadConfig() {
         const ref = db.ref('settings');
         ListenerManager.add(ref, 'value', s => {
@@ -88,24 +109,25 @@ const Store = {
                  Settings.renderFieldsEditor();
                  Settings.renderVouchers();
             }
-            System.toggleAI(this.data.config.enableAI);
+            System.toggleAI(this.data.config.enableAI); // System(utils.js)
         });
     },
 
+    // 7 טעינה מלאה להדפסות (9)
     async ensureAllLoaded(types = ['students', 'donors']) {
         if (!Array.isArray(types)) types = [types];
         
         for (const type of types) {
             if (this.loadedAll[type]) continue;
 
-            Notify.show(`טוען את כל ה-${type === 'students' ? 'בחורים' : 'תורמים'} להדפסה/ייצוא...`, 'info');
+            Notify.show(`טוען את כל ה-${type === 'students' ? 'בחורים' : 'תורמים'} להדפסה...`, 'info');
             
             while (!this.loadedAll[type]) {
                 if (type === 'students') await Students.loadMore();
                 else if (type === 'donors') await Donors.loadMore();
             }
         }
-        Notify.show('כל הנתונים נטענו בהצלחה', 'success');
+        Notify.show('הנתונים נטענו בהצלחה', 'success');
     }
 };
 

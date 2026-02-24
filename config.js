@@ -1,3 +1,4 @@
+// 1 הגדרות התחברות לפיירבייס
 const firebaseConfig = {
     apiKey: "AIzaSyBRunXdWIFiP8-vZao0WZ6WxItMAUt-ORY",
     authDomain: "ezer--project.firebaseapp.com",
@@ -8,6 +9,7 @@ const firebaseConfig = {
     appId: "1:838086109276:web:201babf8b31c39a0cc9e99"
 };
 
+// 2 אתחול פיירבייס (1)
 if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
@@ -16,12 +18,14 @@ const db = firebase.database();
 const auth = firebase.auth();
 auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
 
+// 3 נתוני יסוד למערכת
 const SHIURIM_ORDER = ['שיעור א', 'שיעור ב', 'שיעור ג', 'קיבוץ א', 'קיבוץ ב', 'קיבוץ ג', 'קיבוץ ד', 'קיבוץ ה', 'קיבוץ ו', 'קיבוץ ז', 'קיבוץ ח'];
 const HEBREW_YEARS_MAPPING = {
     'תש״פ': '5780', 'תשפ״א': '5781', 'תשפ״ב': '5782', 'תשפ״ג': '5783', 
-    'תשפ״ד': '5784', 'תשפ״ה': '5785', 'תשפ״ו': '5786', 'תשפ״ז': '5787'
+    'תשפ״ד': '5784', 'תשפ״ה': '5785', 'תשפ״ו': '5786', 'תשפ״ז': '5787', 'תשפ״ח': '5788'
 };
 
+// 4 הגדרות שדות דינמיים
 const PREDEFINED_FIELDS = {
     students: [
         {k:'firstName', l:'שם פרטי', t:'text', r:true},
@@ -63,6 +67,5 @@ window.HEBREW_YEARS_MAPPING = HEBREW_YEARS_MAPPING;
 window.PREDEFINED_FIELDS = PREDEFINED_FIELDS;
 window.DEFAULT_ACTIVE_FIELDS = DEFAULT_ACTIVE_FIELDS;
 
-// --- מפתח AI שיוזרק  על ידי גיטהאב ---
-
+// 5 מפתח גיטהאב נסתר (יוחלף בתהליך בניה, או יעקף ע"י מפתח ידני)
 window.GEMINI_API_KEY = "__GEMINI_KEY_PLACEHOLDER__";

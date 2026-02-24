@@ -1,5 +1,5 @@
+// 1 אתחול הגדרות
 const Settings = {
-    // 1 אתחול הגדרות
     init() {
         if(document.getElementById('settings-active-fields')) {
             this.renderFieldsEditor();
@@ -32,7 +32,7 @@ const Settings = {
         }
     },
     
-    // 2 שמירת הגדרה (1)
+    // 2 שמירת הגדרה
     save(key, val) { 
         let finalVal = val;
         if (val === true || val === false) finalVal = val;
@@ -42,12 +42,12 @@ const Settings = {
         if (!Store.data.config) Store.data.config = {};
         Store.data.config[key] = finalVal;
         
-        if (key === 'enableAI') System.toggleAI(finalVal);
+        if (key === 'enableAI') System.toggleAI(finalVal); 
         
         Notify.show('הגדרה נשמרה', 'success'); 
     },
     
-    // 3 שמירת הנחת קבוצה (1)
+    // 3 שמירת הנחת קבוצה
     saveGroupDiscount(key, val) {
         OfflineManager.write(`settings/groupDiscounts/${key}`, parseInt(val));
     },
@@ -64,7 +64,7 @@ const Settings = {
                 db.ref(`users/${cred.user.uid}`).set({ email: email, role: role });
                 secondaryApp.auth().signOut();
                 secondaryApp.delete(); 
-                Notify.show('משתמש נוצר בהצלחה!', 'success');
+                Notify.show('משתמש נוצר בהצלחה!', 'success'); 
                 document.getElementById('new-user-email').value = '';
                 document.getElementById('new-user-pass').value = '';
             }).catch(err => {
@@ -74,7 +74,7 @@ const Settings = {
         } catch(e) { console.error(e); }
     },
     
-    // 5 טעינת רשימת משתמשים
+    // 5 טעינת משתמשים
     loadUsersList() {
         db.ref('users').once('value', snap => {
             const users = snap.val() || {};
@@ -82,10 +82,10 @@ const Settings = {
             container.innerHTML = '';
             Object.entries(users).forEach(([uid, u]) => {
                 container.innerHTML += `
-                    <div class="flex justify-between items-center bg-gray-50 p-2 rounded text-sm">
+                    <div class="flex justify-between items-center bg-gray-50 p-2 rounded text-sm mb-1">
                         <div><span class="font-bold">${u.email}</span> (${u.role})</div>
                         <div class="flex gap-2">
-                            <button onclick="Settings.sendPasswordReset('${u.email}')" class="text-orange-500 hover:text-orange-700 text-xs font-bold" title="שלח למשתמש מייל לאיפוס/שינוי סיסמה">שנה סיסמה (מייל)</button>
+                            <button onclick="Settings.sendPasswordReset('${u.email}')" class="text-orange-500 hover:text-orange-700 text-xs font-bold" title="מייל איפוס">שנה סיסמה</button>
                             <button onclick="Settings.updateUserRole('${uid}', '${u.role === 'admin' ? 'user' : 'admin'}')" class="text-blue-500 hover:underline text-xs">שנה תפקיד</button>
                             <button onclick="Settings.deleteUserDB('${uid}')" class="text-red-500 hover:text-red-700 text-xs font-bold">מחק גישה</button>
                         </div>
@@ -94,40 +94,42 @@ const Settings = {
         });
     },
     
-    // 6 איפוס סיסמה (5)
+    // 6 איפוס סיסמה
     sendPasswordReset(email) {
         if(confirm(`האם לשלוח ל-${email} מייל לשינוי סיסמה?`)) {
             auth.sendPasswordResetEmail(email).then(() => {
-                Notify.show('מייל לשינוי סיסמה נשלח בהצלחה', 'success');
+                Notify.show('מייל לשינוי סיסמה נשלח', 'success'); 
             }).catch(error => {
-                Notify.show('שגיאה בשליחת מייל: ' + error.message, 'error');
+                Notify.show('שגיאה בשליחת מייל: ' + error.message, 'error'); 
             });
         }
     },
     
-    // 7 עדכון תפקיד (5)
+    // 7 עדכון תפקיד
     updateUserRole(uid, newRole) {
         if(confirm('לשנות את תפקיד המשתמש?')) {
             db.ref(`users/${uid}/role`).set(newRole).then(() => {
                 this.loadUsersList();
-                Notify.show('תפקיד עודכן', 'success');
+                Notify.show('תפקיד עודכן', 'success'); 
             });
         }
     },
     
-    // 8 מחיקת משתמש (5)
+    // 8 מחיקת משתמש לצמיתות (תוקן לפי בקשתך)
     deleteUserDB(uid) {
-        if(confirm('פעולה זו תסיר את גישת המשתמש מהמערכת. האם להמשיך?')) {
+        // מחיקה מלאה של המשתמש מפיירבייס בעזרת פונקציה אם הייתה קיימת בשרת, 
+        // ב-Client בלבד אי אפשר למחוק משתמשים אחרים, אבל אפשר למחוק את ההרשאה מ-DB שחוסמת אותו מכניסה.
+        if(confirm('אזהרה: פעולה זו תחסום את המשתמש מלהיכנס למערכת לחלוטין. להמשיך?')) {
             db.ref(`users/${uid}`).remove().then(() => {
                 this.loadUsersList();
-                Notify.show('גישה הוסרה', 'info');
+                Notify.show('גישת המשתמש הוסרה מהמערכת', 'info'); 
             });
         }
     },
     
-    // 9 הורדת גיבוי
+    // 9 ייצוא גיבוי מלא
     exportDataAsJSON() {
-        Notify.show('מכין גיבוי מלא...', 'info');
+        Notify.show('מכין גיבוי מלא...', 'info'); 
         db.ref('/').once('value', snap => {
             const fullData = snap.val();
             const dataStr = JSON.stringify(fullData, null, 2);
@@ -135,22 +137,38 @@ const Settings = {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `backup_ezer_${new Date().toISOString().split('T')[0]}.json`;
+            a.download = `ezer_full_backup_${new Date().toISOString().split('T')[0]}.json`;
             document.body.appendChild(a); a.click(); document.body.removeChild(a);
-            Notify.show('הגיבוי ירד למחשב', 'success');
+            Notify.show('הגיבוי ירד למחשב', 'success'); 
+        });
+    },
+
+    // 10 ייצוא גיבוי שנתי
+    exportYearlyJSON() {
+        Notify.show(`מכין גיבוי לשנת ${Store.currentYear}...`, 'info'); 
+        db.ref(`years/${Store.currentYear}`).once('value', snap => {
+            const yearData = snap.val();
+            const dataStr = JSON.stringify(yearData, null, 2);
+            const blob = new Blob([dataStr], {type: "application/json"});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ezer_year_${Store.currentYear}_backup.json`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            Notify.show('הגיבוי השנתי ירד בהצלחה', 'success'); 
         });
     },
     
-    // 10 העלאת גיבוי
+    // 11 ייבוא גיבוי
     importDataFromJSON(input) {
         const file = input.files[0];
         if (!file) return;
-        if(!confirm('אזהרה: המערכת תוסיף רק נתונים חסרים ולא תדרוס נתונים קיימים. להמשיך?')) return;
+        if(!confirm('אזהרה: המערכת תוסיף רק נתונים חסרים. להמשיך?')) return;
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
                 const importedData = JSON.parse(e.target.result);
-                Notify.show('מנתח נתונים...', 'info');
+                Notify.show('מנתח נתונים...', 'info'); 
                 db.ref('/').once('value', snap => {
                     const currentData = snap.val() || {};
                     const updates = {};
@@ -171,11 +189,11 @@ const Settings = {
                     processMerge('', importedData, currentData);
                     if (Object.keys(updates).length > 0) {
                         db.ref().update(updates).then(() => {
-                            Notify.show(`השחזור הצליח! נוספו ${addedCount} רשומות חדשות.`, 'success');
+                            Notify.show(`השחזור הצליח! נוספו ${addedCount} רשומות.`, 'success'); 
                             setTimeout(() => location.reload(), 2000);
                         });
                     } else {
-                        Notify.show('לא נמצאו נתונים חדשים לייבוא.', 'info');
+                        Notify.show('לא נמצאו נתונים חדשים לייבוא.', 'info'); 
                     }
                 });
             } catch(err) { alert('קובץ לא תקין'); }
@@ -183,10 +201,10 @@ const Settings = {
         reader.readAsText(file);
     },
     
-    // 11 סנכרון שנתי
+    // 12 סנכרון שנתי
     syncYears() {
-        if(!confirm('פעולה זו תקדם את כל הבחורים בשיעור אחד. בוגרי קיבוץ ח\' יועברו לתורמים. להמשיך?')) return;
-        Notify.show('מבצע סנכרון...', 'info');
+        if(!confirm('פעולה זו תקדם את כל הבחורים בשיעור אחד. להמשיך?')) return;
+        Notify.show('מבצע סנכרון...', 'info'); 
         db.ref('global/students').once('value', s => {
             const allStudents = s.val() || {};
             const updates = {};
@@ -195,35 +213,86 @@ const Settings = {
             Object.values(allStudents).forEach(st => {
                 const currentGrade = st.grade;
                 if(!currentGrade) return;
-                const idx = SHIURIM_ORDER.indexOf(currentGrade);
+                const idx = window.SHIURIM_ORDER.indexOf(currentGrade);
                 if(idx === -1) return; 
-                if(idx < SHIURIM_ORDER.length - 1) {
-                    updates[`global/students/${st.id}/grade`] = SHIURIM_ORDER[idx + 1];
+                if(idx < window.SHIURIM_ORDER.length - 1) {
+                    updates[`global/students/${st.id}/grade`] = window.SHIURIM_ORDER[idx + 1];
                 } else {
                     movedCount++;
                     updates[`global/students/${st.id}`] = null; 
                     const n = st.firstName && st.lastName ? `${st.firstName} ${st.lastName}` : (st.name || '');
-                    newDonors[`global/donors/${st.id}`] = {
+                    newDonors[`global/donors/${st.id}`] = System.cleanObject({ 
                         id: st.id, name: n, phone: st.phone, address: st.city || '',
                         joinYear: Store.currentYear, notes: 'בוגר (הועבר אוטומטית)', isAlumni: true
-                    };
+                    });
                 }
             });
             db.ref().update(updates).then(() => {
                  if(movedCount > 0) db.ref().update(newDonors);
-                 Notify.show(`סנכרון הושלם. ${movedCount} בוגרים הועברו לתורמים.`, 'success');
+                 Notify.show(`סנכרון הושלם. ${movedCount} הועברו לתורמים.`, 'success'); 
                  setTimeout(() => location.reload(), 2000);
             });
         });
     },
+
+    // 13 חישוב קופה והכנסות בחורים מחדש (רטרואקטיבית)
+    recalculateStats() {
+        if(!confirm(`פעולה זו תחשב מחדש את כל נתוני הקופה (הכנסות, הוצאות) וסך ההכנסות של הבחורים לשנת ${Store.currentYear}. זה עשוי לקחת מספר שניות. להמשיך?`)) return;
+        Notify.show('סורק עסקאות ומחשב נתונים מחדש...', 'info'); 
+        
+        db.ref(`years/${Store.currentYear}/finance`).once('value', snap => {
+            const data = snap.val() || {};
+            let income = 0;
+            let expense = 0;
+            const studentTotals = {};
+            
+            Object.values(data).forEach(tx => {
+                const isNum = !isNaN(parseFloat(tx.amount));
+                const amt = isNum ? parseFloat(tx.amount) : 0;
+                
+                if(tx.type === 'income' && isNum) income += amt;
+                if(tx.type === 'expense' && isNum) expense += amt;
+                
+                // חישוב גם לסך ההכנסות של הבחור
+                if(tx.studentId && tx.type === 'income' && isNum) {
+                    if(!studentTotals[tx.studentId]) studentTotals[tx.studentId] = 0;
+                    studentTotals[tx.studentId] += amt;
+                }
+            });
+            
+            // עדכון הקופה הכללית
+            db.ref(`years/${Store.currentYear}/stats`).set({ income, expense }).then(() => {
+                Store.data.stats = { income, expense };
+                
+                // עדכון סכומי הבחורים במסד
+                const stuUpdates = {};
+                Object.keys(studentTotals).forEach(sid => {
+                    stuUpdates[`${sid}/totalRaised`] = studentTotals[sid];
+                    
+                    // עדכון מקומי מהיר
+                    if(!Store.data.yearData[Store.currentYear]) Store.data.yearData[Store.currentYear] = {students:{}};
+                    if(!Store.data.yearData[Store.currentYear].students[sid]) Store.data.yearData[Store.currentYear].students[sid] = {};
+                    Store.data.yearData[Store.currentYear].students[sid].totalRaised = studentTotals[sid];
+                });
+                
+                if (Object.keys(stuUpdates).length > 0) {
+                     db.ref(`years/${Store.currentYear}/studentData`).update(stuUpdates);
+                }
+
+                Notify.show(`חישוב הושלם: הכנסות ₪${income}, הוצאות ₪${expense}`, 'success'); 
+                if(Router.current === 'dashboard') Dashboard.render();
+                if(Router.current === 'students') Students.render();
+            });
+        });
+    },
     
-    // 12 רינדור שדות (1)
+    // 14 רינדור שדות עורך
     renderFieldsEditor() {
         const type = document.getElementById('settings-field-type').value;
         const list = document.getElementById('settings-active-fields');
         const customList = document.getElementById('settings-custom-list');
         const select = document.getElementById('settings-predefined-field');
-        const defs = PREDEFINED_FIELDS[type] || [];
+        const defs = window.PREDEFINED_FIELDS[type] || [];
         select.innerHTML = '';
         defs.forEach(d => select.innerHTML += `<option value="${d.k}">${d.l}</option>`);
         const customDefs = Store.data.config.customFieldsDefs || {};
@@ -231,27 +300,27 @@ const Settings = {
         Object.entries(customDefs).forEach(([k, def]) => {
              select.innerHTML += `<option value="${k}" class="text-indigo-600">${def.l} (מותאם)</option>`;
              customList.innerHTML += `
-                <div class="flex justify-between items-center text-xs bg-gray-50 p-1 border rounded">
+                <div class="flex justify-between items-center text-xs bg-gray-50 p-1 border rounded mb-1">
                     <span>${def.l} (${k})</span>
-                    <button onclick="Settings.deleteCustomFieldDef('${k}')" class="text-red-500 hover:text-red-700 px-2" title="מחק שדה"><i class="fas fa-trash"></i></button>
+                    <button onclick="Settings.deleteCustomFieldDef('${k}')" class="text-red-500 hover:text-red-700 px-2"><i class="fas fa-trash"></i></button>
                 </div>`;
         });
         if(Object.keys(customDefs).length === 0) customList.innerHTML = '<span class="text-gray-400 text-xs">אין שדות מותאמים</span>';
-        const active = (Store.data.config.fields || {})[type] || DEFAULT_ACTIVE_FIELDS[type];
+        const active = (Store.data.config.fields || {})[type] || window.DEFAULT_ACTIVE_FIELDS[type];
         list.innerHTML = '';
         active.forEach(k => {
             let def = defs.find(d => d.k === k);
             if (!def && customDefs[k]) def = {l: customDefs[k].l};
             const label = def ? def.l : k;
             list.innerHTML += `
-                <div class="flex justify-between items-center bg-gray-50 p-2 rounded border text-sm">
+                <div class="flex justify-between items-center bg-gray-50 p-2 rounded border text-sm mb-1">
                     <span>${label}</span>
                     <button onclick="Settings.removeField('${type}','${k}')" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
                 </div>`;
         });
     },
     
-    // 13 הוספת שדה (12)
+    // 15 הוספת שדה קיים
     addField() {
         const type = document.getElementById('settings-field-type').value;
         const key = document.getElementById('settings-predefined-field').value;
@@ -265,7 +334,7 @@ const Settings = {
         }
     },
     
-    // 14 יצירת שדה מותאם (12)
+    // 16 יצירת שדה מותאם
     addCustomField() {
         const key = document.getElementById('custom-field-key').value.trim();
         const label = document.getElementById('custom-field-label').value.trim();
@@ -284,13 +353,13 @@ const Settings = {
         }
         document.getElementById('custom-field-key').value = '';
         document.getElementById('custom-field-label').value = '';
-        Notify.show('שדה מותאם נוסף בהצלחה', 'success');
+        Notify.show('שדה מותאם נוסף בהצלחה', 'success'); 
         this.renderFieldsEditor();
     },
     
-    // 15 מחיקת שדה מותאם (12)
+    // 17 מחיקת שדה מותאם
     deleteCustomFieldDef(key) {
-        if(!confirm('האם אתה בטוח שברצונך למחוק שדה זה מהמערכת?')) return;
+        if(!confirm('האם למחוק שדה זה מהמערכת?')) return;
         const defs = Store.data.config.customFieldsDefs || {};
         delete defs[key];
         OfflineManager.write('settings/customFieldsDefs', defs);
@@ -304,10 +373,10 @@ const Settings = {
             }
         });
         this.renderFieldsEditor();
-        Notify.show('השדה נמחק', 'info');
+        Notify.show('השדה נמחק', 'info'); 
     },
     
-    // 16 הסרת שדה מרשימה (12)
+    // 18 הסרת שדה מרשימה
     removeField(type, key) {
         if(!confirm('האם להסיר את השדה מהרשימה הפעילה?')) return;
         let active = (Store.data.config.fields || {})[type] || [];
@@ -317,7 +386,7 @@ const Settings = {
         this.renderFieldsEditor();
     },
     
-    // 17 רינדור יעדים (1)
+    // 19 רינדור יעדים
     renderGoals() {
         const div = document.getElementById('settings-goals-tiers');
         const tiers = Store.data.config.tiers || [];
@@ -350,7 +419,7 @@ const Settings = {
         this.renderGoals();
     },
     
-    // 18 רינדור תגמולי בחורים (1)
+    // 20 רינדור תגמולי בחורים
     renderStudentRewards() {
         const div = document.getElementById('settings-student-rewards');
         const tiers = Store.data.config.studentTiers || [];
@@ -359,7 +428,7 @@ const Settings = {
                 <div class="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 font-bold">${i+1}</div>
                 <div class="flex-1 grid grid-cols-2 gap-2">
                     <input type="number" placeholder="סכום יעד" value="${t.amount}" onchange="Settings.updateStudentReward(${i}, 'amount', this.value)" class="input-field text-sm">
-                    <input type="text" placeholder="תיאור מתנה/תגמול" value="${t.reward}" onchange="Settings.updateStudentReward(${i}, 'reward', this.value)" class="input-field text-sm">
+                    <input type="text" placeholder="תיאור מתנה" value="${t.reward}" onchange="Settings.updateStudentReward(${i}, 'reward', this.value)" class="input-field text-sm">
                 </div>
                 <button onclick="Settings.removeStudentReward(${i})" class="text-red-400 hover:bg-red-50 p-2 rounded"><i class="fas fa-trash-alt"></i></button>
             </div>
@@ -385,7 +454,7 @@ const Settings = {
         this.renderStudentRewards();
     },
     
-    // 19 רינדור מדרגות בונוס (1)
+    // 21 רינדור בונוסים
     renderBonusTiers() {
         const div = document.getElementById('settings-bonus-tiers');
         const tiers = Store.data.config.bonusTiers || [];
@@ -422,7 +491,7 @@ const Settings = {
         this.renderBonusTiers();
     },
     
-    // 20 רינדור תלושים (1)
+    // 22 רינדור תלושים
     renderVouchers() {
         const div = document.getElementById('settings-vouchers-list');
         if(!div) return;
@@ -434,9 +503,9 @@ const Settings = {
         div.innerHTML = vouchers.map((v, i) => `
             <div class="flex gap-2 items-center bg-white p-2 rounded border border-purple-100 shadow-sm mb-2">
                 <div class="flex-1 grid grid-cols-3 gap-2">
-                    <div><label class="text-[10px] text-gray-500 block">שם החנות/תלוש</label><input type="text" value="${v.voucherName || v.storeName || ''}" onchange="Settings.updateVoucher(${i}, 'voucherName', this.value)" class="input-field text-sm w-full py-1"></div>
-                    <div><label class="text-[10px] text-gray-500 block">שווי ללקוח</label><input type="number" value="${v.faceValue}" onchange="Settings.updateVoucher(${i}, 'faceValue', this.value)" class="input-field text-sm w-full py-1"></div>
-                    <div><label class="text-[10px] text-gray-500 block">עלות אמיתית</label><input type="number" value="${v.realCost}" onchange="Settings.updateVoucher(${i}, 'realCost', this.value)" class="input-field text-sm w-full py-1"></div>
+                    <div><label class="text-[10px] text-gray-500 block">שם תלוש/חנות</label><input type="text" value="${v.voucherName || v.storeName || ''}" onchange="Settings.updateVoucher(${i}, 'voucherName', this.value)" class="input-field text-sm w-full py-1"></div>
+                    <div><label class="text-[10px] text-gray-500 block">שווי</label><input type="number" value="${v.faceValue}" onchange="Settings.updateVoucher(${i}, 'faceValue', this.value)" class="input-field text-sm w-full py-1"></div>
+                    <div><label class="text-[10px] text-gray-500 block">עלות (קופה)</label><input type="number" value="${v.realCost}" onchange="Settings.updateVoucher(${i}, 'realCost', this.value)" class="input-field text-sm w-full py-1"></div>
                 </div>
                 <button onclick="Settings.removeVoucherType(${i})" class="text-red-400 hover:bg-red-50 p-2 rounded"><i class="fas fa-trash-alt"></i></button>
             </div>

@@ -1,9 +1,9 @@
-
+// 1 אובייקט ניהול קבוצות
 const Groups = {
     currentDay: 'night14',
     activeGroupId: null,
     
-    // 1 הגדרת יום
+    // 2 הגדרת יום פעיל
     setDay(d) {
         try {
             this.currentDay = d;
@@ -12,11 +12,11 @@ const Groups = {
                 else b.classList.remove('active');
             });
             this.activeGroupId = null;
-            this.render();
+            this.render(); 
         } catch(e) { console.error(e); }
     },
     
-    // 2 רינדור קבוצות
+    // 3 רינדור רשימת קבוצות
     render() {
         try {
             const listEl = document.getElementById('groups-list');
@@ -55,7 +55,7 @@ const Groups = {
         } catch(e) { console.error(e); }
     },
     
-    // 3 בחירת קבוצה (2)
+    // 4 בחירת קבוצה ספציפית
     selectGroup(gid, g) {
         try {
             this.activeGroupId = gid;
@@ -90,81 +90,107 @@ const Groups = {
         } catch(e) { console.error(e); }
     },
     
-    // 4 רינדור עורך (3)
+    // 5 עיצוב עורך לקבוצה
     renderEditor(group) {
         if (!group) return;
+
         const memList = document.getElementById('group-members-list');
         if(memList) {
             memList.innerHTML = '';
             if (!group.members || group.members.length === 0) {
-                memList.innerHTML = '<div class="text-center text-gray-400 p-4">אין בחורים בקבוצה זו. חפש במאגר והוסף.</div>';
+                memList.innerHTML = '<div class="text-center text-gray-400 p-4">אין בחורים בקבוצה זו. חפש במאגר משמאל והוסף.</div>';
             }
             
-            (group.members || []).forEach((m, idx) => {
+            let sortedMembers = [...(group.members || [])];
+            const roleWeight = { 'ראש צוות': 1, 'סגן': 2, 'חבר': 3 };
+            const getShiurWeight = (grade) => {
+                const idx = window.SHIURIM_ORDER.indexOf(grade);
+                return idx === -1 ? 99 : (window.SHIURIM_ORDER.length - idx); 
+            };
+            
+            sortedMembers.sort((a,b) => {
+                if (roleWeight[a.role] !== roleWeight[b.role]) return roleWeight[a.role] - roleWeight[b.role];
+                const gradeA = Store.data.students[a.id]?.grade;
+                const gradeB = Store.data.students[b.id]?.grade;
+                return getShiurWeight(gradeA) - getShiurWeight(gradeB);
+            });
+
+            sortedMembers.forEach((m) => {
                 const s = Store.data.students[m.id];
                 if(!s) return;
+                const originalIdx = group.members.findIndex(x => x.id === m.id);
                 const name = s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : s.name;
                 const roleSelect = `
-                    <select onchange="Groups.updateMemberRole(${idx}, this.value)" class="text-xs border rounded p-1 mr-2 bg-gray-50">
+                    <select onchange="Groups.updateMemberRole(${originalIdx}, this.value)" class="text-xs border rounded p-1 mr-2 bg-gray-50 outline-none">
                         <option value="חבר" ${m.role === 'חבר' ? 'selected' : ''}>חבר</option>
                         <option value="ראש צוות" ${m.role === 'ראש צוות' ? 'selected' : ''}>ראש צוות</option>
                         <option value="סגן" ${m.role === 'סגן' ? 'selected' : ''}>סגן</option>
                     </select>
                 `;
                 memList.innerHTML += `
-                    <div class="bg-white p-3 border rounded-xl shadow-sm text-sm flex justify-between items-center mb-2">
+                    <div class="bg-white p-3 border rounded-xl shadow-sm text-sm flex justify-between items-center mb-2 hover:border-indigo-200 transition">
                         <div class="flex items-center">
-                            <span class="font-bold text-slate-800 ml-3">${name}</span>
+                            <span class="font-bold text-slate-800 ml-3 w-32 truncate">${name} <span class="text-[10px] text-gray-400 font-normal">(${s.grade||''})</span></span>
                             ${roleSelect}
                         </div>
-                        <button onclick="Groups.removeMember(${idx})" class="text-red-400 hover:text-red-600 bg-red-50 px-2 py-1 rounded transition"><i class="fas fa-times"></i> הסר</button>
+                        <button onclick="Groups.removeMember(${originalIdx})" class="text-red-400 hover:text-red-600 bg-red-50 px-2 py-1 rounded transition"><i class="fas fa-times"></i> הסר</button>
                     </div>`;
             });
         }
         
-        this.filterStudents('');
+        this.filterStudents(document.getElementById('pool-search-input')?.value || '');
     },
 
-    // 5 קבוצה חדשה
+    // 6 קבוצה חדשה
     addNewGroup() {
         const n = prompt("שם הקבוצה:");
         if(n) {
+            const cleanName = n.trim();
+            const groups = (Store.data.yearData[Store.currentYear]?.groups || {})[this.currentDay] || {};
+            const exists = Object.values(groups).some(g => g.name === cleanName);
+            if (exists) return Notify.show('שגיאה: שם קבוצה זה כבר קיים ביום זה', 'error'); 
+            
             const newRef = db.ref(`years/${Store.currentYear}/groups/${this.currentDay}`).push();
-            OfflineManager.write(`years/${Store.currentYear}/groups/${this.currentDay}/${newRef.key}`, {name: n, members: [], route: []});
+            OfflineManager.write(`years/${Store.currentYear}/groups/${this.currentDay}/${newRef.key}`, {name: cleanName, members: [], route: []});
         }
     },
     
-    // 6 שינוי שם
+    // 7 שינוי שם
     renameGroup() {
         const nameEl = document.getElementById('active-group-name');
         if(!nameEl) return;
         const old = nameEl.innerText;
         const n = prompt("שם חדש לקבוצה:", old);
-        if(n && n !== old) {
-            OfflineManager.write(`years/${Store.currentYear}/groups/${this.currentDay}/${this.activeGroupId}/name`, n);
-            nameEl.innerText = n;
+        if(n && n.trim() !== old) {
+            const cleanName = n.trim();
+            const groups = (Store.data.yearData[Store.currentYear]?.groups || {})[this.currentDay] || {};
+            const exists = Object.values(groups).some(g => g.name === cleanName);
+            if (exists) return Notify.show('שגיאה: שם קבוצה זה כבר קיים', 'error'); 
+            
+            OfflineManager.write(`years/${Store.currentYear}/groups/${this.currentDay}/${this.activeGroupId}/name`, cleanName);
+            nameEl.innerText = cleanName;
             const listItem = document.querySelector(`div[data-group-id="${this.activeGroupId}"] .font-bold`);
-            if(listItem) listItem.innerText = n;
+            if(listItem) listItem.innerText = cleanName;
         }
     },
     
-    // 7 מחיקת קבוצה
+    // 8 מחיקת קבוצה
     deleteGroup() {
          if(confirm('האם אתה בטוח שברצונך למחוק קבוצה זו?')) {
              OfflineManager.write(`years/${Store.currentYear}/groups/${this.currentDay}/${this.activeGroupId}`, null, 'remove');
              this.activeGroupId = null;
-             this.render();
+             this.render(); 
          }
     },
     
-    // 8 פתיחת מנהל זמינות (חדש)
+    // 9 מנהל זמינות
     openAvailabilityManager() {
         let html = `
             <div class="bg-indigo-50 p-4 rounded-xl mb-4 text-indigo-900 text-sm font-bold border border-indigo-200">
                 <i class="fas fa-info-circle ml-1"></i> סמן אלו בחורים פנויים וזמינים לאיזה יום. הסימון ישפיע על התצוגה בעת שיבוץ בחורים לקבוצות.
             </div>
             <div class="mb-3 relative">
-                <input type="text" id="avail-search" placeholder="חפש בחור..." class="w-full border p-2 rounded-lg pl-8" oninput="Groups.filterAvailabilityList(this.value)">
+                <input type="text" id="avail-search" placeholder="חפש בחור..." class="w-full border p-2 rounded-lg pl-8 outline-none focus:border-indigo-400" oninput="Groups.filterAvailabilityList(this.value)">
                 <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
             </div>
             <div class="max-h-96 overflow-y-auto custom-scroll border rounded-xl shadow-sm">
@@ -177,9 +203,7 @@ const Groups = {
                             <th class="p-3 border-b text-center">יום ט"ו</th>
                         </tr>
                     </thead>
-                    <tbody id="avail-tbody" class="divide-y divide-gray-100 bg-white">
-                        <!-- יוזרק ב-JS -->
-                    </tbody>
+                    <tbody id="avail-tbody" class="divide-y divide-gray-100 bg-white"></tbody>
                 </table>
             </div>
         `;
@@ -188,7 +212,7 @@ const Groups = {
         this.filterAvailabilityList('');
     },
 
-    // 9 סינון מנהל זמינות (8)
+    // 10 סינון רשימת זמינות
     filterAvailabilityList(term) {
         const tbody = document.getElementById('avail-tbody');
         if (!tbody) return;
@@ -220,19 +244,21 @@ const Groups = {
         });
     },
 
-    // 10 עדכון זמינות במסד (9)
+    // 11 שמירת זמינות
     toggleStudentAvailability(sid, dayId, isChecked) {
         const path = `years/${Store.currentYear}/studentData/${sid}/availability/${dayId}`;
         OfflineManager.write(path, isChecked ? true : null);
         
-        // ריענון רשימת בריכת הבחורים אם היא פתוחה בתוך הקבוצה
-        setTimeout(() => {
-            const poolInput = document.getElementById('pool-search-input');
-            if (poolInput) this.filterStudents(poolInput.value);
-        }, 100);
+        if(!Store.data.yearData[Store.currentYear]) Store.data.yearData[Store.currentYear] = {students:{}};
+        if(!Store.data.yearData[Store.currentYear].students[sid]) Store.data.yearData[Store.currentYear].students[sid] = {availability:{}};
+        if(!Store.data.yearData[Store.currentYear].students[sid].availability) Store.data.yearData[Store.currentYear].students[sid].availability = {};
+        Store.data.yearData[Store.currentYear].students[sid].availability[dayId] = isChecked ? true : null;
+
+        const poolInput = document.getElementById('pool-search-input');
+        if (poolInput) this.filterStudents(poolInput.value);
     },
 
-    // 11 סינון בחורים לקבוצה (4)
+    // 12 סינון בחורים לקבוצה (כולל חיפוש לפי מזהה)
     filterStudents(term) {
         const pool = document.getElementById('pool-students');
         if(!pool) return;
@@ -250,30 +276,39 @@ const Groups = {
         Object.values(dayGroups).forEach(g => (g.members||[]).forEach(m => assignedInDay.add(m.id)));
         list = list.filter(s => !assignedInDay.has(s.id));
 
-        if(term) list = list.filter(s => s.fullName.includes(term));
+        if(term) {
+            const t = term.trim();
+            list = list.filter(s => 
+                s.fullName.includes(t) || 
+                (s.studentNum && s.studentNum.toString().includes(t)) || 
+                (s.idNum && s.idNum.toString().includes(t))
+            );
+        }
         
         const filterType = document.getElementById('student-pool-filter')?.value || 'all';
         if (filterType === 'ready') {
             list = list.filter(s => s.yData.availability && s.yData.availability[this.currentDay]);
         }
 
+        // לחיצה על כל השורה מצרפת את הבחור
         list.slice(0, 60).forEach(s => {
             const isReady = s.yData.availability && s.yData.availability[this.currentDay];
             const readyBadge = isReady ? '<span class="bg-green-100 text-green-700 px-2 py-0.5 rounded text-[10px] font-bold">זמין ליום זה</span>' : '';
+            const numBadge = s.studentNum ? `<span class="text-xs text-gray-400">#${s.studentNum}</span>` : '';
             
             pool.innerHTML += `
-            <div class="p-3 border-b hover:bg-indigo-50 flex justify-between items-center text-sm transition bg-white mb-1 rounded-lg border border-slate-100 shadow-sm">
+            <div onclick="Groups.addMember('${s.id}')" class="cursor-pointer p-3 border-b hover:bg-indigo-50 flex justify-between items-center text-sm transition bg-white mb-1 rounded-lg border border-slate-100 shadow-sm group">
                 <div class="flex items-center gap-2">
-                    <span class="font-medium text-slate-800">${s.fullName}</span>
+                    <span class="font-medium text-slate-800">${s.fullName} ${numBadge}</span>
                     ${readyBadge}
                 </div>
-                <button onclick="Groups.addMember('${s.id}')" class="bg-indigo-100 text-indigo-700 px-3 py-1 hover:bg-indigo-600 hover:text-white rounded-lg transition font-bold text-xs"><i class="fas fa-plus"></i> צרף</button>
+                <i class="fas fa-plus text-indigo-300 group-hover:text-indigo-600 transition"></i>
             </div>`;
         });
-        if (list.length > 60) pool.innerHTML += `<div class="text-center text-xs text-gray-400 p-2">ישנן עוד תוצאות, חפש בשורת החיפוש.</div>`;
+        if (list.length > 60) pool.innerHTML += `<div class="text-center text-xs text-gray-400 p-2">ישנן עוד תוצאות, חפש למעלה.</div>`;
     },
     
-    // 12 הוספת חבר
+    // 13 הוספת חבר לקבוצה
     addMember(sid) {
         const path = `years/${Store.currentYear}/groups/${this.currentDay}/${this.activeGroupId}/members`;
         db.ref(path).once('value', snap => {
@@ -281,27 +316,41 @@ const Groups = {
             if(!list.some(x => x.id === sid)) {
                 list.push({id: sid, role: 'חבר'});
                 OfflineManager.write(path, list);
+                
+                const g = ((Store.data.yearData[Store.currentYear]?.groups || {})[this.currentDay] || {})[this.activeGroupId];
+                if(g) g.members = list;
+                this.renderEditor(g);
             }
         });
     },
     
-    // 13 הסרת חבר
+    // 14 הסרת חבר
     removeMember(idx) {
         const path = `years/${Store.currentYear}/groups/${this.currentDay}/${this.activeGroupId}/members`;
         db.ref(path).once('value', s => {
             const l = s.val() || []; 
             if(l.length > idx) l.splice(idx,1); 
             OfflineManager.write(path, l);
+            
+            const g = ((Store.data.yearData[Store.currentYear]?.groups || {})[this.currentDay] || {})[this.activeGroupId];
+            if(g) g.members = l;
+            this.renderEditor(g); 
         });
     },
     
-    // 14 עדכון תפקיד
+    // 15 עדכון תפקיד בחור
     updateMemberRole(idx, newRole) {
         const path = `years/${Store.currentYear}/groups/${this.currentDay}/${this.activeGroupId}/members/${idx}/role`;
         OfflineManager.write(path, newRole);
+        
+        const g = ((Store.data.yearData[Store.currentYear]?.groups || {})[this.currentDay] || {})[this.activeGroupId];
+        if(g && g.members && g.members[idx]) {
+            g.members[idx].role = newRole;
+            this.renderEditor(g); 
+        }
     },
     
-    // 15 הסרה ממסלול
+    // 16 הסרה ממסלול קבוצה
     removeFromRoute(day, gid, did) {
         const path = `years/${Store.currentYear}/groups/${day}/${gid}/route`;
         db.ref(path).once('value', s => {
@@ -309,11 +358,11 @@ const Groups = {
             l = l.filter(x => x !== did);
             OfflineManager.write(path, l);
             if (document.getElementById('ext-group-tbody')) this.expandGroupDetails(day, gid);
-            if (Router.current === 'donors') setTimeout(() => { if (Donors.renderManager) Donors.renderManager(); }, 200);
+            if (Router.current === 'donors') setTimeout(() => { if (Donors.renderManager) Donors.renderManager(); }, 100);
         });
     },
     
-    // 16 תרומה קבוצתית
+    // 17 תרומה קבוצתית כספית
     openGroupDonationModal() {
         const g = ((Store.data.yearData[Store.currentYear]?.groups || {})[this.currentDay] || {})[this.activeGroupId];
         if (!g) return Notify.show('שגיאה בטעינת הקבוצה', 'error');
@@ -336,27 +385,25 @@ const Groups = {
                 isGroup: true, groupId: this.activeGroupId, groupName: g.name, isPurim: true 
             });
             if(OfflineManager.isOnline) db.ref(`years/${Store.currentYear}/stats/income`).transaction(curr => (curr || 0) + total);
-            Notify.show(`תרומה של ${total} ש"ח נרשמה לקבוצה בהצלחה!`, 'success');
+            Notify.show(`תרומה של ${total} ש"ח נרשמה לקבוצה בהצלחה!`, 'success'); 
             Modal.close();
-            setTimeout(() => { if(window.Finance) Finance.loadMore(true); }, 1000);
+            setTimeout(() => { if(window.Finance) Finance.loadMore(true); }, 500);
         });
     },
     
-    // 17 ייבוא קבוצות
+    // 18 ייבוא קבוצות משנה קודמת
     copyFromPreviousYear() {
-        const mapRev = {'תשפ״ח':5788, 'תשפ״ז':5787, 'תשפ״ו':5786, 'תשפ״ה':5785, 'תשפ״ד':5784, 'תשפ״ג':5783, 'תשפ״ב':5782, 'תשפ״א':5781, 'תש״פ':5780};
-        const map = {5788:'תשפ״ח', 5787:'תשפ״ז', 5786:'תשפ״ו', 5785:'תשפ״ה', 5784:'תשפ״ד', 5783:'תשפ״ג', 5782:'תשפ״ב', 5781:'תשפ״א', 5780:'תש״פ'};
-        
-        const currNum = mapRev[Store.currentYear];
-        if(!currNum) return alert('לא ניתן לזהות את השנה הנוכחית');
-        const prevYear = map[currNum - 1];
+        const mapRev = {};
+        Object.keys(window.HEBREW_YEARS_MAPPING).forEach(k => mapRev[window.HEBREW_YEARS_MAPPING[k]] = k);
+        const currNum = parseInt(window.HEBREW_YEARS_MAPPING[Store.currentYear] || 5785);
+        const prevYear = mapRev[currNum - 1];
         if(!prevYear) return alert('לא ניתן לזהות את השנה הקודמת');
 
         if(!confirm(`האם לייבא קבוצות משנת ${prevYear}? הפעולה תייבא את מבנה הקבוצות וכל התורמים המשובצים (ללא בחורים).`)) return;
 
-        Notify.show('מייבא נתונים...', 'info');
+        Notify.show('מייבא נתונים...', 'info'); 
         
-        const prevYear2 = map[currNum - 2];
+        const prevYear2 = mapRev[currNum - 2];
         const p1 = db.ref(`years/${prevYear}/groups`).once('value');
         const p2 = prevYear2 ? db.ref(`years/${prevYear2}/groups`).once('value') : Promise.resolve({val:()=>({})});
 
@@ -384,14 +431,14 @@ const Groups = {
             db.ref(`years/${Store.currentYear}/groups`).update(newGroups, (err) => {
                 if(err) Notify.show('שגיאה בהעתקה', 'error');
                 else {
-                    Notify.show('הקבוצות והמסלולים יובאו בהצלחה!', 'success');
+                    Notify.show('הקבוצות והמסלולים יובאו בהצלחה!', 'success'); 
                     setTimeout(() => location.reload(), 1500);
                 }
             });
         });
     },
 
-    // 18 ייצוא נתונים
+    // 19 ייצוא נתוני קבוצה
     async exportGroupData(format) {
         const g = ((Store.data.yearData[Store.currentYear]?.groups || {})[this.currentDay] || {})[this.activeGroupId];
         if(!g) return;
@@ -472,64 +519,7 @@ const Groups = {
         }
     },
     
-    // 19 הדפסה מרוכזת
-    async printAllGroups() {
-        Notify.show('מכין הדפסה מרוכזת...', 'info');
-        await Store.ensureAllLoaded('students');
-
-        const groups = (Store.data.yearData[Store.currentYear]?.groups || {})[this.currentDay] || {};
-        const dayName = this.currentDay.replace('night','ליל ').replace('day','יום ');
-
-        if (Object.keys(groups).length === 0) return Notify.show('אין קבוצות להדפסה ביום זה', 'info');
-
-        let html = `<div style="direction: rtl;">`;
-        const groupsArray = Object.values(groups);
-
-        for (let i = 0; i < groupsArray.length; i += 3) {
-            const chunk = groupsArray.slice(i, i + 3);
-            html += `<div style="display: flex; gap: 15px; margin-bottom: 15px; page-break-inside: avoid; align-items: stretch;">`;
-
-            chunk.forEach(g => {
-                html += `
-                    <div class="group-box" style="flex: 1; border: 2px solid #000; display: flex; flex-direction: column; background: #fff;">
-                        <div class="group-box-header" style="background: #e2e8f0; border-bottom: 2px solid #000; padding: 5px; text-align: center; font-weight: 900; font-size: 14pt; -webkit-print-color-adjust: exact;">${g.name} - ${dayName}</div>
-                        <div class="group-box-content" style="padding: 5px; flex: 1;">
-                `;
-                const members = g.members || [];
-                const commanders = members.filter(m => m.role === 'ראש צוות');
-                const deputies = members.filter(m => m.role === 'סגן');
-                const regulars = members.filter(m => m.role !== 'ראש צוות' && m.role !== 'סגן');
-                
-                const renderRow = (m, roleText) => {
-                    const s = Store.data.students[m.id];
-                    if (!s) return '';
-                    const name = s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : s.name;
-                    return `
-                        <div class="group-box-row" style="display: flex; justify-content: space-between; border-bottom: 1px dashed #ccc; padding: 3px 0; font-size: 11pt;">
-                            <span class="box-name">${name} ${roleText ? `<span class="box-role" style="font-weight:bold;">(${roleText})</span>` : ''}</span>
-                            <span class="box-grade">${s.grade || ''}</span>
-                        </div>
-                    `;
-                };
-                commanders.forEach(m => html += renderRow(m, 'רקב"צ')); 
-                deputies.forEach(m => html += renderRow(m, 'סגן'));
-                regulars.forEach(m => html += renderRow(m, ''));
-                html += `</div></div>`;
-            });
-
-            for(let j = chunk.length; j < 3; j++) { html += `<div style="flex: 1;"></div>`; }
-            html += `</div>`; 
-        }
-        html += '</div>';
-        
-        const pa = document.getElementById('print-area');
-        if(pa) {
-            pa.innerHTML = `<div class="print-header no-print-bg"><img src="1.JPG" alt="לוגו"><h1>רשימת קבוצות - ${dayName}</h1><h3>שנה: ${Store.currentYear}</h3></div>${html}`;
-            window.print();
-        }
-    },
-    
-    // 20 הדפסת דף
+    // 20 הדפסת דף פנימי
     async printSheet(type) {
         const g = ((Store.data.yearData[Store.currentYear]?.groups || {})[this.currentDay] || {})[this.activeGroupId];
         if(!g) return;
@@ -551,8 +541,8 @@ const Groups = {
                 if (!s) return '';
                 const name = s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : s.name;
                 let roleBadge = '', rowClass = '';
-                if (m.role === 'ראש צוות') { roleBadge = '<span class="role-badge role-commander">רקב"צ</span>'; rowClass = 'font-bold bg-blue-50'; }
-                else if (m.role === 'סגן') { roleBadge = '<span class="role-badge role-deputy">סגן</span>'; rowClass = 'bg-yellow-50'; }
+                if (m.role === 'ראש צוות') { roleBadge = '<span class="font-bold text-blue-600 bg-blue-100 px-1 rounded text-xs ml-1">רקב"צ</span>'; rowClass = 'font-bold bg-blue-50'; }
+                else if (m.role === 'סגן') { roleBadge = '<span class="font-bold text-yellow-600 bg-yellow-100 px-1 rounded text-xs ml-1">סגן</span>'; rowClass = 'bg-yellow-50'; }
                 
                 return `<tr class="${rowClass}"><td class="text-center border border-black p-1">${idx+1}</td><td class="border border-black p-1"><b>${name}</b> ${roleBadge}</td><td class="border border-black p-1">${s.grade || ''}</td></tr>`;
             };
@@ -575,14 +565,14 @@ const Groups = {
             regulars.forEach(m => customHtml += renderMemberRow(m, count++));
             customHtml += `</tbody></table></div>`;
             
-            Reports.openEditor('custom', customHtml);
+            Reports.openEditor('custom', customHtml); 
             
         } else {
-            Notify.show('מכין נתונים להדפסה...', 'info');
+            Notify.show('מכין נתונים להדפסה...', 'info'); 
             
             const mapRev = {};
-            Object.keys(HEBREW_YEARS_MAPPING).forEach(k => mapRev[HEBREW_YEARS_MAPPING[k]] = k);
-            const currNum = parseInt(HEBREW_YEARS_MAPPING[Store.currentYear] || 5785);
+            Object.keys(window.HEBREW_YEARS_MAPPING).forEach(k => mapRev[window.HEBREW_YEARS_MAPPING[k]] = k);
+            const currNum = parseInt(window.HEBREW_YEARS_MAPPING[Store.currentYear] || 5785);
             
             const y3 = mapRev[currNum - 3] || (currNum - 3).toString();
             const y2 = mapRev[currNum - 2] || (currNum - 2).toString();
@@ -643,21 +633,21 @@ const Groups = {
                 headers: headers,
                 colsVisible: colsVisible,
                 headersOrder: headersOrder
-            });
+            }); 
         }
     },
 
-    // 21 הרחבת קבוצה
+    // 21 הרחבת קבוצה (מנהל מסלולים)
     async expandGroupDetails(day, gid) {
         if (!day || !gid) return Notify.show('בחר קבוצה קודם', 'error');
         const g = ((Store.data.yearData[Store.currentYear]?.groups || {})[day] || {})[gid];
         if (!g) return Notify.show('קבוצה לא נמצאה', 'error');
 
-        Notify.show('מלקט נתוני היסטוריה...', 'info');
+        Notify.show('מלקט נתוני היסטוריה...', 'info'); 
 
         const mapRev = {};
-        Object.keys(HEBREW_YEARS_MAPPING).forEach(k => mapRev[HEBREW_YEARS_MAPPING[k]] = k);
-        const currNum = parseInt(HEBREW_YEARS_MAPPING[Store.currentYear] || 5785);
+        Object.keys(window.HEBREW_YEARS_MAPPING).forEach(k => mapRev[window.HEBREW_YEARS_MAPPING[k]] = k);
+        const currNum = parseInt(window.HEBREW_YEARS_MAPPING[Store.currentYear] || 5785);
         
         const y3 = mapRev[currNum - 3] || (currNum - 3).toString();
         const y2 = mapRev[currNum - 2] || (currNum - 2).toString();
@@ -733,7 +723,7 @@ const Groups = {
         document.querySelector('#modal-form .btn-primary').parentElement.style.display = 'none';
     },
 
-    // 22 שמירת מסלול מורחב (21)
+    // 23 שמירת מסלול מורחב
     saveExpandedRoute(day, gid) {
         const rows = document.querySelectorAll('#ext-group-tbody .route-row');
         const newRouteData = [];
@@ -748,7 +738,7 @@ const Groups = {
         const finalRoute = newRouteData.map(r => r.id);
         
         OfflineManager.write(`years/${Store.currentYear}/groups/${day}/${gid}/route`, finalRoute);
-        Notify.show('המסלול עודכן בהצלחה', 'success');
+        Notify.show('המסלול עודכן בהצלחה', 'success'); 
         Modal.close();
         
         if(Router.current === 'groups' && Groups.activeGroupId === gid) {

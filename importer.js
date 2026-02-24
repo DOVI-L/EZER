@@ -1,10 +1,8 @@
-// 1 מנהל ייבוא
+// 1 מערכת ייבוא נתונים
 const Importer = {
-    currentType: null,
-    fileData: null,
-    pendingImport: [],
+    currentType: null, fileData: null, pendingImport: [],
 
-    // 2 אתחול מערכת (1)
+    // 2 תפריט בחירת ייבוא
     init(type) {
         this.pendingImport = [];
         if (type === 'students') {
@@ -22,12 +20,10 @@ const Importer = {
             `;
             Modal.renderRaw('בחר סוג יבוא', html, () => {});
             document.querySelector('#modal-form .btn-primary').parentElement.style.display = 'none';
-        } else {
-            this.startImport(type);
-        }
+        } else { this.startImport(type); }
     },
     
-    // 3 בחירת קובץ (1)
+    // 3 הפעלת דיאלוג קובץ
     startImport(type) {
         this.currentType = type; 
         Modal.close();
@@ -35,10 +31,10 @@ const Importer = {
             const input = document.getElementById('excel-upload-input');
             input.value = '';
             input.click();
-        }, 300);
+        }, 100);
     },
     
-    // 4 קריאת קובץ (1)
+    // 4 קריאת אקסל
     handleFileSelect(input) {
         const file = input.files[0];
         if (!file) return;
@@ -54,14 +50,14 @@ const Importer = {
         reader.readAsArrayBuffer(file);
     },
     
-    // 5 מיפוי שדות (1)
+    // 5 מסך מיפוי עמודות
     openMappingModal() {
         const excelHeaders = Object.keys(this.fileData[0]);
         let systemFields = [];
         let isDonationImport = false;
 
-        if (this.currentType === 'students_new') systemFields = PREDEFINED_FIELDS.students;
-        else if (this.currentType === 'donors') { systemFields = PREDEFINED_FIELDS.donors; isDonationImport = true; }
+        if (this.currentType === 'students_new') systemFields = window.PREDEFINED_FIELDS.students;
+        else if (this.currentType === 'donors') { systemFields = window.PREDEFINED_FIELDS.donors; isDonationImport = true; }
         else if (this.currentType === 'students_donations') {
             systemFields = [
                 {k:'studentNum', l:'מספר מזהה (ת.ז / פנימי)', t:'text', r:true},
@@ -75,9 +71,7 @@ const Importer = {
         const customDefs = Store.data.config.customFieldsDefs || {};
         const allFields = [...systemFields];
         if (this.currentType !== 'students_donations') {
-            Object.entries(customDefs).forEach(([k, def]) => {
-                 if(!allFields.find(f => f.k === k)) allFields.push({k:k, l:def.l});
-            });
+            Object.entries(customDefs).forEach(([k, def]) => { if(!allFields.find(f => f.k === k)) allFields.push({k:k, l:def.l}); });
         }
 
         let html = `<div dir="rtl" class="text-right">`;
@@ -114,8 +108,11 @@ const Importer = {
             html += `<div class="grid grid-cols-2 gap-4 items-center mb-2"><div class="text-sm font-bold">${field.l} ${field.r ? '*' : ''}</div><select id="map-${field.k}" class="border rounded p-1 w-full text-sm bg-white shadow-sm">${options}</select></div>`;
         });
 
+        // פונקציית נרמול לזיהוי שנים ללא גרשיים
+        const normalizeStr = (str) => String(str).replace(/["'״׳]/g, '').trim();
+
         if (isDonationImport) {
-            html += `<div class="mt-4 pt-4 border-t border-dashed border-gray-400"><h4 class="font-bold mb-2 text-indigo-700"><i class="fas fa-history ml-1"></i> יבוא תרומות / היסטוריה (דינמי)</h4><p class="text-xs text-gray-600 mb-4 bg-gray-50 p-2 rounded border">בחר "עמודת תאריך" ו"עמודת סכום", המערכת תזהה את התאריך והשעה, תמיר לשנה העברית ותשייך לתיקייה הנכונה.</p>`;
+            html += `<div class="mt-4 pt-4 border-t border-dashed border-gray-400"><h4 class="font-bold mb-2 text-indigo-700"><i class="fas fa-history ml-1"></i> יבוא תרומות / היסטוריה (דינמי)</h4>`;
             
             let dateOptions = `<option value="">-- ללא זיהוי דינמי --</option>`;
             excelHeaders.forEach(header => {
@@ -126,18 +123,18 @@ const Importer = {
             
             let amountOptions = `<option value="">-- בחר עמודת סכום --</option>`;
             excelHeaders.forEach(header => { amountOptions += `<option value="${header}">${header}</option>`; });
-            html += `<div class="grid grid-cols-2 gap-4 items-center mb-4 pb-4 border-b border-gray-200"><div class="text-sm font-bold text-indigo-800">עמודת סכום (אם נבחר תאריך)</div><select id="map-finance-amount-general" class="border border-indigo-300 rounded p-1 w-full text-sm bg-indigo-50">${amountOptions}</select></div>`;
+            html += `<div class="grid grid-cols-2 gap-4 items-center mb-4 pb-4 border-b border-gray-200"><div class="text-sm font-bold text-indigo-800">עמודת סכום</div><select id="map-finance-amount-general" class="border border-indigo-300 rounded p-1 w-full text-sm bg-indigo-50">${amountOptions}</select></div>`;
 
-            html += `<p class="text-xs text-gray-500 mb-2"><b>או</b> שייך עמודות באופן ידני לפי שנה עברית ספציפית:</p><div class="space-y-1">`;
+            html += `<p class="text-xs text-gray-500 mb-2"><b>או</b> שייך עמודות ידנית לפי שנה עברית (המערכת מתעלמת מגרשיים):</p><div class="space-y-1">`;
             
-            const years = Object.keys(HEBREW_YEARS_MAPPING);
+            const years = Object.keys(window.HEBREW_YEARS_MAPPING);
             if(!years.includes(Store.currentYear)) years.push(Store.currentYear);
             
             years.forEach(hYear => {
-                const numYear = HEBREW_YEARS_MAPPING[hYear] || hYear; 
+                const numYear = window.HEBREW_YEARS_MAPPING[hYear] || hYear; 
                 let options = `<option value="">-- ללא יבוא --</option>`;
                 excelHeaders.forEach(header => {
-                    const isMatch = header.includes(hYear) || header.includes(String(numYear)); 
+                    const isMatch = normalizeStr(header).includes(normalizeStr(hYear)) || normalizeStr(header).includes(String(numYear)); 
                     options += `<option value="${header}" ${isMatch ? 'selected' : ''}>${header}</option>`;
                 });
                 html += `<div class="grid grid-cols-2 gap-4 items-center bg-gray-50 p-1 rounded"><div class="text-xs font-bold text-gray-700">תרומות ${hYear}</div><select id="map-finance-${numYear}" class="border rounded p-1 w-full text-xs bg-white history-selector" data-hyear="${hYear}">${options}</select></div>`;
@@ -147,18 +144,17 @@ const Importer = {
         html += `</div>`; 
 
         const customBtn = `<button onclick="Importer.executeImport()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold mt-4 shadow-lg hover:bg-indigo-700">המשך לעיבוד ותצוגה מקדימה</button>`;
-        Modal.renderRaw(`יבוא נתונים מאקסל - הגדרת שדות`, html + customBtn, () => {}, 'max-w-2xl');
+        Modal.renderRaw(`יבוא נתונים מאקסל`, html + customBtn, () => {}, 'max-w-2xl');
         document.querySelector('#modal-form .btn-primary').parentElement.style.display = 'none';
     },
     
-    // 6 עיבוד נתונים (1)
+    // 6 עיבוד מקומי ויצירת תצוגה מקדימה
     executeImport() {
-        const mapping = {};
-        const historyMapping = {};
+        const mapping = {}; const historyMapping = {};
         let fieldsToCheck = [];
         
-        if (this.currentType === 'students_new') fieldsToCheck = PREDEFINED_FIELDS.students;
-        else if (this.currentType === 'donors') fieldsToCheck = PREDEFINED_FIELDS.donors;
+        if (this.currentType === 'students_new') fieldsToCheck = window.PREDEFINED_FIELDS.students;
+        else if (this.currentType === 'donors') fieldsToCheck = window.PREDEFINED_FIELDS.donors;
         else fieldsToCheck = [{k:'studentNum'},{k:'firstName'},{k:'lastName'},{k:'fullName'}];
 
         if (this.currentType !== 'students_donations') {
@@ -171,15 +167,12 @@ const Importer = {
             if(el && el.value) mapping[f.k] = el.value;
         });
 
-        // איסוף מדוייק של שנות היסטוריה מהשדות הידניים
-        const years = Object.keys(HEBREW_YEARS_MAPPING);
+        const years = Object.keys(window.HEBREW_YEARS_MAPPING);
         if(!years.includes(Store.currentYear)) years.push(Store.currentYear);
         years.forEach(hYear => {
-            const numYear = HEBREW_YEARS_MAPPING[hYear] || hYear;
+            const numYear = window.HEBREW_YEARS_MAPPING[hYear] || hYear;
             const selectEl = document.getElementById(`map-finance-${numYear}`);
-            if (selectEl && selectEl.value) {
-                historyMapping[hYear] = selectEl.value; 
-            }
+            if (selectEl && selectEl.value) historyMapping[hYear] = selectEl.value; 
         });
 
         const dateCol = document.getElementById('map-finance-date')?.value;
@@ -192,18 +185,16 @@ const Importer = {
 
         const selectedGroup = document.getElementById('import-donor-group') ? document.getElementById('import-donor-group').value : null;
         
-        Notify.show('מעבד נתונים ומכין תצוגה מקדימה...', 'info');
+        Notify.show('מעבד נתונים...', 'info');
         const dbPath = (this.currentType === 'donors') ? 'global/donors' : 'global/students';
         
         db.ref(dbPath).once('value', snapshot => {
             const existingData = snapshot.val() || {};
-            const nameMap = {};
-            const numMap = {};
+            const nameMap = {}; const numMap = {};
 
             Object.values(existingData).forEach(item => {
                 if (item.studentNum) numMap[item.studentNum.toString().trim()] = item.id;
                 if (item.idNum) numMap[item.idNum.toString().trim()] = item.id;
-                
                 if (item.name) {
                     nameMap[item.name.trim()] = item.id;
                     const reversedName = item.name.split(' ').reverse().join(' ');
@@ -214,26 +205,23 @@ const Importer = {
             this.pendingImport = [];
 
             this.fileData.forEach((row, idx) => {
-                const tempObj = {};
-                Object.keys(mapping).forEach(sysKey => { tempObj[sysKey] = row[mapping[sysKey]]; });
+                let tempObj = {};
+                Object.keys(mapping).forEach(sysKey => { 
+                     let v = row[mapping[sysKey]]; 
+                     if(typeof v === 'string') v = v.trim();
+                     if(v !== undefined && v !== '') tempObj[sysKey] = v; 
+                });
                 
                 let fullName = tempObj.fullName;
                 if (!fullName && (tempObj.firstName || tempObj.lastName)) {
                     fullName = `${tempObj.firstName || ''} ${tempObj.lastName || ''}`.trim();
                 }
                 
-                let entityId = null;
-                let isNewEntity = false;
+                let entityId = null; let isNewEntity = false;
                 const possibleNum = tempObj.studentNum ? tempObj.studentNum.toString().trim() : null;
 
-                // בדיקה נוקשה ראשונה לפי מספר מזהה
-                if (possibleNum && numMap[possibleNum]) {
-                    entityId = numMap[possibleNum];
-                } 
-                // בדיקה משנית לפי שם
-                else if (!entityId && fullName && nameMap[fullName]) {
-                    entityId = nameMap[fullName];
-                }
+                if (possibleNum && numMap[possibleNum]) entityId = numMap[possibleNum];
+                else if (!entityId && fullName && nameMap[fullName]) entityId = nameMap[fullName];
 
                 if (this.currentType !== 'students_donations') {
                     if (!entityId) {
@@ -244,12 +232,11 @@ const Importer = {
                     }
                 }
 
-                // ביבוא הכנסות אם לא זוהה הבחור - מדלגים ורושמים שגיאה לתצוגה
                 if (!entityId && this.currentType === 'students_donations') {
                      this.pendingImport.push({
                          originalIdx: idx, entityId: null, isNewEntity: false,
                          fullName: fullName || possibleNum || 'נתון לא מזוהה',
-                         finances: [], errors: ['לא נמצא בחור התואם למספר המזהה או לשם']
+                         finances: [], errors: ['לא נמצא בחור התואם למזהה או לשם']
                      });
                      return;
                 }
@@ -260,22 +247,21 @@ const Importer = {
                     entityData: tempObj, groupTarget: selectedGroup, finances: [], errors: []
                 };
 
-                // עיבוד דינמי לפי עמודת תאריך
                 if (dateCol && genAmountCol && row[dateCol] && row[genAmountCol]) {
                     const hYear = System.getHebrewYearFromDate(row[dateCol]);
                     if (hYear) {
-                        const val = row[genAmountCol];
+                        const val = String(row[genAmountCol]).trim();
                         const isText = isNaN(parseFloat(val));
                         processedRow.finances.push({ targetYear: hYear, val: val, isText: isText, dateStr: row[dateCol] });
                     } else {
-                        processedRow.errors.push(`תאריך לא תקין או חסר: ${row[dateCol]}`);
+                        processedRow.errors.push(`תאריך לא תקין: ${row[dateCol]}`);
                     }
                 }
 
-                // עיבוד היסטוריה ידנית מרובה
                 Object.entries(historyMapping).forEach(([hYear, colName]) => {
                     let val = row[colName];
                     if (val !== undefined && val !== null && val !== '') {
+                        val = String(val).trim();
                         const isText = isNaN(parseFloat(val));
                         processedRow.finances.push({ targetYear: hYear, val: val, isText: isText });
                     }
@@ -290,7 +276,7 @@ const Importer = {
         });
     },
     
-    // 7 תצוגה מקדימה (6)
+    // 7 תצוגה מקדימה לאישור
     showPreviewModal() {
         const allYearsSet = new Set();
         this.pendingImport.forEach(r => r.finances.forEach(f => allYearsSet.add(f.targetYear)));
@@ -298,8 +284,7 @@ const Importer = {
         
         let headersHtml = yearsArr.map(y => `<th class="p-2 border text-center whitespace-nowrap min-w-[100px] text-indigo-700">${y}</th>`).join('');
 
-        let html = `<div class="bg-blue-50 p-4 rounded mb-4 text-sm text-blue-800 font-bold border border-blue-200">תצוגה מקדימה ואישור סופי לפני שמירת נתונים:</div>`;
-        
+        let html = `<div class="bg-blue-50 p-4 rounded mb-4 text-sm text-blue-800 font-bold border border-blue-200">תצוגה מקדימה ואישור סופי:</div>`;
         html += `<div class="max-h-[50vh] overflow-auto custom-scroll border rounded shadow-sm" dir="rtl"><table class="w-full text-right text-sm border-collapse">`;
         html += `<thead class="bg-gray-100 sticky top-0 z-10 shadow-sm"><tr>
                     <th class="p-2 border whitespace-nowrap bg-gray-100">שם / מזהה</th>
@@ -339,7 +324,7 @@ const Importer = {
         document.querySelector('#modal-form .btn-primary').parentElement.style.display = 'none';
     },
     
-    // 8 שמירה סופית (7)
+    // 8 שמירה וסיום
     commitImport() {
         Modal.close();
         Notify.show('שומר נתונים למערכת...', 'info');
@@ -358,7 +343,7 @@ const Importer = {
                 if (this.currentType === 'students_new') newObj.lastUpdatedYear = Store.currentYear;
                 else newObj.joinYear = Store.currentYear; 
                 
-                updates[`${dbPath}/${row.entityId}`] = newObj;
+                updates[`${dbPath}/${row.entityId}`] = System.cleanObject(newObj); 
                 countNew++;
                 
                 if (this.currentType === 'donors' && row.groupTarget) {
@@ -372,15 +357,11 @@ const Importer = {
                 const dObj = fin.dateStr ? System.parseExcelDate(fin.dateStr) : new Date();
                 
                 const tx = {
-                    id: txId,
-                    date: dObj.getTime(),
-                    type: fin.isText ? 'note' : 'income',
-                    category: 'יבוא אקסל',
-                    desc: fin.isText ? fin.val : 'יבוא סכום',
-                    amount: fin.isText ? fin.val : parseFloat(fin.val),
-                    isPurim: true,
-                    importedYear: fin.targetYear
+                    id: txId, date: dObj.getTime(), type: fin.isText ? 'note' : 'income',
+                    category: 'יבוא אקסל', amount: fin.isText ? fin.val : parseFloat(fin.val),
+                    isPurim: true, importedYear: fin.targetYear
                 };
+                if(fin.isText) tx.desc = fin.val; 
                 
                 if (this.currentType === 'donors') tx.donorId = row.entityId;
                 else tx.studentId = row.entityId;

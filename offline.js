@@ -1,7 +1,9 @@
+// 1 מנהל אופליין ותקשורת
 const OfflineManager = {
     isOnline: navigator.onLine,
     queue: [],
     
+    // 2 אתחול שירות אופליין
     init() {
         try {
             const q = localStorage.getItem('offlineQueue');
@@ -16,12 +18,14 @@ const OfflineManager = {
         this.updateStatus(this.isOnline);
     },
     
+    // 3 שמירת מטמון מקומי
     saveState(key, data) {
         try {
             localStorage.setItem('cache_' + key, JSON.stringify(data));
-        } catch(e) { console.error('Cache full or invalid', e); }
+        } catch(e) { console.warn('Cache full or invalid', e); }
     },
     
+    // 4 טעינת מטמון מקומי
     loadState(key) {
         try {
             const item = localStorage.getItem('cache_' + key);
@@ -29,6 +33,7 @@ const OfflineManager = {
         } catch(e) { return null; }
     },
 
+    // 5 עדכון נראות סטטוס
     updateStatus(online) {
         this.isOnline = online;
         const ind = document.getElementById('connection-status');
@@ -49,6 +54,7 @@ const OfflineManager = {
         }
     },
     
+    // 6 כתיבה חכמה (אונליין/אופליין) (1)
     write(path, data, type = 'set') {
         this.updateLocalStore(path, data, type);
 
@@ -58,8 +64,9 @@ const OfflineManager = {
             if(type === 'remove') return db.ref(path).remove();
             if(type === 'transaction') return db.ref(path).transaction(data);
         } else {
+            // סעיף 1: תמיכה מינימלית באופליין גם לדברים כבדים (הסתמכות על כפתור הסנכרון בהמשך)
             if(type === 'transaction') {
-                Notify.show('לא ניתן לבצע חישובים מורכבים במצב אופליין', 'error');
+                Notify.show('שים לב: העדכון יישמר מקומית. לחץ על כפתור "חישוב מחדש" בהגדרות כשיחזור האינטרנט.', 'info');
                 return;
             }
             this.queue.push({path, data, type, ts: Date.now()});
@@ -69,6 +76,7 @@ const OfflineManager = {
         }
     },
 
+    // 7 עדכון נתונים מקומי מהיר (7)
     updateLocalStore(path, data, type) {
         const parts = path.split('/');
         let storeKey = null;
@@ -84,7 +92,15 @@ const OfflineManager = {
                  const txData = type === 'update' ? { ...(Finance.financeData[txId]||{}), ...data } : data;
                  Finance.financeData[txId] = txData;
             }
-            if (Router.current === 'finance') Finance.render();
+            // סעיף 1: עדכון סטטוס קופה מקומי בעת אופליין
+            if (!this.isOnline && data.amount && !isNaN(parseFloat(data.amount))) {
+                 const amt = parseFloat(data.amount);
+                 if (data.type === 'income') Store.data.stats.income += amt;
+                 if (data.type === 'expense') Store.data.stats.expense += amt;
+                 if (Router.current === 'dashboard') Dashboard.render();
+            }
+
+            if (Router.current === 'finance') Finance.render(); // סעיף 7
             return;
         }
 
@@ -115,16 +131,16 @@ const OfflineManager = {
             if (type === 'remove') delete Store.data.yearData[year].students[sid].personalGoal;
             else Store.data.yearData[year].students[sid].personalGoal = data;
             
-            if(Router.current === 'students') Students.render();
+            if(Router.current === 'students') Students.render(); // סעיף 7
         }
     },
     
+    // 8 סנכרון תור המתנה (1)
     async processQueue() {
         const q = [...this.queue];
         this.queue = [];
         localStorage.setItem('offlineQueue', '[]');
         
-        // סנכרון טורי - מונע דריסת נתונים בהעלאות מרובות
         for (const item of q) {
             try {
                 if(item.type === 'set') await db.ref(item.path).set(item.data);
@@ -136,12 +152,13 @@ const OfflineManager = {
         }
         
         setTimeout(() => {
-            Notify.show('כל הנתונים סונכרנו בהצלחה', 'success');
+            Notify.show('הנתונים מהאופליין סונכרנו בהצלחה', 'success');
             this.updateStatus(true);
         }, 1000);
     }
 };
 
+// 9 מערכת AI אופליין מגבה
 const OfflineAI = {
     context: null, 
     
@@ -190,15 +207,15 @@ const OfflineAI = {
             const students = Object.values(Store.data.students).filter(s => s);
             let found = students.find(s => (s.name||'').includes(cleanName));
             if (found) {
-                return `מצאתי: <b>${found.name}</b>.<br><button onclick="Reports.generateIndividual('${found.id}', '${found.name}')">הפק דוח</button>`;
+                return `מצאתי: <b>${found.name}</b>.<br><button onclick="Reports.generateIndividual('${found.id}', '${found.name}')" class="text-indigo-600 font-bold hover:underline">הפק דוח</button>`;
             } else {
                 return "לא זיהיתי את שם הבחור.";
             }
         }
         if(txt.includes('כמה') && (txt.includes('כסף') || txt.includes('קופה'))) {
-            return `הכנסות: ₪${(Store.data.stats.income || 0).toLocaleString()}`;
+            return `הכנסות לשנה זו: ₪${(Store.data.stats.income || 0).toLocaleString()}`;
         }
-        return "לא הבנתי. הקש 'עזרה'.";
+        return "מצב אופליין. הקש 'עזרה' לפקודות מוכרות.";
     }
 };
 

@@ -97,19 +97,25 @@ body { font-family: 'Heebo', sans-serif; background-color: #f8fafc; }
     border-right-color: #818cf8; color: #ffffff; font-weight: bold;
 }
 
-/* 11 עורך דוחות מיוחד */
+/* 11 עורך דוחות מיוחד (תצוגה מקדימה) */
 #report-editor-screen { background-color: #e2e8f0; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 20000; display: flex; }
 #report-sidebar { width: 320px; background: white; border-left: 1px solid #cbd5e1; padding: 20px; display: flex; flex-direction: column; gap: 15px; box-shadow: 5px 0 25px rgba(0,0,0,0.1); z-index: 20; }
 #report-canvas-container { flex: 1; overflow: auto; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 40px; background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 20px 20px; gap: 40px; }
 .report-page { background: white; box-shadow: 0 20px 40px rgba(0,0,0,0.15); position: relative; overflow: hidden; margin-bottom: 20px; transform-origin: top center; transition: transform 0.2s; border-radius: 4px; }
 .page-landscape { width: 297mm; min-height: 210mm; }
 .page-portrait { width: 210mm; min-height: 297mm; }
+
 .draggable-item { position: absolute; cursor: move; border: 2px solid transparent; z-index: 50; }
 .draggable-item:hover, .draggable-item.selected { border: 2px dashed #818cf8; background: rgba(99, 102, 241, 0.05); }
 .resize-handle { width: 14px; height: 14px; background: #4f46e5; position: absolute; bottom: -7px; right: -7px; cursor: se-resize; display: none; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
 .draggable-item:hover .resize-handle, .draggable-item.selected .resize-handle { display: block; }
 
-/* 12 הדפסה */
+/* 12 תצוגת טבלאות ומשבצות (משותף לעורך ולהדפסה - לא לגעת!) */
+.print-table { width: 100%; margin: 10px auto; border-collapse: collapse; font-size: 10pt; table-layout: fixed; }
+.print-table th { background-color: rgba(226, 232, 240, 0.8) !important; border: 1px solid #000; padding: 4px; text-align: center; color: #000 !important; font-weight: 800; -webkit-print-color-adjust: exact; white-space: nowrap; overflow: hidden; }
+.print-table td { border: 1px solid #000; padding: 4px; text-align: right; color: #000; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 13 הדפסה ממשית (נקיון כפתורים) */
 @media print {
     body > *:not(#print-area) { display: none !important; }
     #report-editor-screen { display: none !important; } 
@@ -118,14 +124,11 @@ body { font-family: 'Heebo', sans-serif; background-color: #f8fafc; }
     .editor-print-mode { width: 100% !important; height: 100% !important; transform: none !important; box-shadow: none !important; margin: 0 !important; page-break-after: always; position: relative; padding-bottom: 60px !important; }
     .print-layer-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .print-layer-content { position: relative; z-index: 10 !important; }
-    .print-table { width: 100%; margin: 10px auto; border-collapse: collapse; font-size: 10pt; table-layout: fixed; }
-    .print-table th { background-color: rgba(226, 232, 240, 0.8) !important; border: 1px solid #000; padding: 4px; text-align: center; color: #000 !important; font-weight: 800; -webkit-print-color-adjust: exact; white-space: nowrap; overflow: hidden; }
-    .print-table td { border: 1px solid #000; padding: 4px; text-align: right; color: #000; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 #print-area { display: none; }
 body.role-user .financial-data, body.role-user .admin-only { display: none !important; }
 
-/* 13 טוסטים ואלמנטים צפים */
+/* 14 טוסטים וסטטוס רשת */
 #toast-container { position: fixed; bottom: 20px; left: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
 .toast { min-width: 300px; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); padding: 16px; display: flex; align-items: center; gap: 12px; animation: slideInLeft 0.4s cubic-bezier(0.16, 1, 0.3, 1); pointer-events: auto; border: 1px solid rgba(255,255,255,0.5); }
 @keyframes slideInLeft { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
@@ -137,26 +140,26 @@ body.role-user .financial-data, body.role-user .admin-only { display: none !impo
 .status-collapsed { width: 34px; height: 34px; padding: 0; justify-content: center; border-radius: 50%; }
 .status-collapsed span { display: none; }
 
-/* 14 טבלאות מרוכזות (Batch) */
+/* 15 טבלאות מרוכזות (Batch) */
 .batch-table th { background: #f8fafc; padding: 10px; font-size: 0.85rem; border-bottom: 2px solid #e2e8f0; color: #475569; }
 .batch-table td { border-bottom: 1px solid #f1f5f9; padding: 6px; }
 .batch-input { width: 100%; border: 1px solid #cbd5e1; padding: 6px; font-size: 0.85rem; border-radius: 6px; transition: 0.3s; }
 .batch-input:focus { border-color: #818cf8; outline: none; box-shadow: 0 0 0 2px rgba(99,102,241,0.1); }
 
-/* 15 אנימציות עזר */
+/* 16 אנימציות עזר (חגיגה וכו') */
 .animate-bounce-slight { animation: bounceSlight 3s infinite ease-in-out; }
 @keyframes bounceSlight { 0%, 100% { transform: translateY(-2%); } 50% { transform: translateY(0); } }
 
 .celebration-bg { background: linear-gradient(135deg, #FFD700 0%, #FF8C00 100%); animation: pulse 1s infinite; }
 @keyframes confetti-fall { 0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; } 100% { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
 
-/* 16 אסתטיקה כללית */
+/* 17 אסתטיקה כללית */
 .logo-img-login { max-height: 120px; width: auto; margin: 0 auto 1.5rem auto; display: block; filter: drop-shadow(0 10px 15px rgba(0,0,0,0.1)); }
 .logo-img-sidebar { max-height: 90px; width: auto; max-width: 100%; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3)); }
 .archived-student { background-color: #f8fafc; color: #94a3b8; }
 .archived-student td { color: #94a3b8 !important; font-style: italic; }
 
-/* 17 AI Window */
+/* 18 AI Window וקבצים */
 #ai-chat-window {
     box-shadow: 0 25px 50px -12px rgba(0,0,0,0.3), 0 0 0 1px rgba(0,0,0,0.05);
     backdrop-filter: blur(10px);
@@ -164,3 +167,4 @@ body.role-user .financial-data, body.role-user .admin-only { display: none !impo
 #ai-bubble-container button {
     box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.5);
 }
+.ai-file-badge { background: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: bold; margin-bottom: 5px; display: inline-block; border: 1px solid #c7d2fe; }

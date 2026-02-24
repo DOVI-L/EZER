@@ -1,6 +1,6 @@
 // 1 התראות מערכת
 const Notify = {
-    // 2 הצגת התראה (1)
+    // 2 הצגת התראה
     show(msg, type = 'info') {
         const con = document.getElementById('toast-container');
         if (!con) return alert(msg);
@@ -13,9 +13,9 @@ const Notify = {
     }
 };
 
-// 3 ניהול חלונות
+// 3 ניהול חלונות מודאליים
 const Modal = {
-    // 4 רינדור חלון (3)
+    // 4 רינדור מודאל רגיל
     render(title, fields, onSave, extraHtml='', widthClass = '') {
         let html = '';
         fields.forEach(f => {
@@ -46,11 +46,12 @@ const Modal = {
                 const el = document.getElementById(`field-${f.id}`);
                 data[f.id] = f.t === 'checkbox' ? el.checked : el.value;
             });
-            onSave(data);
+            onSave(System.cleanObject(data)); 
             this.close();
         }, widthClass);
     },
-    // 5 רינדור ישיר (3)
+    
+    // 5 רינדור חופשי
     renderRaw(title, bodyHtml, onSaveAction, widthClass = '') {
         document.getElementById('modal-title').innerText = title;
         document.getElementById('modal-body').innerHTML = bodyHtml;
@@ -58,44 +59,45 @@ const Modal = {
         modalContainer.classList.remove('w-[550px]', 'max-w-4xl', 'w-full', 'max-w-7xl');
         if (widthClass) widthClass.split(' ').forEach(c => modalContainer.classList.add(c));
         else modalContainer.classList.add('w-[550px]');
+        
         document.getElementById('modal-form').classList.remove('hidden-screen');
         const btnContainer = document.querySelector('#modal-form .btn-primary').parentElement;
         if(btnContainer) btnContainer.style.display = 'flex';
-        setTimeout(() => { if(modalContainer) modalContainer.classList.remove('scale-95', 'opacity-0'); }, 10);
+        
+        modalContainer.classList.remove('scale-95', 'opacity-0');
+        
         const btn = document.getElementById('modal-save-btn');
         const newBtn = btn.cloneNode(true);
         btn.parentNode.replaceChild(newBtn, btn);
         newBtn.onclick = onSaveAction;
     },
-    // 6 סגירת חלון (3)
+    
+    // 6 סגירה מהירה
     close() { 
         const el = document.querySelector('#modal-form > div');
         if(el) el.classList.add('scale-95'); 
-        setTimeout(() => document.getElementById('modal-form').classList.add('hidden-screen'), 150); 
+        setTimeout(() => document.getElementById('modal-form').classList.add('hidden-screen'), 100); 
     }
 };
 
 // 7 מאזיני פיירבייס
 const ListenerManager = {
     activeListeners: [],
-    // 8 הוספת מאזין (7)
     add(ref, eventType, callback) {
         ref.on(eventType, callback);
         this.activeListeners.push({ ref, eventType, callback });
     },
-    // 9 הסרת מאזין (7)
     remove(ref, eventType, callback) {
         ref.off(eventType, callback);
         this.activeListeners = this.activeListeners.filter(l => l.callback !== callback);
     },
-    // 10 ניקוי מאזינים (7)
     clearAll() {
         this.activeListeners.forEach(l => l.ref.off(l.eventType, l.callback));
         this.activeListeners = [];
     }
 };
 
-// 11 חישוב שנה
+// 8 חישוב שנה נוכחית
 const getHebrewYear = () => {
     const d = new Date();
     const y = d.getFullYear();
@@ -104,10 +106,11 @@ const getHebrewYear = () => {
     return map[hYear] || hYear.toString();
 };
 
-// 12 מערכת כללית
+// 9 מערכת ועזרים
 const System = {
     searchTimeout: null,
-    // 13 אתחול ממשק (12)
+    
+    // 10 אתחול כפתורי שנה
     initUI() {
         const sel = document.getElementById('year-selector');
         if(!sel) return;
@@ -129,10 +132,11 @@ const System = {
         });
         document.querySelectorAll('.curr-year').forEach(s => s.innerText = Store.currentYear);
     },
-    // 14 החלפת שנה (12)
+    
+    // 11 החלפת שנה
     changeYear(y) {
         const currentView = Router.current;
-        ListenerManager.clearAll();
+        ListenerManager.clearAll(); 
         Store.currentYear = y;
         Store.data.yearData = {};
         Store.data.stats = { income: 0, expense: 0 };
@@ -143,7 +147,8 @@ const System = {
         document.querySelectorAll('.curr-year').forEach(s => s.innerText = y);
         Router.go(currentView || 'dashboard'); 
     },
-    // 15 הוספת שנה (12)
+    
+    // 12 הוספת שנה ידנית
     addCustomYear() {
         const y = prompt("הכנס שנה חדשה (לדוגמה: תשצ״ט או 5800):");
         if (y) {
@@ -154,7 +159,8 @@ const System = {
             this.changeYear(y);
         }
     },
-    // 16 התקדמות בחור (12)
+    
+    // 13 בדיקת התקדמות יעד
     checkStudentProgress(studentId, addedAmount) {
         if(!studentId) return;
         db.ref(`years/${Store.currentYear}/finance`).orderByChild('studentId').equalTo(studentId).once('value', snap => {
@@ -164,6 +170,10 @@ const System = {
                     if(tx.type === 'income') total += parseFloat(tx.amount || 0);
                 });
             }
+            
+            // שמירת סכום רץ במסד (משפר ביצועים למסך בחורים)
+            OfflineManager.write(`years/${Store.currentYear}/studentData/${studentId}/totalRaised`, total);
+
             const tiers = (Store.data.config.studentTiers || []).sort((a,b) => b.amount - a.amount);
             const reachedTier = tiers.find(t => total >= t.amount);
             if(reachedTier) {
@@ -174,7 +184,8 @@ const System = {
             }
         });
     },
-    // 17 חגיגת יעד (12)
+    
+    // 14 אנימציית חגיגה
     showCelebration(name, amount, reward) {
         const modal = document.getElementById('celebration-modal');
         document.getElementById('celebration-name').innerText = name;
@@ -190,7 +201,8 @@ const System = {
             container.appendChild(c);
         }
     },
-    // 18 חיפוש במסד (12)
+    
+    // 15 חיפוש חכם (לפי שם או מזהה)
     searchFirebase(term, type) {
         clearTimeout(this.searchTimeout);
         if(!term && !type) { location.reload(); return; }
@@ -199,23 +211,36 @@ const System = {
              if(type === 'donors') Donors.render();
              return;
         }
+        
+        if(type === 'students') Students.render(term); else Donors.render(term);
+
         this.searchTimeout = setTimeout(() => {
             const path = type === 'students' ? 'global/students' : 'global/donors';
-            db.ref(path).orderByChild('name').startAt(term).endAt(term + "\uf8ff").once('value').then(snapshot => {
-                const results = snapshot.val();
-                if(results) {
-                    const targetStore = type === 'students' ? Store.data.students : Store.data.donors;
-                    Object.assign(targetStore, results);
+            const targetStore = type === 'students' ? Store.data.students : Store.data.donors;
+            
+            // חיפוש לפי שם
+            db.ref(path).orderByChild('name').startAt(term).endAt(term + "\uf8ff").once('value').then(snapName => {
+                if(snapName.val()) {
+                    Object.assign(targetStore, snapName.val());
                     OfflineManager.saveState(type, targetStore);
-                    if(type === 'students') Students.render(term); else Donors.render(term);
-                } else {
-                    Notify.show('לא נמצאו תוצאות', 'info');
                     if(type === 'students') Students.render(term); else Donors.render(term);
                 }
             });
-        }, 800); 
+
+            // אם הוקלד מספר, חפש גם לפי מספר מזהה (לפי בקשתך)
+            if (!isNaN(term) && type === 'students') {
+                db.ref(path).orderByChild('studentNum').equalTo(term).once('value').then(snapNum => {
+                    if(snapNum.val()) {
+                        Object.assign(targetStore, snapNum.val());
+                        OfflineManager.saveState(type, targetStore);
+                        Students.render(term);
+                    }
+                });
+            }
+        }, 500); 
     },
-    // 19 הפעלת בוט (12)
+    
+    // 16 הפעלת צ'אט
     toggleAI(enabled) {
         const aiContainer = document.getElementById('ai-bubble-container');
         const aiCheck = document.getElementById('conf-enable-ai');
@@ -227,47 +252,36 @@ const System = {
             if(aiCheck) aiCheck.checked = false;
         }
     },
-    // 20 המרה לעברית (12)
+
+    // 17 תאריך עברי בפורמט קבוע
     toHebrewDate(dateInput) {
         try {
             const date = new Date(dateInput);
             if (isNaN(date.getTime())) return dateInput;
-            const options = { calendar: 'hebrew', day: 'numeric', month: 'long', year: 'numeric' };
-            const parts = new Intl.DateTimeFormat('he-IL', options).formatToParts(date);
-            let day = '', month = '', year = '';
-            parts.forEach(p => {
-                if (p.type === 'day') day = p.value;
-                if (p.type === 'month') month = p.value;
-                if (p.type === 'year') year = p.value;
-            });
-            const toGematria = (num) => {
-                const map = {1:'א',2:'ב',3:'ג',4:'ד',5:'ה',6:'ו',7:'ז',8:'ח',9:'ט',10:'י',20:'כ',30:'ל'};
-                const n = parseInt(num);
-                if (map[n]) return map[n];
-                if (n > 10 && n < 20) return 'י' + map[n-10];
-                if (n > 20 && n < 30) return 'כ' + map[n-20];
-                if (n > 30) return 'ל' + map[n-30];
-                return num; 
-            };
-            const yearMap = {'5784': 'תשפ״ד', '5785': 'תשפ״ה', '5786': 'תשפ״ו', '5787': 'תשפ״ז', '5788': 'תשפ״ח'};
-            let cleanYear = year.replace("ה'", "").replace(/,/g, "");
-            if (yearMap[cleanYear]) cleanYear = yearMap[cleanYear];
-            return `${toGematria(day)}' ${month} ${cleanYear}`;
+            const dd = String(date.getDate()).padStart(2, '0');
+            const mm = String(date.getMonth() + 1).padStart(2, '0');
+            const yyyy = date.getFullYear();
+            return `${dd}/${mm}/${yyyy}`; // פורמט DD/MM/YYYY קבוע (לפי בקשתך)
         } catch (e) { return dateInput; }
     },
-    // 21 עיבוד תאריך מורכב (12)
+    
+    // 18 תאריך מאקסל פורמט חזק
     parseExcelDate(val) {
         if (!val) return null;
         if (!isNaN(val) && typeof val === 'number') return new Date(Math.round((val - 25569) * 86400 * 1000));
         if (typeof val === 'string') {
             let dStr = val.split(' ')[0].trim();
-            let parts = dStr.split('/');
-            if (parts.length === 3) return new Date(`${parts[2]}-${parts[1]}-${parts[0]}T12:00:00`);
+            let parts = dStr.split(/[-/]/); 
+            if (parts.length === 3) {
+                if (parts[0].length === 4) return new Date(`${parts[0]}-${parts[1]}-${parts[2]}T12:00:00`); 
+                return new Date(`${parts[2]}-${parts[1]}-${parts[0]}T12:00:00`); 
+            }
             return new Date(dStr);
         }
         return new Date(val);
     },
-    // 22 חילוץ שנה עברית (12)
+    
+    // 19 משיכת שנה עברית מתאריך
     getHebrewYearFromDate(dateInput) {
         try {
             const date = this.parseExcelDate(dateInput);
@@ -277,12 +291,45 @@ const System = {
             const map = {5780:'תש״פ', 5781:'תשפ״א', 5782:'תשפ״ב', 5783:'תשפ״ג', 5784:'תשפ״ד', 5785:'תשפ״ה', 5786:'תשפ״ו', 5787:'תשפ״ז', 5788:'תשפ״ח'};
             return map[hYear] || hYear.toString();
         } catch(e) { return null; }
+    },
+
+    // 20 ניקוי שדות ריקים אובייקט
+    cleanObject(obj) {
+        const cleaned = {};
+        Object.keys(obj).forEach(key => {
+            let val = obj[key];
+            if (typeof val === 'string') val = val.trim(); 
+            if (val !== null && val !== undefined && val !== '') {
+                cleaned[key] = val;
+            }
+        });
+        return cleaned;
+    },
+
+    // 21 איפוס חיפוש באנטר
+    handleSearchEnter(inputId) {
+        const input = document.getElementById(inputId);
+        if(!input) return;
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                input.blur();
+                setTimeout(() => input.value = '', 100); 
+            }
+        });
+    },
+
+    // 22 ניקוי מטמון דפדפן מלא
+    clearLocalCache() {
+        if(confirm('פעולה זו תמחק את כל המטמון המקומי מהדפדפן שלך ותטען את כל הנתונים מחדש. האם להמשיך?')) {
+            localStorage.clear(); 
+            Notify.show('מטמון דפדפן נוקה. טוען מחדש...', 'success');
+            setTimeout(() => location.reload(), 1500);
+        }
     }
 };
 
 // 23 עדכון תצוגה
 const UI = {
-    // 24 רענון מסך נוכחי (23)
     updateIfVisible(module) {
         if(Router.current === module) {
             if(module === 'students') Students.render();

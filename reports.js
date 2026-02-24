@@ -1,5 +1,16 @@
+// 1 מערכת דוחות והדפסות
 const Reports = {
-    // 1 חיפוש אישות (2)
+    // 2 משתני עורך
+    editorState: {
+        bgImg: null, bgOpacity: 0.2, title: 'דוח תצוגה משוקלל',
+        images: [], zoom: 0.6, headers: [], colsVisible: [],
+        headersOrder: [], orientation: 'portrait', rowsPerPage: 30, 
+        mode: 'visual', customHtml: '', routeData: null, 
+        marginPadding: 20, sortBy: 'amount_desc',
+        isWeighted: true 
+    },
+
+    // 3 חיפוש אישות לדוח
     searchEntity(v) {
         const res = document.getElementById('rep-entity-results');
         res.innerHTML = '';
@@ -8,7 +19,7 @@ const Reports = {
         
         const students = Object.values(Store.data.students).filter(s => s).filter(s => {
             const n = s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : s.name;
-            return n && n.includes(v);
+            return (n && n.includes(v)) || (s.studentNum && s.studentNum.includes(v)); // הוספת חיפוש לפי מזהה
         }).slice(0,5);
         
         const donors = Object.values(Store.data.donors).filter(d => d && d.name && d.name.includes(v)).slice(0,5);
@@ -23,16 +34,18 @@ const Reports = {
         });
     },
 
-    // 2 בחירת אישות (1)
+    // 4 בחירת יישות לחיפוש
     selectEntity(id, name, type) {
-        document.getElementById('rep-entity-search').value = name;
+        const input = document.getElementById('rep-entity-search');
+        input.value = ''; 
+        input.placeholder = `נבחר: ${name}`; 
         document.getElementById('rep-entity-id').value = id + '|' + type;
         document.getElementById('rep-entity-results').classList.add('hidden');
     },
     
-    // 3 קבלת היסטוריה (4)
+    // 5 משיכת היסטוריה אישית
     async getAllHistory(studentId = null) {
-        let years = Object.keys(HEBREW_YEARS_MAPPING);
+        let years = Object.keys(window.HEBREW_YEARS_MAPPING);
         if (Store.currentYear && !years.includes(Store.currentYear)) {
             years.push(Store.currentYear);
         }
@@ -56,16 +69,16 @@ const Reports = {
         return allTx; 
     },
 
-    // 4 הפקת דוח אישי
+    // 6 הפקת אקסל אישי לבחור
     async generateIndividual(id, name) {
-        Notify.show('מלקט נתונים מכל השנים...', 'info');
+        Notify.show('מלקט נתונים מכל השנים...', 'info'); 
         const data = await this.getAllHistory(id);
         
         data.sort((a, b) => b.date - a.date);
 
         const rows = data.length > 0 ? data.map(t => ({
             "שנה": t._year || '',
-            "תאריך": System.toHebrewDate(t.date),
+            "תאריך": System.toHebrewDate(t.date), 
             "קטגוריה": t.category,
             "תיאור": t.desc,
             "סכום/הערה": isNaN(parseFloat(t.amount)) ? t.amount : parseFloat(t.amount) || 0
@@ -79,12 +92,12 @@ const Reports = {
         wb.Workbook = { Views: [{ RTL: true }] };
         const safeName = name ? name.replace(/ /g,'_') : 'Student';
         XLSX.writeFile(wb, `Income_Report_${safeName}.xlsx`);
-        Notify.show('הדוח הורד בהצלחה', 'success');
+        Notify.show('הדוח הורד בהצלחה', 'success'); 
     },
 
-    // 5 הדפסת דף בחור
+    // 7 הדפסת דף פנימי לבחור
     async printStudentSlip(id, name) {
-        Notify.show('מכין דף בחור להדפסה...', 'info');
+        Notify.show('מכין דף בחור להדפסה...', 'info'); 
         const data = await this.getAllHistory(id);
         const s = Store.data.students[id] || { grade: '', idNum: '' };
         
@@ -111,21 +124,29 @@ const Reports = {
 
         const html = `
             <div class="student-slip">
-                <div class="student-slip-header">
+                <div class="student-slip-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 20px;">
                     <div>
-                        <div class="student-slip-title">${name}</div>
+                        <div style="font-size: 24px; font-weight: bold;">${name}</div>
                         <div>${s.grade || ''} ${s.idNum ? '| ת.ז: ' + s.idNum : ''}</div>
                     </div>
-                    <img src="1.JPG" alt="לוגו" class="student-slip-logo">
+                    <img src="1.JPG" alt="לוגו" style="height: 70px;">
                 </div>
                 <h3 style="text-align:center; margin-bottom:10px;">פירוט תרומות והכנסות</h3>
-                <table class="print-table" style="width:100%;">
-                    <thead><tr><th>סכום/הערה</th><th>תיאור</th><th>קטגוריה</th><th>תאריך</th><th>שנה</th></tr></thead>
+                <table class="print-table" style="width:100%; border-collapse: collapse; font-size: 14px; text-align: right;">
+                    <thead style="background: #e2e8f0; -webkit-print-color-adjust: exact;">
+                        <tr>
+                            <th style="padding: 8px; border: 1px solid black;">סכום/הערה</th>
+                            <th style="padding: 8px; border: 1px solid black;">תיאור</th>
+                            <th style="padding: 8px; border: 1px solid black;">קטגוריה</th>
+                            <th style="padding: 8px; border: 1px solid black;">תאריך</th>
+                            <th style="padding: 8px; border: 1px solid black;">שנה</th>
+                        </tr>
+                    </thead>
                     <tbody>${rowsHtml}</tbody>
                     <tfoot>
-                        <tr style="background:#e0f2fe; font-weight:bold;">
-                            <td>₪${total.toLocaleString()}</td>
-                            <td colspan="4">סה״כ לתשלום (לא כולל הערות)</td>
+                        <tr style="background:#e0f2fe; font-weight:bold; -webkit-print-color-adjust: exact;">
+                            <td style="padding: 8px; border: 1px solid black;">₪${total.toLocaleString()}</td>
+                            <td colspan="4" style="padding: 8px; border: 1px solid black;">סה״כ לתשלום (לא כולל הערות)</td>
                         </tr>
                     </tfoot>
                 </table>
@@ -136,75 +157,103 @@ const Reports = {
         window.print();
     },
 
-    // 6 ייצוא דוח כללי
+    // 8 יצירת דוח כללי מתקדם
     async generateStandard() {
         if(Store.role === 'user') return Notify.show('אין הרשאה להפקת דוח כספי מלא', 'error');
-        await Store.ensureAllLoaded(['students', 'donors']);
-        Notify.show('מייצא נתונים...', 'info');
         
-        db.ref(`years/${Store.currentYear}/finance`).once('value', snap => {
-            const type = document.getElementById('rep-type').value;
-            const entVal = document.getElementById('rep-entity-id').value;
-            let data = Object.values(snap.val() || {});
+        const modalHtml = `
+            <div class="space-y-4 text-right" dir="rtl">
+                <div>
+                    <label class="text-sm font-bold block mb-1">סוג תנועות</label>
+                    <select id="modal-rep-type" class="w-full border p-2 rounded bg-slate-50 outline-none">
+                        <option value="all">הכל (הכנסות והוצאות)</option>
+                        <option value="income">הכנסות בלבד</option>
+                        <option value="expense">הוצאות בלבד</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-sm font-bold block mb-1">מתאריך</label>
+                        <input type="date" id="modal-rep-from" class="w-full border p-2 rounded bg-slate-50 outline-none">
+                    </div>
+                    <div>
+                        <label class="text-sm font-bold block mb-1">עד תאריך</label>
+                        <input type="date" id="modal-rep-to" class="w-full border p-2 rounded bg-slate-50 outline-none">
+                    </div>
+                </div>
+                <p class="text-xs text-gray-500">השאר תאריכים ריקים לייצוא כל נתוני השנה.</p>
+            </div>
+        `;
+
+        Modal.renderRaw('הגדרות דוח אקסל (שנה נוכחית)', modalHtml, async () => {
+            const type = document.getElementById('modal-rep-type').value;
+            const fromDate = document.getElementById('modal-rep-from').value;
+            const toDate = document.getElementById('modal-rep-to').value;
             
-            if(type !== 'all') data = data.filter(t => t.type === type);
-            if(entVal) {
-                const [eid, etype] = entVal.split('|');
-                data = data.filter(t => (etype === 'student' ? t.studentId : t.donorId) === eid);
-            }
-            data.sort((a, b) => b.date - a.date);
+            let fromTs = fromDate ? new Date(fromDate + 'T00:00:00').getTime() : null;
+            let toTs = toDate ? new Date(toDate + 'T23:59:59').getTime() : null;
 
-            const rows = data.map(t => {
-                let entityName = '';
-                if (t.studentId) {
-                    const s = Store.data.students[t.studentId];
-                    entityName = s ? (s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : s.name) : 'בחור לא ידוע';
-                } else if (t.donorId) {
-                    const d = Store.data.donors[t.donorId];
-                    entityName = d ? d.name : 'תורם לא ידוע';
-                } else if (t.isGroup) {
-                    entityName = `קבוצה: ${t.groupName || ''}`;
+            Modal.close();
+            await Store.ensureAllLoaded(['students', 'donors']);
+            Notify.show('מייצא נתונים לאקסל...', 'info'); 
+            
+            db.ref(`years/${Store.currentYear}/finance`).once('value', snap => {
+                const entVal = document.getElementById('rep-entity-id').value; 
+                let data = Object.values(snap.val() || {});
+                
+                if(type !== 'all') data = data.filter(t => t.type === type);
+                
+                if (fromTs) data = data.filter(t => t.date >= fromTs);
+                if (toTs) data = data.filter(t => t.date <= toTs);
+
+                if(entVal) {
+                    const [eid, etype] = entVal.split('|');
+                    data = data.filter(t => (etype === 'student' ? t.studentId : t.donorId) === eid);
                 }
+                
+                data.sort((a, b) => b.date - a.date);
 
-                return {
-                    "תאריך": System.toHebrewDate(t.date),
-                    "שם משוייך": entityName,
-                    "סוג תנועה": t.type === 'income' ? 'הכנסה' : (t.type === 'expense' ? 'הוצאה' : 'הערה'),
-                    "קטגוריה": t.category,
-                    "תת קטגוריה": t.subCategory || '',
-                    "תיאור / הערות": t.desc,
-                    "סכום/ערך": isNaN(parseFloat(t.amount)) ? t.amount : parseFloat(t.amount) || 0
-                };
+                const rows = data.map(t => {
+                    let entityName = '';
+                    if (t.studentId) {
+                        const s = Store.data.students[t.studentId];
+                        entityName = s ? (s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : s.name) : 'בחור לא ידוע';
+                    } else if (t.donorId) {
+                        const d = Store.data.donors[t.donorId];
+                        entityName = d ? d.name : 'תורם לא ידוע';
+                    } else if (t.isGroup) {
+                        entityName = `קבוצה: ${t.groupName || ''}`;
+                    }
+
+                    return {
+                        "תאריך": System.toHebrewDate(t.date),
+                        "שם משוייך": entityName,
+                        "סוג תנועה": t.type === 'income' ? 'הכנסה' : (t.type === 'expense' ? 'הוצאה' : 'הערה'),
+                        "קטגוריה": t.category,
+                        "תת קטגוריה": t.subCategory || '',
+                        "תיאור / הערות": t.desc,
+                        "סכום/ערך": isNaN(parseFloat(t.amount)) ? t.amount : parseFloat(t.amount) || 0
+                    };
+                });
+
+                const ws = XLSX.utils.json_to_sheet(rows);
+                ws['!cols'] = [{wch: 15}, {wch: 25}, {wch: 10}, {wch: 15}, {wch: 15}, {wch: 40}, {wch: 12}];
+                if(!ws['!views']) ws['!views'] = [];
+                ws['!views'].push({ rightToLeft: true });
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "דוח כספי");
+                wb.Workbook = { Views: [{ RTL: true }] };
+                XLSX.writeFile(wb, `Report_Finance_${Store.currentYear}.xlsx`);
+                
+                document.getElementById('rep-entity-id').value = '';
+                document.getElementById('rep-entity-search').placeholder = 'חפש בחור/תורם לסינון ספציפי...';
+                
+                Notify.show('הקובץ מוכן!', 'success'); 
             });
-
-            const ws = XLSX.utils.json_to_sheet(rows);
-            ws['!cols'] = [{wch: 15}, {wch: 25}, {wch: 10}, {wch: 15}, {wch: 15}, {wch: 40}, {wch: 12}];
-            if(!ws['!views']) ws['!views'] = [];
-            ws['!views'].push({ rightToLeft: true });
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "דוח כספי");
-            wb.Workbook = { Views: [{ RTL: true }] };
-            XLSX.writeFile(wb, `Report_${Store.currentYear}.xlsx`);
-            Notify.show('הקובץ מוכן!', 'success');
         });
     },
     
-    // 7 משתני עורך
-    editorState: {
-        bgImg: null, bgOpacity: 0.2, title: 'דוח תצוגה משוקלל',
-        images: [], zoom: 0.6, headers: [], colsVisible: [],
-        headersOrder: [], orientation: 'portrait', rowsPerPage: 30, 
-        mode: 'visual', customHtml: '', routeData: null, 
-        marginPadding: 20, sortBy: 'amount_desc'
-    },
-    
-    // 8 שינוי שורות לדף (7)
-    setRowsPerPage(val) {
-        this.editorState.rowsPerPage = parseInt(val) || 30;
-        this.renderEditorCanvas();
-    },
-    
-    // 9 פתיחת עורך (7)
+    // 9 פתיחת עורך דוחות
     openEditor(mode = 'visual', payload = '') {
         this.editorState.mode = mode;
         this.editorState.headers = [];
@@ -226,6 +275,7 @@ const Reports = {
             this.editorState.headers = ['שם הבחור', 'יעד אישי', 'סה״כ לתצוגה', 'אחוז מיעד', 'מתנה'];
             this.editorState.colsVisible = [true, true, true, true, true];
             this.editorState.headersOrder = [0, 1, 2, 3, 4];
+            this.editorState.isWeighted = true; 
         }
         
         document.getElementById('editor-title-input').value = this.editorState.title;
@@ -242,20 +292,28 @@ const Reports = {
         this.renderEditorCanvas();
     },
 
-    // 10 סגירת עורך
     closeEditor() { document.getElementById('report-editor-screen').classList.add('hidden-screen'); },
 
-    // 11 רינדור כותרות (9)
+    // 10 רינדור תפריט צד
     renderHeadersEditor() {
         const container = document.getElementById('editor-headers-container');
         container.innerHTML = '';
         
         if (this.editorState.mode === 'visual') {
             const sortDiv = document.createElement('div');
-            sortDiv.className = "mb-2 border-b pb-2";
+            sortDiv.className = "mb-2 border-b pb-2 space-y-2";
+            
+            const weightToggle = `
+                <label class="flex items-center gap-2 cursor-pointer bg-purple-50 p-2 rounded border border-purple-200">
+                    <input type="checkbox" ${this.editorState.isWeighted ? 'checked' : ''} onchange="Reports.toggleWeighted(this.checked)" class="accent-purple-600 w-4 h-4">
+                    <span class="text-xs font-bold text-purple-900">הצג סכומים משוקללים (עם בונוסים)</span>
+                </label>
+            `;
+
             sortDiv.innerHTML = `
-                <label class="text-xs font-bold block mb-1">מיון לפי:</label>
-                <select onchange="Reports.setSort(this.value)" class="text-xs border rounded p-1 w-full">
+                ${weightToggle}
+                <label class="text-xs font-bold block mt-2 mb-1">מיון לפי:</label>
+                <select onchange="Reports.setSort(this.value)" class="text-xs border rounded p-1 w-full bg-white">
                     <option value="amount_desc" ${this.editorState.sortBy === 'amount_desc' ? 'selected' : ''}>סכום לתצוגה (מהגבוה)</option>
                     <option value="goal_desc" ${this.editorState.sortBy === 'goal_desc' ? 'selected' : ''}>גובה יעד (מהגבוה)</option>
                     <option value="name_asc" ${this.editorState.sortBy === 'name_asc' ? 'selected' : ''}>שם משפחה (א-ת)</option>
@@ -280,10 +338,14 @@ const Reports = {
         });
     },
 
-    // 12 הגדרת מיון (11)
+    // 11 החלפת מצב משוקלל
+    toggleWeighted(isChecked) {
+        this.editorState.isWeighted = isChecked;
+        this.renderEditorCanvas();
+    },
+
     setSort(val) { this.editorState.sortBy = val; this.renderEditorCanvas(); },
 
-    // 13 הזזת כותרת (11)
     moveHeader(currIdx, direction) {
         const newIdx = currIdx + direction;
         const arr = this.editorState.headersOrder;
@@ -295,7 +357,12 @@ const Reports = {
         this.renderEditorCanvas();
     },
     
-    // 14 רינדור קנבס עורך (9)
+    setRowsPerPage(val) {
+        this.editorState.rowsPerPage = parseInt(val) || 30;
+        this.renderEditorCanvas();
+    },
+    
+    // 12 רינדור קנבס הראשי
     async renderEditorCanvas() {
         const container = document.getElementById('report-canvas-container');
         
@@ -316,7 +383,7 @@ const Reports = {
         await this.renderVisualMode(container);
     },
 
-    // 15 רינדור חופשי (14)
+    // 13 עורך חופשי
     renderCustomMode(container) {
         container.innerHTML = '';
         const bgStyle = this.editorState.bgImg ? `background-image: url('${this.editorState.bgImg}');` : '';
@@ -328,7 +395,7 @@ const Reports = {
             <div class="print-layer-content h-full flex flex-col relative">
                     ${this.editorState.customHtml}
                     <div class="draggable-item" id="default-logo" style="top: 10px; left: 10px; width: 80px;">
-                    <img src="1.JPG" class="w-full h-full object-contain pointer-events-none"><div class="resize-handle"></div>
+                        <img src="1.JPG" class="w-full h-full object-contain pointer-events-none"><div class="resize-handle"></div>
                     </div>
             </div>
             <div class="print-layer-decor absolute inset-0 overflow-hidden pointer-events-auto" id="decor-layer-0"></div>
@@ -339,19 +406,17 @@ const Reports = {
         
         setTimeout(() => {
             const logo = document.getElementById('default-logo');
-            if(logo) this.makeDraggable(logo);
+            if(logo) this.makeDraggable(logo); 
         }, 100);
     },
 
-    // 16 רינדור מסלול (14)
+    // 14 עורך מסלול
     renderRouteMode(container) {
         container.innerHTML = '';
         const data = this.editorState.routeData || []; 
         
         const ROWS_PER_PAGE = this.editorState.rowsPerPage || 30;
-        let pages = [];
-        let currentPage = [];
-        let rowCount = 0;
+        let pages = []; let currentPage = []; let rowCount = 0;
 
         data.forEach(segment => {
             if (segment.type === 'note') {
@@ -378,16 +443,16 @@ const Reports = {
             const closeTable = () => { if(inTable) { contentHtml += '</tbody></table>'; inTable = false; } };
             const openTable = () => {
                 if(!inTable) {
-                    contentHtml += '<table class="w-full text-right border-collapse text-sm mb-2" style="table-layout: auto;"><thead><tr class="bg-gray-200">';
+                    contentHtml += '<table class="print-table"><thead><tr>';
                     this.editorState.headersOrder.forEach(idx => {
                         if (this.editorState.colsVisible[idx]) {
                              const headerText = this.editorState.headers[idx];
                              let widthStyle = '';
-                             if (headerText === 'שם') widthStyle = 'width: 15%;';
+                             if (headerText === 'שם') widthStyle = 'width: 20%;';
                              else if (headerText === 'הערות') widthStyle = 'width: 25%;';
-                             else if (headerText === '#') widthStyle = 'width: 3%;';
+                             else if (headerText === '#') widthStyle = 'width: 5%;';
                              
-                             contentHtml += `<th class="border border-black p-0 text-center font-bold align-top"><div style="resize: horizontal; overflow: hidden; padding: 4px; min-width: 30px; ${widthStyle}">${headerText}</div></th>`;
+                             contentHtml += `<th style="${widthStyle}">${headerText}</th>`;
                         }
                     });
                     contentHtml += '</tr></thead><tbody>';
@@ -398,7 +463,7 @@ const Reports = {
             pageContent.forEach(item => {
                 if (item.type === 'note') {
                     closeTable();
-                    contentHtml += `<div class="bg-yellow-100 border-2 border-black p-2 my-2 text-center font-bold shadow-sm rounded break-inside-avoid">-- ${item.text} --</div>`;
+                    contentHtml += `<div style="background-color: #fef08a; border: 2px solid black; padding: 8px; margin: 10px 0; text-align: center; font-weight: bold;">-- ${item.text} --</div>`;
                 } else {
                     openTable();
                     let tds = '';
@@ -407,7 +472,7 @@ const Reports = {
                     
                     this.editorState.headersOrder.forEach(idx => {
                         if (this.editorState.colsVisible[idx]) {
-                            tds += `<td class="border border-black p-1 text-center" style="font-size: 11px; padding: 4px; word-wrap: break-word; white-space: normal; vertical-align: top;">${values[idx]}</td>`;
+                            tds += `<td>${values[idx]}</td>`;
                         }
                     });
                     contentHtml += `<tr>${tds}</tr>`;
@@ -439,7 +504,7 @@ const Reports = {
         setTimeout(() => { document.querySelectorAll('.draggable-item').forEach(el => this.makeDraggable(el)); }, 100);
     },
 
-    // 17 רינדור חזותי (14)
+    // 15 עורך חזותי לחישובים
     async renderVisualMode(container) {
         container.innerHTML = '<div class="absolute inset-0 flex flex-col items-center justify-center text-indigo-500"><i class="fas fa-spinner fa-spin text-4xl mb-4"></i><span class="font-bold">מעבד נתונים לדוח...</span></div>';
         try {
@@ -462,31 +527,35 @@ const Reports = {
                 finances.filter(f => f.studentId == student.id && f.type === 'income').forEach(f => {
                      if (!isNaN(parseFloat(f.amount))) actual += parseFloat(f.amount);
                 });
-                Object.keys(groupsData).forEach(day => {
-                    Object.values(groupsData[day]).forEach(g => {
-                        if((g.members||[]).some(m => m.id == student.id)) {
-                            const disc = parseInt(discounts[day] || 0);
-                            if (disc > 0) extra += disc;
-                        }
+                
+                if (this.editorState.isWeighted) {
+                    Object.keys(groupsData).forEach(day => {
+                        Object.values(groupsData[day]).forEach(g => {
+                            if((g.members||[]).some(m => m.id == student.id)) {
+                                const disc = parseInt(discounts[day] || 0);
+                                if (disc > 0) extra += disc;
+                            }
+                        });
                     });
-                });
-                const donorsBrought = Object.values(Store.data.donors).filter(d => d && d.referrerId == student.id);
-                donorsBrought.forEach(d => {
-                    let donorTotal = 0;
-                    finances.filter(f => f.donorId == d.id && f.type === 'income').forEach(f => {
-                        if (!isNaN(parseFloat(f.amount))) donorTotal += parseFloat(f.amount);
+                    const donorsBrought = Object.values(Store.data.donors).filter(d => d && d.referrerId == student.id);
+                    donorsBrought.forEach(d => {
+                        let donorTotal = 0;
+                        finances.filter(f => f.donorId == d.id && f.type === 'income').forEach(f => {
+                            if (!isNaN(parseFloat(f.amount))) donorTotal += parseFloat(f.amount);
+                        });
+                        const tier = bonusTiers.find(t => donorTotal >= t.rangeMin && donorTotal <= t.rangeMax);
+                        if (tier) extra += (donorTotal * (tier.percent / 100));
+                        const tiers = config.tiers || [];
+                        const goalTier = tiers.sort((a,b) => b.amount - a.amount).find(t => donorTotal >= t.amount);
+                        if (goalTier && !isNaN(parseInt(goalTier.gift))) extra += parseInt(goalTier.gift);
                     });
-                    const tier = bonusTiers.find(t => donorTotal >= t.rangeMin && donorTotal <= t.rangeMax);
-                    if (tier) extra += (donorTotal * (tier.percent / 100));
-                    const tiers = config.tiers || [];
-                    const goalTier = tiers.sort((a,b) => b.amount - a.amount).find(t => donorTotal >= t.amount);
-                    if (goalTier && !isNaN(parseInt(goalTier.gift))) extra += parseInt(goalTier.gift);
-                });
+                }
 
                 const yData = (Store.data.yearData[Store.currentYear]?.students || {})[student.id] || {};
                 const goal = (yData.personalGoal !== undefined && yData.personalGoal !== null && yData.personalGoal !== '') ? parseInt(yData.personalGoal) : (config.baseStudentGoal || 0);
                 const name = student.firstName && student.lastName ? `${student.firstName} ${student.lastName}` : (student.name || 'ללא שם');
                 const totalDisplay = Math.round(actual + extra);
+                
                 const studentTiers = config.studentTiers || [];
                 const rewardTier = studentTiers.sort((a,b) => b.amount - a.amount).find(t => totalDisplay >= t.amount);
                 const reward = rewardTier ? rewardTier.reward : '-';
@@ -533,10 +602,10 @@ const Reports = {
                                  <img src="1.JPG" alt="לוגו" class="w-full h-full object-contain pointer-events-none"><div class="resize-handle"></div>
                             </div>
                             <h1 class="text-2xl font-black text-center" id="canvas-title">${this.editorState.title || 'דוח'}</h1>
-                            <h3 class="text-center">שנה: ${Store.currentYear} | עמוד ${pageIdx+1} מתוך ${chunks.length}</h3>
+                            <h3 class="text-center">שנה: ${Store.currentYear} | עמוד ${pageIdx+1} מתוך ${chunks.length} ${this.editorState.isWeighted ? '(כולל בונוסים)' : ''}</h3>
                         </div>
                         <div class="flex-1">
-                             <table class="w-full text-right border-collapse text-sm">
+                             <table class="print-table w-full text-right border-collapse text-sm">
                                 <thead>${tableHeaderHTML}</thead>
                                 <tbody>
                                     ${chunk.map(item => {
@@ -549,7 +618,7 @@ const Reports = {
                                                 if (idx === 2) val = `<span class="font-bold">${item.totalDisplay}</span>`;
                                                 if (idx === 3) val = `${item.pct}%`;
                                                 if (idx === 4) val = `<span class="text-xs">${item.reward}</span>`;
-                                                rowHtml += `<td class="border border-black p-1 text-center">${val}</td>`;
+                                                rowHtml += `<td>${val}</td>`;
                                             }
                                         });
                                         rowHtml += '</tr>';
@@ -569,7 +638,7 @@ const Reports = {
         } catch (e) { container.innerHTML = `<div class="p-10 text-center text-red-500 font-bold">שגיאה בהפקת הדוח.<br>${e.message}</div>`; }
     },
     
-    // 18 עדכון תכונות (7)
+    // 16 עדכון שדות עורך דינמית
     updateTitle(val) { this.editorState.title = val; document.querySelectorAll('#canvas-title').forEach(el => el.innerText = val); },
     updateHeader(originalIdx, val) { this.editorState.headers[originalIdx] = val; this.renderEditorCanvas(); },
     toggleCol(originalIdx, isChecked) { this.editorState.colsVisible[originalIdx] = isChecked; this.renderEditorCanvas(); },
@@ -595,7 +664,7 @@ const Reports = {
         this.renderEditorCanvas();
     },
     
-    // 19 תמונה נגררת
+    // 17 תמונת דקורציה חופשית
     addDecorImage(input) {
         if (input.files && input.files[0]) {
             const reader = new FileReader();
@@ -612,41 +681,69 @@ const Reports = {
         }
     },
     
-    // 20 מנגנון גרירה (19)
+    // 18 גרירת תמונות משופרת עם גבולות חכמים
     makeDraggable(elmnt) {
         let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+        
         elmnt.onmousedown = function(e) {
             if (e.target.classList.contains('resize-handle')) return; 
             document.querySelectorAll('.draggable-item').forEach(el => el.classList.remove('selected'));
             elmnt.classList.add('selected');
             e.preventDefault();
-            pos3 = e.clientX; pos4 = e.clientY;
+            pos3 = e.clientX; 
+            pos4 = e.clientY;
+            
             document.onmouseup = () => { document.onmouseup = null; document.onmousemove = null; }; 
+            
             document.onmousemove = (e) => {
                 e.preventDefault();
                 const zoom = Reports.editorState.zoom || 1;
-                pos1 = pos3 - e.clientX; pos2 = pos4 - e.clientY;
-                pos3 = e.clientX; pos4 = e.clientY;
-                elmnt.style.top = (elmnt.offsetTop - pos2 / zoom) + "px";
-                elmnt.style.left = (elmnt.offsetLeft - pos1 / zoom) + "px";
+                pos1 = pos3 - e.clientX; 
+                pos2 = pos4 - e.clientY;
+                pos3 = e.clientX; 
+                pos4 = e.clientY;
+                
+                let newTop = elmnt.offsetTop - (pos2 / zoom);
+                let newLeft = elmnt.offsetLeft - (pos1 / zoom);
+                
+                // חסימה מלמעלה ומשמאל כדי למנוע בריחה לגמרי
+                if (newTop < 0) newTop = 0;
+                if (newLeft < 0) newLeft = 0;
+
+                // חסימה מלמטה ומימין בהתאם לגודל הדף (container)
+                const parent = elmnt.parentElement;
+                if (parent) {
+                    const maxTop = parent.offsetHeight - elmnt.offsetHeight;
+                    const maxLeft = parent.offsetWidth - elmnt.offsetWidth;
+                    if (newTop > maxTop) newTop = maxTop;
+                    if (newLeft > maxLeft) newLeft = maxLeft;
+                }
+
+                elmnt.style.top = newTop + "px";
+                elmnt.style.left = newLeft + "px";
             };
         };
+        
         const resizeHandle = elmnt.querySelector('.resize-handle');
         if (resizeHandle) {
             resizeHandle.onmousedown = function(e) {
                 e.stopPropagation(); e.preventDefault();
                 let startX = e.clientX;
+                let startY = e.clientY;
                 let startWidth = parseInt(document.defaultView.getComputedStyle(elmnt).width, 10);
+                
                 document.onmouseup = () => { document.onmouseup = null; document.onmousemove = null; };
+                
                 document.onmousemove = (e) => {
-                    let newW = startWidth + (e.clientX - startX) / Reports.editorState.zoom; 
-                    elmnt.style.width = newW + 'px';
+                    const zoom = Reports.editorState.zoom || 1;
+                    let newW = startWidth + ((e.clientX - startX) / zoom); 
+                    if (newW > 30) elmnt.style.width = newW + 'px'; 
                 };
             };
         }
     },
     
-    // 21 הדפסת עורך
+    // 19 הדפסת העורך
     printEditor() {
         const container = document.getElementById('report-canvas-container');
         const printArea = document.getElementById('print-area');

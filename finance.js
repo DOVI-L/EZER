@@ -1,38 +1,55 @@
+// 1 אובייקט מנהל קופה
 const Finance = {
     currentFilter: 'all',
     limit: 30,
     financeData: {},
     
-    // 1 איפוס מידע
+    // 2 איפוס קופה
     reset() { 
         this.financeData = {}; 
         Store.cursors.finance = null; 
         document.getElementById('finance-tbody').innerHTML = '';
-        this.loadMore(); 
+        this.loadMore(true); 
     },
     
-    // 2 טעינת קופה (1)
+    // 3 טעינת היסטוריה (12)
     loadMore(reset = false) {
-        if(reset) this.reset();
+        if(reset) {
+            this.financeData = {};
+            Store.cursors.finance = null;
+        }
+        
+        const loader = document.getElementById('finance-loader-more');
+        if(loader) {
+            loader.style.display = 'block';
+            loader.innerHTML = '<span class="text-gray-500 font-bold"><i class="fas fa-spinner fa-spin"></i> טוען נתונים...</span>';
+        }
+
         let q = db.ref(`years/${Store.currentYear}/finance`).orderByChild('date').limitToLast(this.limit);
         if(Store.cursors.finance) q = q.endBefore(Store.cursors.finance);
+        
         q.once('value', snap => {
             const data = snap.val();
             if(!data) {
-                document.getElementById('finance-loader-more').style.display = 'none';
+                if(loader) loader.innerHTML = '<span class="text-gray-400 font-bold bg-gray-50 px-4 py-2 rounded-full border">סוף רשימה</span>';
                 return;
             }
             const arr = [];
             Object.keys(data).forEach(k => arr.push(data[k]));
             arr.sort((a,b) => b.date - a.date); 
             Store.cursors.finance = arr[arr.length-1].date;
-            document.getElementById('finance-loader-more').style.display = 'block';
             Object.assign(this.financeData, data);
+            
+            if (arr.length < this.limit) {
+                if(loader) loader.innerHTML = '<span class="text-gray-400 font-bold bg-gray-50 px-4 py-2 rounded-full border">סוף רשימה</span>';
+            } else {
+                if(loader) loader.innerHTML = `<button onclick="Finance.loadMore()" class="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-6 py-2 rounded-full text-sm font-bold transition shadow-sm w-full sm:w-auto">טען היסטוריה ישנה יותר...</button>`;
+            }
             this.render();
         });
     },
     
-    // 3 רינדור רשימה (2)
+    // 4 רינדור רשימת תנועות (18)
     render() {
         const tbody = document.getElementById('finance-tbody');
         if(!tbody) return;
@@ -80,15 +97,17 @@ const Finance = {
                     ${tx.addedBy ? `<div class="text-[10px] text-gray-400">נוסף ע״י: ${tx.addedBy}</div>` : ''}
                 </td>
                 <td class="p-3 font-bold ${isNote ? 'text-gray-600' : (tx.type==='income'?'text-emerald-600':'text-rose-600')}" dir="ltr">${displayAmount}</td>
-                <td class="p-3 flex gap-2 justify-center">
-                    <button onclick="Finance.editTx('${tx.id}')" class="text-gray-400 hover:text-indigo-500 transition bg-white px-2 rounded border hover:border-indigo-200"><i class="fas fa-pen"></i></button>
-                    <button onclick="Finance.deleteTx('${tx.id}', '${tx.type}', '${tx.amount}')" class="text-gray-400 hover:text-red-500 transition bg-white px-2 rounded border hover:border-red-200"><i class="fas fa-trash-alt"></i></button>
+                <td class="p-3">
+                    <div class="flex gap-2 justify-center overflow-x-auto custom-scroll pb-1">
+                        <button onclick="Finance.editTx('${tx.id}')" class="shrink-0 text-gray-400 hover:text-indigo-500 transition bg-white px-2 py-1 rounded border hover:border-indigo-200"><i class="fas fa-pen"></i></button>
+                        <button onclick="Finance.deleteTx('${tx.id}', '${tx.type}', '${tx.amount}')" class="shrink-0 text-gray-400 hover:text-red-500 transition bg-white px-2 py-1 rounded border hover:border-red-200"><i class="fas fa-trash-alt"></i></button>
+                    </div>
                 </td>
             </tr>`;
         }).join('');
     },
     
-    // 4 בחירת תצוגה
+    // 5 סינונים בראש העמוד
     setFilter(f) {
         this.currentFilter = f;
         document.querySelectorAll('.finance-filter').forEach(b => {
@@ -112,7 +131,7 @@ const Finance = {
         }
     },
     
-    // 5 ניהול קטגוריות פורים (4)
+    // 6 מסך ניהול פורים (7)
     renderPurimManager() {
         const container = document.getElementById('finance-purim-view');
         if(!container) return;
@@ -124,8 +143,7 @@ const Finance = {
             const txs = Object.values(data).filter(t => t.type === 'expense' || t.type === 'income');
             
             const categories = { income: {}, expense: {} };
-            let totalIncome = 0;
-            let totalExpense = 0;
+            let totalIncome = 0; let totalExpense = 0;
 
             txs.forEach(tx => {
                 const amt = isNaN(parseFloat(tx.amount)) ? 0 : parseFloat(tx.amount);
@@ -216,7 +234,7 @@ const Finance = {
         });
     },
 
-    // 6 מימוש תלושים (4)
+    // 7 מסכי תלושים וחובות
     openVouchersView() {
         document.getElementById('finance-main-view').classList.add('hidden');
         document.getElementById('finance-purim-view').classList.add('hidden');
@@ -228,8 +246,6 @@ const Finance = {
         document.getElementById('finance-vouchers-view').classList.add('hidden');
         this.setFilter(this.currentFilter); 
     },
-    
-    // 7 חובות לחנויות (4)
     openStoreDebtsView() {
         document.getElementById('finance-main-view').classList.add('hidden');
         document.getElementById('finance-purim-view').classList.add('hidden');
@@ -242,7 +258,7 @@ const Finance = {
         this.setFilter(this.currentFilter);
     },
 
-    // 8 רשימת תלושים (6)
+    // 8 רשימת תלושים למנהל
     renderPendingVouchers() {
         const list = document.getElementById('pending-vouchers-list');
         list.innerHTML = '<div class="text-center text-gray-400">טוען תלושים...</div>';
@@ -273,27 +289,22 @@ const Finance = {
         });
     },
 
-    // 9 אישור תלוש (8)
+    // 9 אישור תלוש
     realizeVoucher(vid) {
-        if(!confirm('האם לרשום תלוש זה כמומש? הפעולה תיצור הוצאה בקופה לפי העלות האמיתית.')) return;
+        if(!confirm('האם לרשום תלוש זה כמומש? الفעולה תיצור הוצאה בקופה לפי העלות האמיתית.')) return;
         
         db.ref(`years/${Store.currentYear}/vouchersPending/${vid}`).once('value', s => {
             const v = s.val();
             if(!v) return;
             
             const expenseId = 'exp' + Date.now();
-            const expenseTx = {
-                id: expenseId,
-                date: Date.now(),
-                type: 'expense',
-                amount: parseFloat(v.realCost),
-                category: 'תלושים/מתנות',
+            const expenseTx = System.cleanObject({ // סעיף 9
+                id: expenseId, date: Date.now(), type: 'expense',
+                amount: parseFloat(v.realCost), category: 'תלושים/מתנות',
                 desc: `מימוש תלוש: ${v.voucherName} (שווי ${v.faceValue})`,
-                studentId: v.studentId,
-                isPurim: true,
-                storeName: v.storeName || 'כללי',
-                isPaidToStore: false
-            };
+                studentId: v.studentId, isPurim: true,
+                storeName: v.storeName || 'כללי', isPaidToStore: false
+            });
             
             OfflineManager.write(`years/${Store.currentYear}/finance/${expenseId}`, expenseTx);
             if(OfflineManager.isOnline) {
@@ -302,11 +313,11 @@ const Finance = {
             
             OfflineManager.write(`years/${Store.currentYear}/vouchersPending/${vid}`, null, 'remove');
             Notify.show('התלוש מומש ונרשמה הוצאה', 'success');
-            setTimeout(() => this.renderPendingVouchers(), 500);
+            this.renderPendingVouchers(); // סעיף 7 מיידי
         });
     },
     
-    // 10 רשימת חובות (7)
+    // 10 רשימת חובות לחנויות
     renderStoreDebts() {
         const container = document.getElementById('store-debts-container');
         container.innerHTML = '<div class="text-center text-gray-400">מחשב נתונים...</div>';
@@ -372,13 +383,13 @@ const Finance = {
         });
     },
 
-    // 11 שינוי סטטוס חוב (10)
+    // 11 שינוי סטטוס חוב (7)
     toggleStorePayment(id, status) {
         OfflineManager.write(`years/${Store.currentYear}/finance/${id}/isPaidToStore`, status);
-        setTimeout(() => this.renderStoreDebts(), 200);
+        this.renderStoreDebts(); // סעיף 7 עובד מיידי
     },
 
-    // 12 טופס מרובה (3)
+    // 12 הוספה מרוכזת של תנועות
     renderBatchTransactionForm() {
         const today = new Date().toISOString().split('T')[0];
         const studentsList = Object.values(Store.data.students).map(s => {
@@ -393,16 +404,16 @@ const Finance = {
                     ${studentsList}
                     ${donorsList}
                 </datalist>
-                <table class="w-full text-right batch-table" id="batch-tx-table">
+                <table class="w-full text-right batch-table min-w-[800px]" id="batch-tx-table">
                     <thead>
                         <tr>
-                            <th width="80">סוג</th>
-                            <th width="120">תאריך</th>
-                            <th width="150">שם או מס' מזהה</th>
+                            <th width="90">סוג</th>
+                            <th width="130">תאריך</th>
+                            <th width="160">שם או מס' מזהה</th>
                             <th width="100">סכום / טקסט / תלוש</th>
-                            <th width="120">קטגוריה</th>
+                            <th width="130">קטגוריה</th>
                             <th>פרטים / הערות</th>
-                            <th width="50" class="text-center">פורים</th>
+                            <th width="60" class="text-center">פורים</th>
                             <th width="40"></th>
                         </tr>
                     </thead>
@@ -412,11 +423,10 @@ const Finance = {
             </div>
         `;
 
-        Modal.renderRaw('הוספת תנועות מרוכזת (כסף / הערות)', html, () => Finance.submitBatch(), 'max-w-7xl w-full');
+        Modal.renderRaw('הוספת תנועות מרוכזת', html, () => Finance.submitBatch(), 'max-w-7xl w-full');
         for(let i=0; i<5; i++) Finance.addBatchRow();
     },
 
-    // 13 הוספת שורה (12)
     addBatchRow() {
         const tbody = document.getElementById('batch-tbody');
         const rowId = 'row-' + Date.now() + Math.random().toString(36).substr(2, 5);
@@ -432,37 +442,31 @@ const Finance = {
 
         tr.innerHTML = `
             <td>
-                <select class="batch-input" name="type" onchange="Finance.toggleRowType(this)">
-                    <option value="income">הכנסה</option>
-                    <option value="expense">הוצאה</option>
-                    <option value="note">הערה (מסלול)</option>
-                    <option value="voucher">תלוש לבחור</option>
+                <select class="batch-input text-xs" name="type" onchange="Finance.toggleRowType(this)">
+                    <option value="income">הכנסה</option><option value="expense">הוצאה</option>
+                    <option value="note">הערה (מסלול)</option><option value="voucher">תלוש לבחור</option>
                 </select>
             </td>
-            <td><input type="date" class="batch-input" name="date" value="${today}"></td>
+            <td><input type="date" class="batch-input text-xs" name="date" value="${today}"></td>
             <td>
-                <input type="text" list="entity-list" class="batch-input" name="entityName" placeholder="הקלד שם או מספר..." onchange="Finance.resolveEntity(this)">
-                <input type="hidden" name="entityId">
-                <input type="hidden" name="entityType">
+                <input type="text" list="entity-list" class="batch-input text-xs" name="entityName" placeholder="הקלד שם..." onchange="Finance.resolveEntity(this)">
+                <input type="hidden" name="entityId"><input type="hidden" name="entityType">
             </td>
             <td>
-                <input type="text" class="batch-input field-amount" name="amount" placeholder="סכום/ערך">
-                <select class="batch-input field-voucher hidden" name="voucherId">${voucherOpts}</select>
+                <input type="text" class="batch-input text-xs field-amount" name="amount" placeholder="סכום/ערך">
+                <select class="batch-input text-xs field-voucher hidden" name="voucherId">${voucherOpts}</select>
             </td>
             <td>
-                <select class="batch-input field-cat" name="category">
-                    <option>תרומה כללית</option><option>מזומן</option><option>צק</option><option>אשראי</option>
-                </select>
-                <input type="text" class="batch-input mt-1 text-xs" name="subCategory" placeholder="תת קטגוריה (למשל: סוכן ג')">
+                <select class="batch-input text-xs field-cat" name="category"><option>תרומה כללית</option><option>מזומן</option><option>צק</option><option>אשראי</option></select>
+                <input type="text" class="batch-input mt-1 text-[10px]" name="subCategory" placeholder="תת קטגוריה">
             </td>
-            <td><input type="text" class="batch-input" name="desc" placeholder="פירוט נוסף..."></td>
+            <td><input type="text" class="batch-input text-xs" name="desc" placeholder="פירוט נוסף..."></td>
             <td class="text-center"><input type="checkbox" name="isPurim" checked class="h-4 w-4"></td>
             <td class="text-center"><button onclick="document.getElementById('${rowId}').remove()" class="text-red-400 hover:text-red-600"><i class="fas fa-times"></i></button></td>
         `;
         tbody.appendChild(tr);
     },
 
-    // 14 סוג שורה (13)
     toggleRowType(select) {
         const tr = select.closest('tr');
         const type = select.value;
@@ -471,56 +475,35 @@ const Finance = {
         const voucherSelect = tr.querySelector('.field-voucher');
         
         if (type === 'voucher') {
-            amtInput.classList.add('hidden');
-            voucherSelect.classList.remove('hidden');
-            catSelect.innerHTML = `<option>תלושים/מתנות</option>`;
-            catSelect.disabled = true;
+            amtInput.classList.add('hidden'); voucherSelect.classList.remove('hidden');
+            catSelect.innerHTML = `<option>תלושים/מתנות</option>`; catSelect.disabled = true;
         } else if (type === 'note') {
-            amtInput.classList.remove('hidden');
-            voucherSelect.classList.add('hidden');
-            catSelect.innerHTML = `<option>הערה / טקסט</option>`;
-            catSelect.disabled = false;
+            amtInput.classList.remove('hidden'); voucherSelect.classList.add('hidden');
+            catSelect.innerHTML = `<option>הערה / טקסט</option>`; catSelect.disabled = false;
         } else {
-            amtInput.classList.remove('hidden');
-            voucherSelect.classList.add('hidden');
-            catSelect.disabled = false;
-            if (type === 'income') {
-                catSelect.innerHTML = `<option>תרומה כללית</option><option>מזומן</option><option>צק</option><option>אשראי</option><option>הו"ק</option>`;
-            } else {
-                catSelect.innerHTML = `<option>אוכל</option><option>ציוד</option><option>שיווק</option><option>אחר</option><option>תלושים/מתנות</option>`;
-            }
+            amtInput.classList.remove('hidden'); voucherSelect.classList.add('hidden'); catSelect.disabled = false;
+            if (type === 'income') catSelect.innerHTML = `<option>תרומה כללית</option><option>מזומן</option><option>צק</option><option>אשראי</option><option>הו"ק</option>`;
+            else catSelect.innerHTML = `<option>אוכל</option><option>ציוד</option><option>שיווק</option><option>אחר</option><option>תלושים/מתנות</option>`;
         }
     },
 
-    // 15 זיהוי מזהה (13)
     resolveEntity(input) {
         const val = input.value;
         const tr = input.closest('tr');
         const hiddenId = tr.querySelector('input[name="entityId"]');
         const hiddenType = tr.querySelector('input[name="entityType"]');
         
-        let foundId = null; 
-        let foundType = null;
-        
-        // נסיון לאתר לפי מספר מזהה
+        let foundId = null; let foundType = null;
         const possibleNum = val.trim();
-        const studentByNum = Object.values(Store.data.students).find(s => 
-            (s.studentNum && s.studentNum.toString() === possibleNum) || 
-            (s.idNum && s.idNum.toString() === possibleNum)
-        );
+        const studentByNum = Object.values(Store.data.students).find(s => (s.studentNum && s.studentNum.toString() === possibleNum) || (s.idNum && s.idNum.toString() === possibleNum));
         
         if (studentByNum) {
-            foundId = studentByNum.id;
-            foundType = 'student';
+            foundId = studentByNum.id; foundType = 'student';
             input.value = (studentByNum.firstName && studentByNum.lastName) ? `${studentByNum.firstName} ${studentByNum.lastName}` : studentByNum.name;
         } else {
             const cleanName = val.split('|')[0].replace(' (בחור)', '').replace(' (תורם)', '').trim();
-            const s = Object.values(Store.data.students).find(s => {
-                const n = s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : s.name;
-                return n === cleanName;
-            });
+            const s = Object.values(Store.data.students).find(s => { const n = s.firstName && s.lastName ? `${s.firstName} ${s.lastName}` : s.name; return n === cleanName; });
             if (s) { foundId = s.id; foundType = 'student'; }
-            
             if (!foundId) {
                 const d = Object.values(Store.data.donors).find(d => d.name === cleanName);
                 if (d) { foundId = d.id; foundType = 'donor'; }
@@ -528,17 +511,15 @@ const Finance = {
         }
 
         if (foundId) {
-            hiddenId.value = foundId;
-            hiddenType.value = foundType;
+            hiddenId.value = foundId; hiddenType.value = foundType;
             input.classList.add('border-green-500', 'bg-green-50');
         } else {
-            hiddenId.value = '';
-            hiddenType.value = '';
+            hiddenId.value = ''; hiddenType.value = '';
             input.classList.remove('border-green-500', 'bg-green-50');
         }
     },
 
-    // 16 שליחת טופס מרוכז (12)
+    // 13 שמירת טופס מרובה (9)
     submitBatch() {
         const rows = document.querySelectorAll('#batch-tbody tr');
         let count = 0;
@@ -562,16 +543,12 @@ const Finance = {
                 const vOption = voucherSelect.options[voucherSelect.selectedIndex];
                 if (!vOption.value || !entityId || entityType !== 'student') return;
                 
-                const vData = {
+                const vData = System.cleanObject({
                     id: 'vp' + Date.now() + Math.random().toString(36).substr(2,5),
-                    studentId: entityId,
-                    voucherId: vOption.value,
-                    voucherName: vOption.dataset.name,
-                    realCost: parseFloat(vOption.dataset.cost),
-                    faceValue: parseFloat(vOption.dataset.face),
-                    storeName: vOption.text.match(/\((.*?)\)/)?.[1] || 'כללי',
-                    dateIssued: timestamp
-                };
+                    studentId: entityId, voucherId: vOption.value, voucherName: vOption.dataset.name,
+                    realCost: parseFloat(vOption.dataset.cost), faceValue: parseFloat(vOption.dataset.face),
+                    storeName: vOption.text.match(/\((.*?)\)/)?.[1] || 'כללי', dateIssued: timestamp
+                });
                 OfflineManager.write(`years/${Store.currentYear}/vouchersPending/${vData.id}`, vData);
                 count++;
                 
@@ -582,16 +559,12 @@ const Finance = {
                 const amount = parseFloat(rawVal);
                 const isText = type === 'note' || isNaN(amount);
 
-                const txData = {
-                    id: txId,
-                    date: timestamp,
-                    type: isText ? 'note' : type,
-                    amount: isText ? rawVal : amount,
-                    category: category,
-                    subCategory: subCategory,
-                    desc: (entityId ? '' : `שם: ${entityNameRaw}. `) + desc,
-                    isPurim: isPurim
-                };
+                // סעיף 9: ניקוי שדות
+                const txData = System.cleanObject({
+                    id: txId, date: timestamp, type: isText ? 'note' : type,
+                    amount: isText ? rawVal : amount, category: category, subCategory: subCategory,
+                    desc: (entityId ? '' : `שם: ${entityNameRaw}. `) + desc, isPurim: isPurim
+                });
                 
                 if (entityId) {
                     if (entityType === 'student') txData.studentId = entityId;
@@ -610,22 +583,18 @@ const Finance = {
             }
         });
         
-        if (count > 0) {
-            Notify.show(`${count} שורות נקלטו בהצלחה`, 'success');
-            Modal.close();
-        } else {
-            alert('לא נקלטו נתונים (ודא שמילאת סכומים/ערכים ושמות תקינים)');
-        }
+        if (count > 0) { Notify.show(`${count} שורות נקלטו`, 'success'); Modal.close(); } 
+        else { alert('לא נקלטו נתונים (ודא שמילאת סכומים)'); }
     },
 
-    // 17 עריכת תנועה (3)
+    // 14 פתיחת עריכה
     editTx(id) {
         const tx = this.financeData[id];
         if(!tx) return;
         this.openTransactionModal(tx.type, tx); 
     },
     
-    // 18 חלון תנועה בודדת
+    // 15 חלון תנועה (9)
     openTransactionModal(type, existingData = null) {
         const isNote = existingData && (existingData.type === 'note' || isNaN(parseFloat(existingData.amount)));
         let cats = [];
@@ -640,9 +609,7 @@ const Finance = {
         const donorsOpts = Object.values(Store.data.donors).filter(d => d).map(d => `<option value="${d.id}">${d.name}</option>`).join('');
         
         let defaultDate = new Date().toISOString().split('T')[0];
-        if (existingData && existingData.date) {
-            defaultDate = new Date(existingData.date).toISOString().split('T')[0];
-        }
+        if (existingData && existingData.date) defaultDate = new Date(existingData.date).toISOString().split('T')[0];
 
         const html = `
             <div class="space-y-6">
@@ -660,12 +627,10 @@ const Finance = {
                         <input type="text" id="tx-sub-category" class="input-field w-full mt-2 text-sm" placeholder="תת קטגוריה..." value="${existingData?.subCategory || ''}">
                     </div>
                 </div>
-
                 <div id="amount-input-container" class="bg-gray-50 p-4 rounded-xl border border-gray-200">
                     <label class="lbl text-lg text-slate-700">סכום או ערך (הערה)</label>
                     <input type="text" id="tx-amount" class="input-field w-full text-3xl font-bold text-center tracking-wider text-slate-800" value="${existingData?.amount || ''}" placeholder="סכום בש״ח או טקסט" required>
                 </div>
-
                 <div class="bg-slate-50 p-4 rounded-xl border">
                     <label class="lbl">שיוך</label>
                     <div class="flex gap-4 mb-3">
@@ -678,12 +643,10 @@ const Finance = {
                         <select id="sel-donor" class="input-field w-full ${existingData?.donorId?'':'hidden'}"><option value="">-- בחר תורם --</option>${donorsOpts}</select>
                     </div>
                 </div>
-
                 <div>
                     <label class="lbl">תיאור / פירוט</label>
                     <textarea id="tx-desc" class="input-field w-full h-24" placeholder="פירוט נוסף...">${existingData?.desc || ''}</textarea>
                 </div>
-
                 <div class="flex items-center gap-2 bg-purple-50 p-3 rounded border border-purple-100">
                     <input type="checkbox" id="tx-purim" class="h-5 w-5 rounded text-indigo-600" ${(!existingData || existingData.isPurim)?'checked':''}>
                     <span class="text-sm font-bold text-purple-900">שייך לתקציב פורים?</span>
@@ -699,23 +662,20 @@ const Finance = {
             
             let rawVal = document.getElementById('tx-amount').value;
             if(!rawVal) return alert('חובה להזין סכום או ערך');
-            
-            let amount = parseFloat(rawVal);
-            const isTextNow = isNaN(amount);
+            let amount = parseFloat(rawVal); const isTextNow = isNaN(amount);
             
             const dVal = document.getElementById('tx-date').value;
             const timestamp = dVal ? new Date(dVal + 'T12:00:00').getTime() : Date.now();
-
             const id = existingData ? existingData.id : ('tx' + Date.now());
-            const newData = {
-                id, date: timestamp, type: isTextNow ? 'note' : type,
-                amount: isTextNow ? rawVal : amount,
+            
+            // סעיף 9: ניקוי שדות (חיסכון ב-Firebase)
+            const newData = System.cleanObject({
+                id, date: timestamp, type: isTextNow ? 'note' : type, amount: isTextNow ? rawVal : amount,
                 category: document.getElementById('tx-category').value,
-                subCategory: document.getElementById('tx-sub-category').value.trim(),
+                subCategory: document.getElementById('tx-sub-category').value,
                 desc: document.getElementById('tx-desc').value,
-                isPurim: document.getElementById('tx-purim').checked,
-                studentId, donorId
-            };
+                isPurim: document.getElementById('tx-purim').checked, studentId, donorId
+            });
             
             OfflineManager.write(`years/${Store.currentYear}/finance/${id}`, newData, existingData ? 'update' : 'set');
             
@@ -728,7 +688,7 @@ const Finance = {
             Modal.close();
             
             if (document.getElementById('finance-purim-view') && !document.getElementById('finance-purim-view').classList.contains('hidden')) {
-                setTimeout(() => this.renderPurimManager(), 300);
+                this.renderPurimManager(); // סעיף 7
             }
         }, 'max-w-3xl w-full'); 
         
@@ -736,7 +696,7 @@ const Finance = {
         if(existingData?.donorId) document.getElementById('sel-donor').value = existingData.donorId;
     },
 
-    // 19 מחיקת תנועה (3)
+    // 16 מחיקת תנועה (7)
     deleteTx(id, type, amountVal) {
         if(confirm('למחוק תנועה זו?')) {
             OfflineManager.write(`years/${Store.currentYear}/finance/${id}`, null, 'remove');
@@ -747,7 +707,7 @@ const Finance = {
             Notify.show('תנועה נמחקה', 'info');
             
             if (document.getElementById('finance-purim-view') && !document.getElementById('finance-purim-view').classList.contains('hidden')) {
-                setTimeout(() => this.renderPurimManager(), 300);
+                this.renderPurimManager(); // סעיף 7: מיידי
             }
         }
     }

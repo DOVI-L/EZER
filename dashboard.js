@@ -1,4 +1,6 @@
+// 1 לוח מחוונים ראשי
 const Dashboard = {
+    // 2 רינדור נתונים גרפיים
     render() {
         const stats = Store.data.stats || { income: 0, expense: 0 };
         const inc = stats.income || 0;
@@ -29,30 +31,33 @@ const Dashboard = {
             if(el) el.innerText = count;
         });
 
+        // 3 טעינת יומן אחרונים (מיידי)
         if (Store.role !== 'user') {
             db.ref(`years/${Store.currentYear}/finance`).orderByChild('date').limitToLast(5).once('value', s => {
                 const logs = document.getElementById('dash-logs');
                 if(!logs) return;
                 const val = s.val();
-                if(!val) { logs.innerHTML = '<div class="text-center text-gray-400 mt-4">אין תנועות אחרונות</div>'; return; }
+                if(!val) { logs.innerHTML = '<div class="text-center text-gray-400 mt-4 font-bold">אין תנועות אחרונות בקופה</div>'; return; }
                 const arr = Object.values(val).sort((a,b)=>b.date-a.date);
                 logs.innerHTML = arr.map(t => {
                     const icon = t.type==='income' ? 'fa-arrow-down text-emerald-500' : 'fa-arrow-up text-rose-500';
-                    const displayAmt = isNaN(parseFloat(t.amount)) ? t.amount : `₪${t.amount}`;
+                    const displayAmt = isNaN(parseFloat(t.amount)) ? t.amount : `₪${t.amount.toLocaleString()}`;
                     return `
-                    <div class="p-3 border-b flex justify-between items-center text-sm hover:bg-slate-50">
+                    <div class="p-3 border-b flex justify-between items-center text-sm hover:bg-slate-50 transition rounded-lg">
                         <div class="flex items-center gap-2">
-                            <i class="fas ${icon}"></i>
-                            <span class="font-medium">${t.category}</span>
-                            <span class="text-xs text-gray-400">${t.desc||''}</span>
+                            <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center"><i class="fas ${icon}"></i></div>
+                            <div class="flex flex-col">
+                                <span class="font-bold text-slate-800">${t.category}</span>
+                                <span class="text-[10px] text-gray-500 truncate w-32">${t.desc||'ללא הערה'}</span>
+                            </div>
                         </div>
-                        <span class="font-bold">${displayAmt}</span>
+                        <span class="font-black ${t.type==='income'?'text-emerald-600':'text-rose-600'}">${displayAmt}</span>
                     </div>`;
                 }).join('');
             });
         } else {
              const logs = document.getElementById('dash-logs');
-             if(logs) logs.innerHTML = '<div class="text-center text-gray-400 mt-4">אין גישה לנתונים כספיים</div>';
+             if(logs) logs.innerHTML = '<div class="text-center text-gray-400 mt-4">אין לך גישה לנתונים כספיים</div>';
         }
     }
 };

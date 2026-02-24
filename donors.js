@@ -1,3 +1,4 @@
+// 1 משיכת תורמים במינות
 const Donors = {
     limit: 40,
     viewMode: 'list', 
@@ -5,23 +6,24 @@ const Donors = {
     donorSortables: [], 
     poolSortable: null,
     
-    // 1 טעינת תורמים
+    // 2 טעינת עוד
     loadMore(reset = false) {
         return new Promise((resolve) => {
             if(reset) { Store.cursors.donors = null; Store.loadedAll.donors = false; }
             const loader = document.getElementById('donors-loader-more');
             if(loader) {
                  loader.style.display = 'block';
-                 const btn = loader.querySelector('button');
-                 if(btn) btn.innerText = 'טוען...';
+                 loader.innerHTML = '<span class="text-gray-500 font-bold"><i class="fas fa-spinner fa-spin"></i> טוען...</span>';
             }
+            
             let query = db.ref('global/donors').orderByKey().limitToLast(this.limit);
             if(Store.cursors.donors) query = query.endBefore(Store.cursors.donors);
+            
             query.once('value', snap => {
                 const data = snap.val();
                 if(!data) {
                     Store.loadedAll.donors = true;
-                    if(loader) loader.style.display = 'none';
+                    this.render(); 
                     resolve();
                     return;
                 }
@@ -29,19 +31,16 @@ const Donors = {
                 Store.cursors.donors = keys[0];
                 Object.assign(Store.data.donors, data);
                 OfflineManager.saveState('donors', Store.data.donors);
-                this.render();
-                if (keys.length < this.limit) {
-                    Store.loadedAll.donors = true;
-                    if(loader) loader.style.display = 'none';
-                } else {
-                    if(loader) loader.innerHTML = `<button onclick="Donors.loadMore()" class="bg-slate-200 text-slate-600 px-6 py-2 rounded-full font-bold text-sm">טען עוד...</button>`;
-                }
+                
+                if (keys.length < this.limit) Store.loadedAll.donors = true;
+                
+                this.render(); 
                 resolve();
             });
         });
     },
     
-    // 2 סנכרון תורמים (1)
+    // 3 סנכרון חדשים
     syncNewest() {
         db.ref('global/donors').orderByKey().limitToLast(10).once('value', snap => {
             const data = snap.val();
@@ -53,7 +52,7 @@ const Donors = {
         });
     },
     
-    // 3 רינדור מסך
+    // 4 רינדור ראשי
     render(searchTerm = null) {
         try {
             const listView = document.getElementById('donors-list-view');
@@ -73,12 +72,10 @@ const Donors = {
                 if(managerView) managerView.classList.remove('hidden');
                 this.renderManager();
             }
-        } catch(e) {
-            console.error("Error in Donors.render:", e);
-        }
+        } catch(e) { console.error("Error in Donors.render:", e); }
     },
 
-    // 4 בניית תפריט (3)
+    // 5 תפריט עליון
     buildTopMenu() {
         const topBar = document.getElementById('donors-top-bar');
         if(!topBar) {
@@ -86,24 +83,24 @@ const Donors = {
             const headerHtml = `
                 <div id="donors-top-bar" class="p-4 bg-white rounded-t-2xl shadow-sm border-b flex flex-col gap-3 shrink-0 z-20 relative">
                     <div class="flex justify-between items-center w-full flex-wrap gap-2">
-                        <div class="flex gap-2 items-center">
-                            <button onclick="Donors.openAddModal()" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow hover:bg-emerald-700 transition">
+                        <div class="flex gap-2 items-center overflow-x-auto pb-1 custom-scroll">
+                            <button onclick="Donors.openAddModal()" class="shrink-0 bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow hover:bg-emerald-700 transition">
                                 <i class="fas fa-plus"></i> <span class="hidden sm:inline">הוספה</span>
                             </button>
-                            <button onclick="Donors.toggleQuickManager()" id="donor-view-toggle-btn" class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-lg text-sm font-bold hover:bg-emerald-100 transition">
+                            <button onclick="Donors.toggleQuickManager()" id="donor-view-toggle-btn" class="shrink-0 bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-lg text-sm font-bold hover:bg-emerald-100 transition">
                                 <i class="fas fa-th"></i> <span class="hidden sm:inline">מצב שיבוץ ומסלול</span>
                             </button>
-                            <button onclick="Importer.init('donors')" class="bg-white text-green-600 border border-green-200 px-3 py-1.5 rounded-lg text-sm font-bold hover:bg-green-50 transition">
+                            <button onclick="Importer.init('donors')" class="shrink-0 bg-white text-green-600 border border-green-200 px-3 py-1.5 rounded-lg text-sm font-bold hover:bg-green-50 transition">
                                 <i class="fas fa-file-excel"></i> <span class="hidden sm:inline">אקסל</span>
                             </button>
-                            <select id="donor-group-select" onchange="Donors.renderList()" class="hidden border-emerald-300 border text-emerald-800 bg-emerald-50 text-sm rounded-lg px-2 py-1.5 outline-none font-bold min-w-[120px]">
+                            <select id="donor-group-select" onchange="Donors.renderList()" class="shrink-0 hidden border-emerald-300 border text-emerald-800 bg-emerald-50 text-sm rounded-lg px-2 py-1.5 outline-none font-bold min-w-[120px]">
                                 <option value="">- כל הקבוצות -</option>
                             </select>
-                            <button id="donor-expand-btn" onclick="Groups.expandGroupDetails(Donors.viewTab, document.getElementById('donor-group-select').value)" class="hidden bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow hover:bg-indigo-700 transition">
+                            <button id="donor-expand-btn" onclick="Groups.expandGroupDetails(Donors.viewTab, document.getElementById('donor-group-select').value)" class="shrink-0 hidden bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow hover:bg-indigo-700 transition">
                                 <i class="fas fa-expand-arrows-alt"></i> <span class="hidden sm:inline">הרחבה מפורטת</span>
                             </button>
                         </div>
-                        <div class="relative w-full sm:w-56 mt-2 sm:mt-0" id="donor-search-wrapper">
+                        <div class="relative w-full sm:w-56 mt-2 sm:mt-0 shrink-0" id="donor-search-wrapper">
                             <input type="text" id="donor-search-input" oninput="Donors.renderList(this.value)" placeholder="חפש תורם..." class="input-field w-full pl-4 pr-10 py-1.5 text-sm">
                             <i class="fas fa-search absolute left-3 top-2.5 text-gray-400 text-xs"></i>
                         </div>
@@ -123,7 +120,7 @@ const Donors = {
         }
     },
     
-    // 5 החלפת תצוגה (3)
+    // 6 מצב ניהול
     toggleQuickManager() {
         this.viewMode = this.viewMode === 'list' ? 'manager' : 'list';
         
@@ -157,7 +154,7 @@ const Donors = {
         }
     },
     
-    // 6 בחירת כרטיסייה (3)
+    // 7 החלפת טאב
     setViewTab(tab) {
         try {
             this.viewTab = tab;
@@ -177,7 +174,7 @@ const Donors = {
                     this.setViewTab('night14');
                     return;
                 }
-                this.renderManager();
+                this.renderManager(); 
                 return;
             }
 
@@ -195,11 +192,11 @@ const Donors = {
                     if(expandBtn) expandBtn.style.display = 'none';
                 }
             }
-            this.renderList();
+            this.renderList(); 
         } catch(e) { console.error(e); }
     },
     
-    // 7 רינדור רשימה (3)
+    // 8 רינדור רשימה וכפתור דינמי (סעיף 12)
     renderList(searchTerm) {
         const term = searchTerm || (document.getElementById('donor-search-input') ? document.getElementById('donor-search-input').value.trim() : '');
         const tbody = document.getElementById('donors-tbody');
@@ -214,9 +211,7 @@ const Donors = {
                 expandBtn.classList.remove('hidden');
                 expandBtn.style.display = 'inline-block';
             }
-            else {
-                expandBtn.style.display = 'none';
-            }
+            else { expandBtn.style.display = 'none'; }
         }
         
         tbody.innerHTML = '';
@@ -243,15 +238,30 @@ const Donors = {
         if(term) list = list.filter(d => (d.name || '').includes(term) || (d.address||'').includes(term) || (d.city||'').includes(term));
         
         const displayList = list.slice(0, 50);
-        if(displayList.length === 0) {
-             tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-gray-400">לא נמצאו תורמים</td></tr>';
-             return;
+        const loader = document.getElementById('donors-loader-more');
+
+        if (loader) {
+            loader.style.display = 'block';
+            if (displayList.length === 0) {
+                 loader.innerHTML = '<span class="text-gray-400 font-bold bg-gray-50 px-4 py-2 rounded-full border">לא נמצאו תורמים</span>';
+            } else if (Store.loadedAll.donors || term) {
+                 loader.innerHTML = '<span class="text-gray-400 font-bold bg-gray-50 px-4 py-2 rounded-full border">סוף רשימה</span>';
+            } else {
+                 loader.innerHTML = `
+                    <button onclick="Donors.loadMore()" class="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-6 py-2 rounded-full text-sm font-bold transition shadow-sm w-full sm:w-auto">
+                        <i class="fas fa-chevron-down ml-2"></i> טען עוד תורמים...
+                    </button>`;
+            }
         }
+
+        if(displayList.length === 0) return;
 
         displayList.forEach(d => {
             const groupName = Store.data.donorGroupMap[d.id];
             const tr = document.createElement('tr');
             tr.className = "hover:bg-slate-50 border-b border-slate-50 transition cursor-pointer group";
+            tr.onclick = (e) => { if(!e.target.closest('button')) this.openEdit(d.id); }; 
+            
             tr.innerHTML = `
                 <td class="p-3 text-right font-medium text-slate-800">
                      ${d.name} ${d.vip ? '<span class="mr-2 text-[10px] bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-100">VIP</span>' : ''}
@@ -259,17 +269,19 @@ const Donors = {
                 <td class="p-3 text-right text-gray-500 text-sm">${d.city || ''} ${d.street || d.address || ''} ${d.floor ? '(קומה '+d.floor+')' : ''}</td>
                 <td class="p-3 text-right text-gray-500 text-sm">${d.phone || ''}</td>
                 <td class="p-3 text-right text-sm">${groupName ? `<span class="bg-amber-50 text-amber-700 px-2 py-0.5 rounded font-bold border border-amber-100">${groupName}</span>` : '-'}</td>
-                <td class="p-3 text-center flex items-center justify-center gap-2">
-                    <button onclick="Donors.openBatchDonation('${d.id}', '${d.name}')" class="bg-green-100 text-green-600 hover:bg-green-200 hover:text-green-800 transition p-2 rounded-full font-bold" title="הוסף תרומות"><i class="fas fa-plus"></i></button>
-                    <button onclick="Donors.openEdit('${d.id}')" class="text-indigo-400 hover:text-indigo-600 bg-indigo-50 hover:bg-indigo-100 p-2 rounded-full transition"><i class="fas fa-pen"></i></button>
-                    <button onclick="Donors.delete('${d.id}')" class="text-red-300 hover:text-red-600 hover:bg-red-50 p-2 rounded-full transition"><i class="fas fa-trash"></i></button>
+                <td class="p-3">
+                    <div class="flex items-center justify-start sm:justify-center gap-2 overflow-x-auto pb-1 custom-scroll">
+                        <button onclick="Donors.openBatchDonation('${d.id}', '${d.name}')" class="bg-green-100 text-green-600 hover:bg-green-200 hover:text-green-800 transition shrink-0 p-2 rounded-full font-bold" title="הוסף תרומות"><i class="fas fa-plus"></i></button>
+                        <button onclick="Donors.openEdit('${d.id}')" class="text-indigo-400 hover:text-indigo-600 bg-indigo-50 hover:bg-indigo-100 shrink-0 p-2 rounded-full transition"><i class="fas fa-pen"></i></button>
+                        <button onclick="Donors.delete('${d.id}')" class="text-red-300 hover:text-red-600 hover:bg-red-50 shrink-0 p-2 rounded-full transition admin-only"><i class="fas fa-trash"></i></button>
+                    </div>
                 </td>
             `;
             tbody.appendChild(tr);
         });
     },
 
-    // 8 תבנית תרומה
+    // 9 HTML לשורה
     getBatchRowHtml() {
         return `
             <tr class="border-b last:border-0">
@@ -285,7 +297,7 @@ const Donors = {
         `;
     },
 
-    // 9 חלון תרומות (8)
+    // 10 חלון תרומה מרובה
     openBatchDonation(id, name) {
         const html = `
             <div class="space-y-4">
@@ -312,11 +324,13 @@ const Donors = {
                 const method = tr.querySelector('.input-method').value;
                 const notes = tr.querySelector('.input-notes').value;
                 const txId = 'tx' + Date.now() + Math.random().toString(36).substr(2,5);
-                const txData = {
+                
+                const txData = System.cleanObject({ 
                     id: txId, date: now, type: isText ? 'note' : 'income', 
                     amount: isText ? rawVal : amount, category: isText ? 'הערת מסלול' : method, 
                     desc: notes || (isText ? rawVal : ''), donorId: id, isPurim: true
-                };
+                });
+                
                 OfflineManager.write(`years/${Store.currentYear}/finance/${txId}`, txData);
                 if(OfflineManager.isOnline && !isText) db.ref(`years/${Store.currentYear}/stats/income`).transaction(curr => (curr || 0) + amount);
                 count++;
@@ -326,10 +340,10 @@ const Donors = {
         }, 'max-w-3xl w-full');
     },
     
-    // 10 הוספת שורה (9)
+    // 11 הוספת שורה לטבלה
     addBatchRow() { document.getElementById('batch-add-tbody').insertAdjacentHTML('beforeend', this.getBatchRowHtml()); },
     
-    // 11 הוספת הערת מסלול (14)
+    // 12 הערת מסלול מנהל
     addRouteNoteManager(day, gid) {
         const text = prompt("הכנס טקסט להערה במסלול (לדוגמה: 'הפסקה', 'מעבר לרחוב הבא'):");
         if(text) {
@@ -338,12 +352,12 @@ const Donors = {
                 const list = s.val() || [];
                 list.push(`NOTE:${text}`);
                 OfflineManager.write(path, list);
-                setTimeout(() => this.renderManager(), 300);
+                this.renderManager(); 
              });
         }
     },
 
-    // 12 שיבוץ מהיר (3)
+    // 13 מודאל שיבוץ מהיר
     quickAssignModal(donorId, donorName) {
         const currentDay = this.viewTab;
         const groupsData = Store.data.yearData[Store.currentYear]?.groups || {};
@@ -361,7 +375,7 @@ const Donors = {
         document.querySelector('#modal-form .btn-primary').parentElement.style.display = 'none';
     },
 
-    // 13 שמירת שיבוץ (12)
+    // 14 אישור שיבוץ
     assignToGroup(donorId, day, gid) {
         const path = `years/${Store.currentYear}/groups/${day}/${gid}/route`;
         db.ref(path).once('value', s => {
@@ -371,12 +385,12 @@ const Donors = {
                 OfflineManager.write(path, list);
                 Notify.show('שובץ בהצלחה (לסוף המסלול)', 'success');
                 Modal.close();
-                setTimeout(() => this.renderManager(), 300);
+                this.renderManager(); 
             }
         });
     },
     
-    // 14 מסך מנהל (3)
+    // 15 רינדור מסך מנהל מסלולים
     renderManager() {
         if(this.poolSortable) { try { this.poolSortable.destroy(); } catch(e){} this.poolSortable = null; }
         if(this.donorSortables && this.donorSortables.length > 0) {
@@ -473,19 +487,19 @@ const Donors = {
         });
     },
     
-    // 15 סינון רשימה (14)
+    // 16 סינון בריכת מנהל
     filterPool(v) {
         const list = document.getElementById('donor-pool-list');
         if(!list) return;
         Array.from(list.children).forEach(el => { el.style.display = el.innerText.includes(v) ? 'flex' : 'none'; });
     },
     
-    // 16 שדות הוספה
+    // 17 שדות הוספה
     getFormFields() {
-        const activeKeys = (Store.data.config.fields || {}).donors || DEFAULT_ACTIVE_FIELDS.donors;
+        const activeKeys = (Store.data.config.fields || {}).donors || window.DEFAULT_ACTIVE_FIELDS.donors;
         const fields = [];
         activeKeys.forEach(k => {
-            let def = PREDEFINED_FIELDS.donors.find(p => p.k === k);
+            let def = window.PREDEFINED_FIELDS.donors.find(p => p.k === k);
             if (!def && Store.data.config.customFieldsDefs && Store.data.config.customFieldsDefs[k]) {
                 def = { k: k, l: Store.data.config.customFieldsDefs[k].l, t: 'text' };
             }
@@ -494,7 +508,7 @@ const Donors = {
         return fields;
     },
     
-    // 17 טופס הוספה
+    // 18 הוספת תורם
     openAddModal() {
         let preselectDay = null, preselectGid = null;
         if (this.viewTab !== 'all' && this.viewTab !== 'unassigned') {
@@ -525,7 +539,8 @@ const Donors = {
             if(data.firstName || data.lastName) data.name = `${data.firstName || ''} ${data.lastName || ''}`.trim();
             if(!data.name) data.name = 'ללא שם';
             
-            OfflineManager.write(`global/donors/${id}`, { id, joinYear: Store.currentYear, ...data });
+            const cleanData = System.cleanObject({ id, joinYear: Store.currentYear, ...data });
+            OfflineManager.write(`global/donors/${id}`, cleanData);
             
             const groupVal = document.getElementById('new-donor-group').value;
             if(groupVal) {
@@ -538,27 +553,29 @@ const Donors = {
                 });
             }
             Notify.show('תורם נוסף בהצלחה', 'success');
+            this.render(); 
         }, groupSelectHtml);
     },
     
-    // 18 טופס עריכה
+    // 19 עריכת תורם
     openEdit(id) {
         const d = Store.data.donors[id];
         if (!d) return Notify.show('תורם לא נמצא', 'error');
         const fields = this.getFormFields().map(f => ({ ...f, v: d[f.id] }));
         Modal.render('עריכת תורם', fields, (data) => {
             if(data.firstName || data.lastName) data.name = `${data.firstName || ''} ${data.lastName || ''}`.trim();
-            OfflineManager.write(`global/donors/${id}`, data, 'update');
+            OfflineManager.write(`global/donors/${id}`, System.cleanObject(data), 'update');
             Notify.show('פרטי תורם עודכנו', 'success');
+            this.render(); 
         });
     },
     
-    // 19 מחיקת תורם
+    // 20 מחיקת תורם
     delete(id) {
         if(confirm('אזהרה: למחוק תורם זה?')) {
             OfflineManager.write(`global/donors/${id}`, null, 'remove');
             delete Store.data.donors[id];
-            this.render();
+            this.render(); 
             Notify.show('התורם נמחק', 'info');
         }
     }
