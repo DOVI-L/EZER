@@ -276,21 +276,21 @@ const Importer = {
         });
     },
     
-    // 7 תצוגה מקדימה לאישור
+    // 7 תצוגה מקדימה לאישור (כולל עריכה חיה והפרדת טקסט מספר)
     showPreviewModal() {
         const allYearsSet = new Set();
         this.pendingImport.forEach(r => r.finances.forEach(f => allYearsSet.add(f.targetYear)));
         const yearsArr = Array.from(allYearsSet).sort(); 
         
-        let headersHtml = yearsArr.map(y => `<th class="p-2 border text-center whitespace-nowrap min-w-[100px] text-indigo-700">${y}</th>`).join('');
+        let headersHtml = yearsArr.map(y => `<th class="p-2 border text-center whitespace-nowrap min-w-[120px] text-indigo-700">${y}<br><span class="text-[9px] text-gray-500 font-normal">סכום | הערה</span></th>`).join('');
 
-        let html = `<div class="bg-blue-50 p-4 rounded mb-4 text-sm text-blue-800 font-bold border border-blue-200">תצוגה מקדימה ואישור סופי:</div>`;
+        let html = `<div class="bg-blue-50 p-4 rounded mb-4 text-sm text-blue-800 font-bold border border-blue-200">תצוגה מקדימה ועריכה: <span class="font-normal">ניתן לתקן שגיאות או להפריד טקסט מסכום ישירות בטבלה לפני השמירה.</span></div>`;
         html += `<div class="max-h-[50vh] overflow-auto custom-scroll border rounded shadow-sm" dir="rtl"><table class="w-full text-right text-sm border-collapse">`;
         html += `<thead class="bg-gray-100 sticky top-0 z-10 shadow-sm"><tr>
-                    <th class="p-2 border whitespace-nowrap bg-gray-100">שם / מזהה</th>
+                    <th class="p-2 border whitespace-nowrap bg-gray-100">שם / מזהה (ניתן לעריכה)</th>
                     <th class="p-2 border whitespace-nowrap bg-gray-100 text-center">סטטוס</th>
                     ${headersHtml}
-                    <th class="p-2 border text-center bg-gray-100">הערות/שגיאה</th>
+                    <th class="p-2 border text-center bg-gray-100">הערות מערכת</th>
                     <th class="p-2 border text-center bg-gray-100 sticky left-0 z-20">פעולה</th>
                 </tr></thead><tbody>`;
         
@@ -301,16 +301,28 @@ const Importer = {
             
             let yearsTds = yearsArr.map(y => {
                 const fin = row.finances.find(f => f.targetYear === y);
-                if (!fin) return `<td class="p-2 border text-center text-gray-300">-</td>`;
-                const display = fin.isText ? `<span class="text-yellow-700 italic text-xs">${fin.val}</span>` : `<span class="text-emerald-600 font-bold" dir="ltr">₪${fin.val}</span>`;
-                return `<td class="p-2 border text-center bg-green-50/30">${display}</td>`;
+                if (!fin) return `<td class="p-2 border text-center bg-gray-50/50 text-gray-300">-</td>`;
+                
+                const parsed = System.parseFinancialInput(fin.val);
+                const hasBoth = parsed.amount !== null && parsed.textNote !== null;
+                const warnClass = hasBoth ? 'bg-orange-50 border-orange-300' : 'bg-green-50/30';
+                
+                return `<td class="p-1 border text-center ${warnClass}">
+                    ${hasBoth ? `<div class="text-[9px] text-orange-600 font-bold mb-1"><i class="fas fa-exclamation-triangle"></i> פוצל אוטומטית</div>` : ''}
+                    <div class="flex flex-col gap-1 items-center">
+                        <input type="number" id="import-amt-${i}-${y}" class="w-full max-w-[80px] border rounded text-center text-xs p-1 outline-none focus:border-indigo-400" placeholder="₪ סכום" value="${parsed.amount !== null ? parsed.amount : ''}">
+                        <input type="text" id="import-txt-${i}-${y}" class="w-full border rounded text-center text-xs p-1 outline-none focus:border-indigo-400" placeholder="טקסט/הערה" value="${parsed.textNote || ''}">
+                    </div>
+                </td>`;
             }).join('');
             
             html += `<tr class="border-b ${errClass} transition" id="prev-row-${i}">
-                <td class="p-2 border font-bold whitespace-nowrap">${row.fullName}</td>
+                <td class="p-2 border font-bold whitespace-nowrap">
+                    <input type="text" id="import-name-${i}" class="w-full border-b border-transparent hover:border-gray-300 focus:border-indigo-500 outline-none bg-transparent" value="${row.fullName}">
+                </td>
                 <td class="p-2 border text-center">${status}</td>
                 ${yearsTds}
-                <td class="p-2 border">${errStr}</td>
+                <td class="p-2 border text-xs">${errStr}</td>
                 <td class="p-2 border text-center sticky left-0 bg-white shadow-[-4px_0_10px_-5px_rgba(0,0,0,0.1)]">
                     <button onclick="document.getElementById('prev-row-${i}').style.opacity='0.3'; Importer.pendingImport[${i}].skip=true;" class="text-red-500 hover:text-red-700 text-xs font-bold px-3 py-1.5 bg-red-50 border border-red-200 rounded transition">דלג</button>
                 </td>
@@ -318,13 +330,12 @@ const Importer = {
         });
         
         html += `</tbody></table></div>`;
-        const customBtn = `<button onclick="Importer.commitImport()" class="w-full bg-emerald-600 text-white py-4 rounded-xl font-bold mt-6 shadow-lg hover:bg-emerald-700 text-lg transition transform hover:scale-[1.01]">אשר ושמור נתונים למערכת</button>`;
+        const customBtn = `<button onclick="Importer.commitImport()" class="w-full bg-emerald-600 text-white py-4 rounded-xl font-bold mt-6 shadow-lg hover:bg-emerald-700 text-lg transition transform hover:scale-[1.01]">אשר, שמור והפעל סנכרון</button>`;
         
-        Modal.renderRaw(`אישור נתוני ייבוא (${this.pendingImport.length} רשומות)`, html + customBtn, () => {}, 'max-w-7xl w-full');
+        Modal.renderRaw(`אישור ועריכת נתוני ייבוא (${this.pendingImport.length} רשומות)`, html + customBtn, () => {}, 'max-w-7xl w-full');
         document.querySelector('#modal-form .btn-primary').parentElement.style.display = 'none';
     },
-    
-    // 8 שמירה וסיום
+  // 8 שמירה וסיום
     commitImport() {
         Modal.close();
         Notify.show('שומר נתונים למערכת...', 'info');
@@ -335,11 +346,13 @@ const Importer = {
         const newDonorIdsForGroup = [];
         let groupTargetStr = null;
 
-        this.pendingImport.forEach(row => {
+        this.pendingImport.forEach((row, i) => {
             if (row.skip || row.errors.length > 0) return;
 
+            const editedName = document.getElementById(`import-name-${i}`).value.trim();
+
             if (row.isNewEntity) {
-                const newObj = { id: row.entityId, ...row.entityData, name: row.fullName };
+                const newObj = { id: row.entityId, ...row.entityData, name: editedName };
                 if (this.currentType === 'students_new') newObj.lastUpdatedYear = Store.currentYear;
                 else newObj.joinYear = Store.currentYear; 
                 
@@ -353,20 +366,31 @@ const Importer = {
             }
 
             row.finances.forEach(fin => {
+                const amtEl = document.getElementById(`import-amt-${i}-${fin.targetYear}`);
+                const txtEl = document.getElementById(`import-txt-${i}-${fin.targetYear}`);
+                
+                const rawAmt = amtEl ? amtEl.value : '';
+                const rawTxt = txtEl ? txtEl.value.trim() : '';
+                
+                if (!rawAmt && !rawTxt) return; 
+
+                const amount = rawAmt ? parseFloat(rawAmt) : null;
                 const txId = 'imp' + Date.now() + Math.random().toString(36).substr(2, 5);
                 const dObj = fin.dateStr ? System.parseExcelDate(fin.dateStr) : new Date();
                 
                 const tx = {
-                    id: txId, date: dObj.getTime(), type: fin.isText ? 'note' : 'income',
-                    category: 'יבוא אקסל', amount: fin.isText ? fin.val : parseFloat(fin.val),
+                    id: txId, date: dObj.getTime(), 
+                    type: (amount !== null ? 'income' : 'note'),
+                    category: 'יבוא אקסל', 
+                    amount: amount,
+                    textNote: rawTxt || null,
                     isPurim: true, importedYear: fin.targetYear
                 };
-                if(fin.isText) tx.desc = fin.val; 
                 
                 if (this.currentType === 'donors') tx.donorId = row.entityId;
                 else tx.studentId = row.entityId;
                 
-                financeUpdates[`years/${fin.targetYear}/finance/${txId}`] = tx;
+                financeUpdates[`years/${fin.targetYear}/finance/${txId}`] = System.cleanObject(tx);
                 countFinance++;
             });
         });
@@ -401,5 +425,4 @@ const Importer = {
             Notify.show('שגיאה בשמירת הנתונים', 'error');
         });
     }
-};
 window.Importer = Importer;

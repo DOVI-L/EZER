@@ -48,14 +48,20 @@ const Finance = {
             this.render();
         });
     },
-    
-    // 4 רינדור רשימת תנועות (18)
+    // 4 רינדור רשימת תנועות (הסתרת טקסטים שהגיעו מייבוא)
     render() {
         const tbody = document.getElementById('finance-tbody');
         if(!tbody) return;
         
         tbody.innerHTML = ''; 
         let raw = Object.values(this.financeData);
+        
+        // סינון: אל תציג בקופה תנועות שהן רק טקסט/הערה שהגיעו מייבוא (כדי לא לשבש את מראה הקופה)
+        raw = raw.filter(tx => {
+            if (tx.type === 'note' && (tx.category === 'יבוא אקסל' || tx.category === 'היסטוריה/יבוא')) return false;
+            return true;
+        });
+
         if(this.currentFilter !== 'all') {
             if(this.currentFilter === 'purim') raw = raw.filter(tx => tx.isPurim);
             else raw = raw.filter(tx => tx.type === this.currentFilter);
@@ -73,13 +79,20 @@ const Finance = {
                 entityName = `קבוצה: ${tx.groupName || tx.groupId}`;
             }
 
-            const isNote = tx.type === 'note' || isNaN(parseFloat(tx.amount));
-            const displayAmount = isNote ? `<span class="text-xs text-gray-500">${tx.amount || tx.desc}</span>` : `₪${parseInt(tx.amount).toLocaleString()}`;
+            // טקסטים או הערות שלא מכילים כסף
+            const isNote = tx.type === 'note' || (tx.amount === null && tx.textNote);
+            let displayAmount = isNote ? `<span class="text-xs text-gray-500">${tx.textNote || tx.desc || tx.amount}</span>` : `₪${parseInt(tx.amount).toLocaleString()}`;
+            
+            // אם יש גם כסף וגם טקסט בתנועה (מהעריכה המתקדמת החדשה)
+            if (!isNote && tx.textNote) {
+                displayAmount += `<br><span class="text-[10px] text-gray-400 font-normal">${tx.textNote}</span>`;
+            }
+
             const rowClass = isNote ? 'bg-yellow-50/50 italic' : 'hover:bg-slate-50';
             const displayDate = System.toHebrewDate(tx.date);
 
             let typeBadge = '';
-            if (isNote) typeBadge = '<span class="px-2 py-1 rounded text-xs font-bold bg-yellow-100 text-yellow-700">הערת מסלול</span>';
+            if (isNote) typeBadge = '<span class="px-2 py-1 rounded text-xs font-bold bg-yellow-100 text-yellow-700">הערת מסלול/טקסט</span>';
             else if (tx.type === 'income') typeBadge = '<span class="px-2 py-1 rounded text-xs font-bold bg-emerald-50 text-emerald-700">הכנסה</span>';
             else typeBadge = '<span class="px-2 py-1 rounded text-xs font-bold bg-rose-50 text-rose-700">הוצאה</span>';
 
@@ -519,7 +532,7 @@ const Finance = {
         }
     },
 
-    // 13 שמירת טופס מרובה (9)
+    // 13 שמירת טופס מרובה (כולל המפצל)
     submitBatch() {
         const rows = document.querySelectorAll('#batch-tbody tr');
         let count = 0;
@@ -554,15 +567,19 @@ const Finance = {
                 
             } else {
                 const rawVal = tr.querySelector('input[name="amount"]').value;
-                if (!rawVal) return;
+                if (!rawVal && type !== 'note') return;
                 
-                const amount = parseFloat(rawVal);
-                const isText = type === 'note' || isNaN(amount);
+                // שימוש במפרק החכם
+                const parsed = System.parseFinancialInput(rawVal);
+                const amount = parsed.amount;
+                const textNote = parsed.textNote;
+                
+                const isPureText = (amount === null && textNote !== null) || type === 'note';
 
-                // סעיף 9: ניקוי שדות
                 const txData = System.cleanObject({
-                    id: txId, date: timestamp, type: isText ? 'note' : type,
-                    amount: isText ? rawVal : amount, category: category, subCategory: subCategory,
+                    id: txId, date: timestamp, type: isPureText ? 'note' : type,
+                    amount: amount, textNote: textNote,
+                    category: category, subCategory: subCategory,
                     desc: (entityId ? '' : `שם: ${entityNameRaw}. `) + desc, isPurim: isPurim
                 });
                 
@@ -573,10 +590,10 @@ const Finance = {
 
                 OfflineManager.write(`years/${Store.currentYear}/finance/${txId}`, txData);
                 
-                if(OfflineManager.isOnline && !isText) {
+                if(OfflineManager.isOnline && amount !== null && !isPureText) {
                      db.ref(`years/${Store.currentYear}/stats/${type}`).transaction(curr => (curr || 0) + amount);
                 }
-                if(type === 'income' && txData.studentId && !isText) {
+                if(type === 'income' && txData.studentId && amount !== null && !isPureText) {
                     System.checkStudentProgress(txData.studentId, amount);
                 }
                 count++;
@@ -586,7 +603,6 @@ const Finance = {
         if (count > 0) { Notify.show(`${count} שורות נקלטו`, 'success'); Modal.close(); } 
         else { alert('לא נקלטו נתונים (ודא שמילאת סכומים)'); }
     },
-
     // 14 פתיחת עריכה
     editTx(id) {
         const tx = this.financeData[id];
@@ -594,9 +610,9 @@ const Finance = {
         this.openTransactionModal(tx.type, tx); 
     },
     
-    // 15 חלון תנועה (9)
+  // 15 חלון תנועה עריכה/הוספה בודדת (כולל המפצל)
     openTransactionModal(type, existingData = null) {
-        const isNote = existingData && (existingData.type === 'note' || isNaN(parseFloat(existingData.amount)));
+        const isNote = existingData && (existingData.type === 'note' || existingData.amount === null);
         let cats = [];
         if (isNote || type === 'note') cats = ['הערה / טקסט', 'יבוא אקסל'];
         else if (type === 'income') cats = ['תרומה כללית','מזומן','צק','אשראי','הו"ק','יבוא אקסל'];
@@ -610,6 +626,14 @@ const Finance = {
         
         let defaultDate = new Date().toISOString().split('T')[0];
         if (existingData && existingData.date) defaultDate = new Date(existingData.date).toISOString().split('T')[0];
+        
+        // יצירת מחרוזת מאוחדת לשדה אחד כפי שהיה מקודם (המשתמש כותב הכל בשדה אחד והמערכת מפצלת)
+        let defaultAmountValue = '';
+        if (existingData) {
+             if (existingData.amount !== null && existingData.amount !== undefined) defaultAmountValue += existingData.amount;
+             if (existingData.textNote) defaultAmountValue += (defaultAmountValue ? ' ' : '') + existingData.textNote;
+             if (!defaultAmountValue && isNote && existingData.desc) defaultAmountValue = existingData.desc;
+        }
 
         const html = `
             <div class="space-y-6">
@@ -629,7 +653,8 @@ const Finance = {
                 </div>
                 <div id="amount-input-container" class="bg-gray-50 p-4 rounded-xl border border-gray-200">
                     <label class="lbl text-lg text-slate-700">סכום או ערך (הערה)</label>
-                    <input type="text" id="tx-amount" class="input-field w-full text-3xl font-bold text-center tracking-wider text-slate-800" value="${existingData?.amount || ''}" placeholder="סכום בש״ח או טקסט" required>
+                    <input type="text" id="tx-amount" class="input-field w-full text-3xl font-bold text-center tracking-wider text-slate-800" value="${defaultAmountValue}" placeholder="סכום בש״ח או טקסט" required>
+                    <p class="text-center text-xs text-gray-400 mt-2">הזן סכום, או טקסט (לדוגמה: 200 צק), והמערכת תפצל אותם אוטומטית לשמירה מדויקת.</p>
                 </div>
                 <div class="bg-slate-50 p-4 rounded-xl border">
                     <label class="lbl">שיוך</label>
@@ -662,15 +687,20 @@ const Finance = {
             
             let rawVal = document.getElementById('tx-amount').value;
             if(!rawVal) return alert('חובה להזין סכום או ערך');
-            let amount = parseFloat(rawVal); const isTextNow = isNaN(amount);
+            
+            // המפצל החכם!
+            const parsed = System.parseFinancialInput(rawVal);
+            const amount = parsed.amount;
+            const textNote = parsed.textNote;
+            const isTextNow = (amount === null && textNote !== null);
             
             const dVal = document.getElementById('tx-date').value;
             const timestamp = dVal ? new Date(dVal + 'T12:00:00').getTime() : Date.now();
             const id = existingData ? existingData.id : ('tx' + Date.now());
             
-            // סעיף 9: ניקוי שדות (חיסכון ב-Firebase)
             const newData = System.cleanObject({
-                id, date: timestamp, type: isTextNow ? 'note' : type, amount: isTextNow ? rawVal : amount,
+                id, date: timestamp, type: isTextNow ? 'note' : type, 
+                amount: amount, textNote: textNote,
                 category: document.getElementById('tx-category').value,
                 subCategory: document.getElementById('tx-sub-category').value,
                 desc: document.getElementById('tx-desc').value,
@@ -680,22 +710,25 @@ const Finance = {
             OfflineManager.write(`years/${Store.currentYear}/finance/${id}`, newData, existingData ? 'update' : 'set');
             
             if(OfflineManager.isOnline) {
-                if (existingData && !isNote) db.ref(`years/${Store.currentYear}/stats/${type}`).transaction(curr => (curr || 0) - existingData.amount);
-                if (!isTextNow) db.ref(`years/${Store.currentYear}/stats/${type}`).transaction(curr => (curr || 0) + amount);
+                if (existingData && existingData.amount !== null && !isNaN(existingData.amount)) {
+                     db.ref(`years/${Store.currentYear}/stats/${type}`).transaction(curr => (curr || 0) - existingData.amount);
+                }
+                if (amount !== null) {
+                     db.ref(`years/${Store.currentYear}/stats/${type}`).transaction(curr => (curr || 0) + amount);
+                }
             }
             
             Notify.show('נשמר בהצלחה', 'success');
             Modal.close();
             
             if (document.getElementById('finance-purim-view') && !document.getElementById('finance-purim-view').classList.contains('hidden')) {
-                this.renderPurimManager(); // סעיף 7
+                this.renderPurimManager(); 
             }
         }, 'max-w-3xl w-full'); 
         
         if(existingData?.studentId) document.getElementById('sel-student').value = existingData.studentId;
         if(existingData?.donorId) document.getElementById('sel-donor').value = existingData.donorId;
     },
-
     // 16 מחיקת תנועה (7)
     deleteTx(id, type, amountVal) {
         if(confirm('למחוק תנועה זו?')) {

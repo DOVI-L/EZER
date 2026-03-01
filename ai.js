@@ -1,4 +1,4 @@
-// --- אובייקט המודאל החסר ---
+
 window.Modal = {
     open(title, bodyHtml, onSaveCallback) {
         const modal = document.getElementById('modal-form');
@@ -46,13 +46,10 @@ const HybridAI = {
     apiKeys: [],
     currentKeyIndex: 0,
 
-    init() {
-        const btnContainer = document.getElementById('ai-bubble-container');
-        if (btnContainer) {
-            btnContainer.classList.remove('hidden-screen', 'hidden');
-            btnContainer.style.display = 'block';
-        }
-
+  init() {
+        // מחיקת השורות שהסירו את המחלקות המוסתרות מהבועה.
+        // הבועה תישאר מוסתרת (hidden-screen) עד שמערכת ההרשאות תשחרר אותה!
+        
         this.loadKeys();
         this.loadSessions();
         this.checkApiKey();
@@ -62,7 +59,6 @@ const HybridAI = {
         ['mousemove', 'keydown', 'click'].forEach(ev => document.addEventListener(ev, () => this.resetKeyExpiration()));
         this.resetKeyExpiration();
     },
-
     // --- זיכרון של 5 צ'אטים אחרונים ---
     loadSessions() {
         try {
@@ -616,4 +612,4 @@ const HybridAI = {
 };
 
 window.HybridAI = HybridAI;
-document.addEventListener('DOMContentLoaded', () => setTimeout(() => HybridAI.init(), 1000));
+// שורת ה-DOMContentLoaded נמחקה לחלוטין. הפעלת ה-AI תתרחש דרך Store.loadConfig בלבד.

@@ -1,37 +1,25 @@
-// 1 משיכת בחורים במינות
+
 const Students = {
-    limit: 30,
+    showAll: false, // הגדרה חדשה המנטרת האם להציג את כולם
     
-    // 2 טעינת עוד בחורים
+    // 1 טעינת כל הבחורים במכה אחת (ולא במנות)
     loadMore(reset = false) {
         return new Promise((resolve) => {
             if (reset) {
-                Store.cursors.students = null;
-                Store.loadedAll.students = false;
+                this.showAll = false;
             }
             const loader = document.getElementById('students-loader-more');
             if(loader) {
                 loader.style.display = 'block';
-                loader.innerHTML = '<span class="text-gray-500 font-bold"><i class="fas fa-spinner fa-spin"></i> טוען נתונים...</span>';
+                loader.innerHTML = '<span class="text-gray-500 font-bold"><i class="fas fa-spinner fa-spin"></i> טוען את כל הבחורים למערכת...</span>';
             }
 
-            let query = db.ref('global/students').orderByKey().limitToLast(this.limit);
-            if (Store.cursors.students) query = query.endBefore(Store.cursors.students);
-
-            query.once('value', snap => {
-                const data = snap.val();
-                if (!data) {
-                    Store.loadedAll.students = true;
-                    this.render(); 
-                    resolve();
-                    return;
-                }
-                const keys = Object.keys(data).sort();
-                Store.cursors.students = keys[0];
-                Object.assign(Store.data.students, data);
+            // משיכה של כלל הבחורים ללא לימיט כדי לאפשר חיפוש וגלילה תקינים תמיד
+            db.ref('global/students').once('value', snap => {
+                const data = snap.val() || {};
+                Store.data.students = data;
+                Store.loadedAll.students = true; // נסמן שירדו כולם
                 OfflineManager.saveState('students', Store.data.students);
-                
-                if (keys.length < this.limit) Store.loadedAll.students = true;
                 
                 this.render(); 
                 resolve();
@@ -39,19 +27,13 @@ const Students = {
         });
     },
     
-    // 3 סנכרון חדשים
+    // 2 סנכרון בחורים חדשים
     syncNewest() {
-        db.ref('global/students').orderByKey().limitToLast(10).once('value', snap => {
-            const data = snap.val();
-            if(data) {
-                Object.assign(Store.data.students, data);
-                OfflineManager.saveState('students', Store.data.students);
-                if(Router.current === 'students') this.render();
-            }
-        });
+        // היות ואנו מורידים את כולם, הסנכרון יבצע פשוט ריענון כללי מהיר ברקע
+        this.loadMore();
     },
     
-    // 4 רינדור רשימה
+    // 3 רינדור רשימת בחורים
     render(searchTerm = null) {
         const term = searchTerm || (document.getElementById('student-search') ? document.getElementById('student-search').value.trim() : '');
         const tbody = document.getElementById('students-tbody');
@@ -63,6 +45,7 @@ const Students = {
             return { ...s, displayName: fullName };
         });
         
+        // תיקון מיון בטוח שימנע קריסות במקרים של נתונים פגומים מה-JSON
         list.sort((a,b) => (a.displayName||'').localeCompare(b.displayName||''));
         const baseGoal = Store.data.config.baseStudentGoal || 0;
         
@@ -72,28 +55,34 @@ const Students = {
             if (yData.personalGoal !== undefined && yData.personalGoal !== null && yData.personalGoal !== '') {
                 effective = parseInt(yData.personalGoal);
             }
-            // משיכת סך ההכנסות שחושב מראש
             const raised = yData.totalRaised || 0; 
             return { ...s, ...yData, effectiveGoal: effective, totalRaised: raised }; 
         });
         
         if(term) {
-            list = list.filter(s => (s.displayName || '').includes(term) || (s.phone || '').includes(term) || (s.grade && s.grade.includes(term)) || (s.studentNum && s.studentNum.includes(term)));
+            list = list.filter(s => (s.displayName || '').includes(term) || (s.studentNum && s.studentNum.includes(term)));
         }
         
-        const displayList = list.slice(0, 100); 
+        // חיתוך הרשימה לתצוגה ראשונית מהירה (30) אלא אם חיפשנו משהו או לחצנו "הצג הכל"
+        let displayList;
+        if (term || this.showAll) {
+            displayList = list;
+        } else {
+            displayList = list.slice(0, 30);
+        }
+
         const loader = document.getElementById('students-loader-more');
 
         if (loader) {
             loader.style.display = 'block';
-            if (displayList.length === 0) {
+            if (list.length === 0) {
                  loader.innerHTML = '<span class="text-gray-400 font-bold bg-gray-50 px-4 py-2 rounded-full border">לא נמצאו בחורים</span>';
-            } else if (Store.loadedAll.students || term) {
-                 loader.innerHTML = '<span class="text-gray-400 font-bold bg-gray-50 px-4 py-2 rounded-full border">סוף רשימה</span>';
+            } else if (displayList.length >= list.length) {
+                 loader.innerHTML = `<span class="text-gray-400 font-bold bg-gray-50 px-4 py-2 rounded-full border">סוף רשימה (${list.length} בחורים)</span>`;
             } else {
                  loader.innerHTML = `
-                    <button onclick="Students.loadMore()" class="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-6 py-2 rounded-full text-sm font-bold transition shadow-sm w-full sm:w-auto">
-                        <i class="fas fa-chevron-down ml-2"></i> טען עוד בחורים...
+                    <button onclick="Students.showAll = true; Students.render();" class="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-6 py-2 rounded-full text-sm font-bold transition shadow-sm w-full sm:w-auto">
+                        <i class="fas fa-list ml-2"></i> הצג את כל השאר... (${list.length - 30} בחורים נוספים)
                     </button>`;
             }
         }
@@ -113,12 +102,17 @@ const Students = {
             const archiveIcon = s.isArchived ? 'fa-box-open' : 'fa-archive';
             const archiveTitle = s.isArchived ? 'שחזר מהיסטוריה' : 'העבר להיסטוריה';
             
-            // תצוגת היעד לצד הסכום שנאסף בפועל (סעיף 3 בבקשה החדשה)
-            const goalDisplay = `<div class="flex items-center justify-end gap-2">
-                <span class="text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 font-bold" title="סך הכל הוכנס השנה">₪${s.totalRaised.toLocaleString()}</span>
-                <span class="text-slate-400 text-xs">מתוך</span>
-                <span class="font-bold text-slate-800">₪${parseInt(s.effectiveGoal).toLocaleString()}</span>
-            </div>`;
+            const pct = s.effectiveGoal > 0 ? Math.min(100, Math.round((s.totalRaised / s.effectiveGoal) * 100)) : 0;
+            const goalDisplay = `
+                <div class="flex flex-col gap-1 items-end w-32 mr-auto">
+                    <div class="flex justify-between w-full text-[10px] font-bold">
+                        <span class="text-emerald-600">₪${s.totalRaised.toLocaleString()}</span>
+                        <span class="text-slate-400">₪${parseInt(s.effectiveGoal).toLocaleString()}</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                        <div class="bg-emerald-500 h-2 rounded-full transition-all" style="width: ${pct}%"></div>
+                    </div>
+                </div>`;
 
             row.innerHTML = `
                 <td class="p-3 text-right font-medium text-slate-700 group-hover:text-indigo-600 transition">
@@ -141,24 +135,24 @@ const Students = {
             tbody.appendChild(row);
         });
     },
-    
-    // 5 הוספה מהירה
+
+   // 4 פתיחת הוספה מהירה (בחורים - שימוש במפצל החכם לשדה הסכום)
     openBatchDonation(id, name) {
         const html = `
             <div class="space-y-4">
                 <div class="bg-green-50 p-3 rounded-lg border border-green-200 flex justify-between items-center">
                     <div>
                         <div class="font-bold text-green-900">הוספת תרומות עבור: ${name}</div>
-                        <div class="text-xs text-green-700">כל שורה מייצגת תרומה נפרדת</div>
+                        <div class="text-xs text-green-700">ניתן להזין סכום, טקסט, או שניהם יחד.</div>
                     </div>
                 </div>
                 
                 <table class="w-full text-right" id="batch-add-table">
                     <thead>
                         <tr class="text-xs text-gray-500 border-b">
-                            <th class="p-2">סכום</th>
+                            <th class="p-2">סכום / טקסט משולב</th>
+                            <th class="p-2">הערה נוספת (אופציונלי)</th>
                             <th class="p-2">מקור</th>
-                            <th class="p-2">הערות</th>
                             <th class="p-2 w-8"></th>
                         </tr>
                     </thead>
@@ -180,61 +174,64 @@ const Students = {
             let totalAdded = 0;
             
             rows.forEach(tr => {
-                const amount = parseFloat(tr.querySelector('.input-amount').value);
-                if (!amount) return;
+                const amountRaw = tr.querySelector('.input-amount').value;
+                const textNote = tr.querySelector('.input-textnote').value.trim();
                 
+                if (!amountRaw && !textNote) return;
+                
+                const parsed = System.parseFinancialInput(amountRaw);
                 const method = tr.querySelector('.input-method').value;
-                const notes = tr.querySelector('.input-notes').value;
-                
                 const txId = 'tx' + Date.now() + Math.random().toString(36).substr(2,5);
                 
+                // חיבור הטקסט שהגיע משדה הסכום (אם היה שם) יחד עם שדה ההערה הייעודי
+                const finalNote = [parsed.textNote, textNote].filter(Boolean).join(" | ");
+
                 const txData = System.cleanObject({ 
-                    id: txId, date: now, type: 'income', amount: amount,
-                    category: method, desc: notes, studentId: id, isPurim: true
+                    id: txId, date: now, type: 'income', 
+                    amount: parsed.amount, 
+                    textNote: finalNote || null,
+                    category: method, studentId: id, isPurim: true
                 });
                 
                 OfflineManager.write(`years/${Store.currentYear}/finance/${txId}`, txData);
-                if(OfflineManager.isOnline) {
-                     db.ref(`years/${Store.currentYear}/stats/income`).transaction(curr => (curr || 0) + amount);
+                if(OfflineManager.isOnline && parsed.amount !== null) {
+                     db.ref(`years/${Store.currentYear}/stats/income`).transaction(curr => (curr || 0) + parsed.amount);
+                     totalAdded += parsed.amount;
                 }
-                
-                totalAdded += amount;
                 count++;
             });
             
             if (count > 0) {
-                System.checkStudentProgress(id, totalAdded);
-                Notify.show(`${count} תרומות בסך ₪${totalAdded} נוספו בהצלחה`, 'success');
+                if(totalAdded > 0) System.checkStudentProgress(id, totalAdded);
+                Notify.show(`${count} רשומות נוספו בהצלחה`, 'success');
                 Modal.close();
-                // רענון מיידי לתצוגת הסכום
                 if(Router.current === 'students') setTimeout(() => this.render(), 300);
-            } else { alert('לא הוזנו סכומים'); }
+            } else { alert('לא הוזנו נתונים'); }
         }, 'max-w-3xl w-full');
     },
-
-    // 6 HTML לשורה
+    // 5 יצירת שורת הוספה
     getBatchRowHtml() {
         return `
             <tr class="border-b last:border-0">
                 <td class="p-2"><input type="number" class="input-amount border rounded p-1 w-full" placeholder="₪"></td>
+                <td class="p-2"><input type="text" class="input-textnote border rounded p-1 w-full" placeholder="הערה..."></td>
                 <td class="p-2">
                     <select class="input-method border rounded p-1 w-full text-sm">
                         <option>תרומה כללית</option><option>מזומן</option><option>צק</option><option>אשראי</option>
                     </select>
                 </td>
-                <td class="p-2"><input type="text" class="input-notes border rounded p-1 w-full" placeholder="הערה..."></td>
                 <td class="p-2 text-center"><button onclick="this.closest('tr').remove()" class="text-red-400 hover:text-red-600"><i class="fas fa-times"></i></button></td>
             </tr>
         `;
     },
 
-    // 7 הוספת שורה
+    // 6 הוספת שורה לטבלה
     addBatchRow() {
         const tbody = document.getElementById('batch-add-tbody');
         tbody.insertAdjacentHTML('beforeend', this.getBatchRowHtml());
     },
 
-    // 8 שדות הוספה
+    // 7 יצירת שדות טופס
     getFormFields() {
         const activeKeys = (Store.data.config.fields || {}).students || window.DEFAULT_ACTIVE_FIELDS.students;
         const fields = [];
@@ -248,7 +245,7 @@ const Students = {
         return fields;
     },
     
-    // 9 טופס הוספה
+    // 8 פתיחת מודאל הוספה
     openAddModal() {
         Modal.render('הוספת בחור חדש', this.getFormFields(), (data) => {
             if (!data.firstName || !data.lastName) return Notify.show('שגיאה: חובה להזין שם ומשפחה', 'error');
@@ -262,7 +259,7 @@ const Students = {
         });
     },
     
-    // 10 הוספה מרובה
+    // 9 פתיחת הוספה מרובה
     openQuickAdd() {
         const html = `
             <div class="mb-4">
@@ -293,39 +290,44 @@ const Students = {
         });
     },
     
-    // 11 טופס עריכה
+ // 10 פתיחת מודאל עריכה
     openEdit(id) {
         const s = Store.data.students[id];
         if(!s) return Notify.show('שגיאה בטעינת הבחור', 'error');
+        
         const yData = (Store.data.yearData[Store.currentYear]?.students || {})[id] || {};
-        const currentGoal = yData.personalGoal; 
+        const currentPersonalGoal = yData.personalGoal; // יכול להיות ריק
         const baseGoal = Store.data.config.baseStudentGoal || 0;
+        
         const fields = this.getFormFields().map(f => ({ ...f, v: s[f.id] || '' }));
         const tiers = (Store.data.config.studentTiers || []).sort((a,b) => a.amount - b.amount);
         
-        let isCustom = false; let selectedValue = "";
-        if (currentGoal === undefined || currentGoal === null || currentGoal === '') selectedValue = ""; 
-        else {
-            const match = tiers.find(t => t.amount == currentGoal);
-            if (match) selectedValue = match.amount;
-            else { isCustom = true; selectedValue = "custom"; }
-        }
+        // מה שמוצג כרגע בתיבת הטקסט (אם יש לו יעד אישי נציג אותו, אחרת ריק)
+        const displayGoal = (currentPersonalGoal !== undefined && currentPersonalGoal !== null && currentPersonalGoal !== '') ? currentPersonalGoal : '';
         
-        let goalOptions = `<option value="">יעד מערכת בסיסי (${baseGoal})</option>`;
-        tiers.forEach(t => { goalOptions += `<option value="${t.amount}" ${!isCustom && selectedValue == t.amount ? 'selected' : ''}>${t.amount} (${t.reward})</option>`; });
+        let tierOptions = `<option value="">-- בחר יעד מוכן מראש (או הקלד למטה) --</option>`;
+        tierOptions += `<option value="BASE">יעד מערכת בסיסי (${baseGoal})</option>`;
+        tiers.forEach(t => { 
+            tierOptions += `<option value="${t.amount}">${t.amount} ש"ח (${t.reward})</option>`; 
+        });
 
         const extraHtml = `
-            <div class="mb-4 bg-amber-50 p-3 rounded border border-amber-200">
-                <label class="block text-sm font-bold text-amber-900 mb-1">יעד אישי לשנת ${Store.currentYear}</label>
-                <select id="student-goal-select" class="w-full border border-amber-300 p-2 rounded mb-2 bg-white" onchange="document.getElementById('custom-goal-wrap').style.display = this.value === 'custom' ? 'block' : 'none'">
-                    ${goalOptions}
-                    <option value="custom" ${isCustom ? 'selected' : ''}>יעד מותאם אישית...</option>
+            <div class="mb-4 bg-amber-50 p-4 rounded-xl border border-amber-200 shadow-sm">
+                <label class="block text-sm font-bold text-amber-900 mb-2">יעד אישי לשנת ${Store.currentYear}</label>
+                
+                <select id="quick-goal-select" class="w-full border border-amber-300 p-2 rounded mb-3 bg-white text-sm outline-none" 
+                        onchange="if(this.value === 'BASE') { document.getElementById('student-custom-goal').value = ''; } else if(this.value !== '') { document.getElementById('student-custom-goal').value = this.value; }">
+                    ${tierOptions}
                 </select>
-                <div id="custom-goal-wrap" style="display: ${isCustom ? 'block' : 'none'}">
-                    <input type="number" id="student-custom-goal" value="${isCustom ? currentGoal : ''}" placeholder="הכנס סכום יעד..." class="w-full border border-amber-300 p-2 rounded">
+                
+                <div class="relative">
+                    <input type="number" id="student-custom-goal" value="${displayGoal}" placeholder="השאר ריק כדי שהבחור יקבל את יעד הבסיס (${baseGoal})" class="w-full border border-amber-300 p-2.5 rounded outline-none focus:border-amber-500 font-bold text-lg shadow-inner pr-8">
+                    <span class="absolute right-3 top-3 text-gray-400 font-bold">₪</span>
                 </div>
+                <p class="text-[10px] text-amber-700 mt-2 font-medium">ניתן להקליד כל סכום, גם נמוך מהבסיס (למשל 500). <br>השאר את התיבה ריקה אם ברצונך שהבחור יתעדכן אוטומטית לפי יעד המערכת הכללי.</p>
             </div>
         `;
+
         Modal.render('עריכת פרטי בחור', fields, (data) => {
             const updates = {};
             Object.keys(data).forEach(k => { updates[k] = data[k]; });
@@ -333,26 +335,31 @@ const Students = {
             
             OfflineManager.write(`global/students/${id}`, System.cleanObject(updates), 'update');
             
-            const selectVal = document.getElementById('student-goal-select').value;
-            let finalGoal = null;
-            if(selectVal === 'custom') {
-                const customVal = document.getElementById('student-custom-goal').value;
-                if(customVal !== '') finalGoal = parseInt(customVal);
-            } else if(selectVal !== "") {
-                finalGoal = parseInt(selectVal);
+            // טיפול בשמירת היעד מהתיבה החדשה
+            const customGoalStr = document.getElementById('student-custom-goal').value.trim();
+            
+            if (customGoalStr !== '') {
+                // נשמר יעד אישי ספציפי (גם אם הוא נמוך)
+                const finalGoal = parseInt(customGoalStr);
+                OfflineManager.write(`years/${Store.currentYear}/studentData/${id}/personalGoal`, finalGoal);
+                
+                if(!Store.data.yearData[Store.currentYear]) Store.data.yearData[Store.currentYear] = {students:{}};
+                if(!Store.data.yearData[Store.currentYear].students[id]) Store.data.yearData[Store.currentYear].students[id] = {};
+                Store.data.yearData[Store.currentYear].students[id].personalGoal = finalGoal;
+            } else {
+                // התיבה ריקה - מחיקת היעד האישי וחזרה ליעד בסיס
+                OfflineManager.write(`years/${Store.currentYear}/studentData/${id}/personalGoal`, null, 'remove');
+                
+                if(Store.data.yearData[Store.currentYear] && Store.data.yearData[Store.currentYear].students[id]) {
+                    delete Store.data.yearData[Store.currentYear].students[id].personalGoal;
+                }
             }
             
-            if(finalGoal !== null && !isNaN(finalGoal)) {
-                OfflineManager.write(`years/${Store.currentYear}/studentData/${id}/personalGoal`, finalGoal);
-            } else {
-                OfflineManager.write(`years/${Store.currentYear}/studentData/${id}/personalGoal`, null, 'remove');
-            }
-            Notify.show('פרטים עודכנו', 'success');
+            Notify.show('פרטים עודכנו בהצלחה', 'success');
             this.render(); 
         }, extraHtml);
     },
-    
-    // 12 העברה לארכיון
+    // 11 העברה לארכיון
     toggleArchive(id, shouldArchive) {
         if(shouldArchive && !confirm('האם להעביר בחור זה לארכיון?')) return;
         OfflineManager.write(`global/students/${id}/isArchived`, shouldArchive ? true : null);
@@ -361,7 +368,7 @@ const Students = {
         Notify.show(shouldArchive ? 'הועבר לארכיון' : 'שוחזר מהארכיון', 'info');
     },
     
-    // 13 מחיקת בחור
+    // 12 מחיקת בחור לצמיתות
     delete(id) {
         if(confirm('למחוק לגמרי? יוסר מכל הקבוצות.')) {
             OfflineManager.write(`global/students/${id}`, null, 'remove');

@@ -1,3 +1,4 @@
+
 // 1 מערכת דוחות והדפסות
 const Reports = {
     // 2 משתני עורך
@@ -410,13 +411,16 @@ const Reports = {
         }, 100);
     },
 
-    // 14 עורך מסלול
+    // 14 עורך מסלול (מתוקן עם מספור רציף)
     renderRouteMode(container) {
         container.innerHTML = '';
         const data = this.editorState.routeData || []; 
         
         const ROWS_PER_PAGE = this.editorState.rowsPerPage || 30;
         let pages = []; let currentPage = []; let rowCount = 0;
+        
+        // מונה גלובלי לתורמים, כך שהמספור לא יתאפס אחרי כל הערה
+        let globalRowIndex = 1;
 
         data.forEach(segment => {
             if (segment.type === 'note') {
@@ -424,9 +428,9 @@ const Reports = {
                 currentPage.push({ type: 'note', text: segment.text });
                 rowCount += 2;
             } else if (segment.type === 'table') {
-                segment.rows.forEach((row, i) => {
+                segment.rows.forEach((row) => {
                     if (rowCount >= ROWS_PER_PAGE) { pages.push(currentPage); currentPage = []; rowCount = 0; }
-                    currentPage.push({ type: 'row', data: row, index: i });
+                    currentPage.push({ type: 'row', data: row, index: globalRowIndex++ });
                     rowCount++;
                 });
             }
@@ -468,7 +472,7 @@ const Reports = {
                     openTable();
                     let tds = '';
                     const r = item.data;
-                    const values = [item.index + 1, `<b>${r.name}</b>`, r.street, r.floor, r.notes, r.hist3, r.hist2, r.hist1, r.currentYearBlank];
+                    const values = [item.index, `<b>${r.name}</b>`, r.street, r.floor, r.notes, r.hist3, r.hist2, r.hist1, r.currentYearBlank];
                     
                     this.editorState.headersOrder.forEach(idx => {
                         if (this.editorState.colsVisible[idx]) {

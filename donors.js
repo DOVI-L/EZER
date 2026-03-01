@@ -1,3 +1,4 @@
+
 // 1 משיכת תורמים במינות
 const Donors = {
     limit: 40,
@@ -196,7 +197,7 @@ const Donors = {
         } catch(e) { console.error(e); }
     },
     
-    // 8 רינדור רשימה וכפתור דינמי (סעיף 12)
+    // 8 רינדור רשימה וכפתור דינמי (מעודכן עם השהיה)
     renderList(searchTerm) {
         const term = searchTerm || (document.getElementById('donor-search-input') ? document.getElementById('donor-search-input').value.trim() : '');
         const tbody = document.getElementById('donors-tbody');
@@ -237,6 +238,9 @@ const Donors = {
 
         if(term) list = list.filter(d => (d.name || '').includes(term) || (d.address||'').includes(term) || (d.city||'').includes(term));
         
+        // הערה: הסרנו את המיון המיוחד של המושהים לסוף, כדי שלא יחתכו על ידי הפאגינציה.
+        // הם יוצגו בסדר אלף-בית רגיל יחד עם כולם, אך במראה שקוף כדי לזהותם.
+
         const displayList = list.slice(0, 50);
         const loader = document.getElementById('donors-loader-more');
 
@@ -259,12 +263,20 @@ const Donors = {
         displayList.forEach(d => {
             const groupName = Store.data.donorGroupMap[d.id];
             const tr = document.createElement('tr');
-            tr.className = "hover:bg-slate-50 border-b border-slate-50 transition cursor-pointer group";
+            
+            // עיצוב שונה לתורם מושהה
+            const rowStyle = d.isSuspended ? 'bg-gray-100 opacity-60' : 'hover:bg-slate-50';
+            tr.className = `${rowStyle} border-b border-slate-50 transition cursor-pointer group`;
             tr.onclick = (e) => { if(!e.target.closest('button')) this.openEdit(d.id); }; 
             
+            const suspendBtnIcon = d.isSuspended ? 'fa-play text-emerald-500' : 'fa-pause text-orange-400';
+            const suspendBtnTitle = d.isSuspended ? 'בטל השהיה (החזר למסלול)' : 'השהה תורם (הסר ממסלול זמנית)';
+
             tr.innerHTML = `
                 <td class="p-3 text-right font-medium text-slate-800">
-                     ${d.name} ${d.vip ? '<span class="mr-2 text-[10px] bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-100">VIP</span>' : ''}
+                     ${d.name} 
+                     ${d.vip ? '<span class="mr-2 text-[10px] bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-100">VIP</span>' : ''}
+                     ${d.isSuspended ? '<span class="mr-2 text-[10px] bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded font-bold">מושהה</span>' : ''}
                 </td>
                 <td class="p-3 text-right text-gray-500 text-sm">${d.city || ''} ${d.street || d.address || ''} ${d.floor ? '(קומה '+d.floor+')' : ''}</td>
                 <td class="p-3 text-right text-gray-500 text-sm">${d.phone || ''}</td>
@@ -272,13 +284,23 @@ const Donors = {
                 <td class="p-3">
                     <div class="flex items-center justify-start sm:justify-center gap-2 overflow-x-auto pb-1 custom-scroll">
                         <button onclick="Donors.openBatchDonation('${d.id}', '${d.name}')" class="bg-green-100 text-green-600 hover:bg-green-200 hover:text-green-800 transition shrink-0 p-2 rounded-full font-bold" title="הוסף תרומות"><i class="fas fa-plus"></i></button>
-                        <button onclick="Donors.openEdit('${d.id}')" class="text-indigo-400 hover:text-indigo-600 bg-indigo-50 hover:bg-indigo-100 shrink-0 p-2 rounded-full transition"><i class="fas fa-pen"></i></button>
-                        <button onclick="Donors.delete('${d.id}')" class="text-red-300 hover:text-red-600 hover:bg-red-50 shrink-0 p-2 rounded-full transition admin-only"><i class="fas fa-trash"></i></button>
+                        <button onclick="Donors.openEdit('${d.id}')" class="text-indigo-400 hover:text-indigo-600 bg-indigo-50 hover:bg-indigo-100 shrink-0 p-2 rounded-full transition" title="ערוך"><i class="fas fa-pen"></i></button>
+                        <button onclick="Donors.toggleSuspend('${d.id}', ${d.isSuspended})" class="bg-white border shadow-sm hover:bg-gray-50 shrink-0 p-2 rounded-full transition" title="${suspendBtnTitle}"><i class="fas ${suspendBtnIcon}"></i></button>
+                        <button onclick="Donors.delete('${d.id}')" class="text-red-300 hover:text-red-600 hover:bg-red-50 shrink-0 p-2 rounded-full transition admin-only" title="מחק לצמיתות"><i class="fas fa-trash"></i></button>
                     </div>
                 </td>
             `;
             tbody.appendChild(tr);
         });
+    },
+
+    // 8.5 פונקציית השהיה גלובלית
+    toggleSuspend(id, isCurrentlySuspended) {
+        const newState = isCurrentlySuspended ? null : true;
+        OfflineManager.write(`global/donors/${id}/isSuspended`, newState);
+        if (Store.data.donors[id]) Store.data.donors[id].isSuspended = newState;
+        Notify.show(newState ? 'התורם הועבר למצב מושהה' : 'התורם חזר לפעילות', 'info');
+        this.renderList();
     },
 
     // 9 HTML לשורה
@@ -304,7 +326,7 @@ const Donors = {
                 <div class="bg-green-50 p-3 rounded-lg border border-green-200 flex justify-between items-center">
                     <div>
                         <div class="font-bold text-green-900">הוספת נתונים עבור: ${name}</div>
-                        <div class="text-xs text-green-700">ניתן להזין סכום כספי, או טקסט שיישמר כהערה.</div>
+                        <div class="text-xs text-green-700">ניתן להזין סכום כספי, או טקסט שיישמר כהערה (המערכת מפצלת אוטומטית).</div>
                     </div>
                 </div>
                 <table class="w-full text-right" id="batch-add-table">
@@ -318,21 +340,26 @@ const Donors = {
             const rows = document.querySelectorAll('#batch-add-tbody tr');
             let count = 0; const now = Date.now();
             rows.forEach(tr => {
-                const rawVal = tr.querySelector('.input-amount').value.trim();
+                const rawVal = tr.querySelector('.input-amount').value;
                 if (!rawVal) return;
-                const amount = parseFloat(rawVal); const isText = isNaN(amount);
+                
+                const parsed = System.parseFinancialInput(rawVal);
                 const method = tr.querySelector('.input-method').value;
                 const notes = tr.querySelector('.input-notes').value;
                 const txId = 'tx' + Date.now() + Math.random().toString(36).substr(2,5);
                 
+                const isTextNow = (parsed.amount === null && parsed.textNote !== null);
+                
                 const txData = System.cleanObject({ 
-                    id: txId, date: now, type: isText ? 'note' : 'income', 
-                    amount: isText ? rawVal : amount, category: isText ? 'הערת מסלול' : method, 
-                    desc: notes || (isText ? rawVal : ''), donorId: id, isPurim: true
+                    id: txId, date: now, type: isTextNow ? 'note' : 'income', 
+                    amount: parsed.amount, 
+                    textNote: (parsed.textNote ? parsed.textNote + " " : "") + notes,
+                    category: isTextNow ? 'הערת מסלול' : method, 
+                    desc: notes || parsed.textNote || '', donorId: id, isPurim: true
                 });
                 
                 OfflineManager.write(`years/${Store.currentYear}/finance/${txId}`, txData);
-                if(OfflineManager.isOnline && !isText) db.ref(`years/${Store.currentYear}/stats/income`).transaction(curr => (curr || 0) + amount);
+                if(OfflineManager.isOnline && parsed.amount !== null) db.ref(`years/${Store.currentYear}/stats/income`).transaction(curr => (curr || 0) + parsed.amount);
                 count++;
             });
             if (count > 0) { Notify.show(`${count} רשומות נוספו בהצלחה`, 'success'); Modal.close(); } 
@@ -390,7 +417,7 @@ const Donors = {
         });
     },
     
-    // 15 רינדור מסך מנהל מסלולים
+    // 15 רינדור מסך מנהל מסלולים (קנבן)
     renderManager() {
         if(this.poolSortable) { try { this.poolSortable.destroy(); } catch(e){} this.poolSortable = null; }
         if(this.donorSortables && this.donorSortables.length > 0) {
@@ -451,7 +478,10 @@ const Donors = {
                 <div class="flex-1 overflow-y-auto p-2 space-y-2 bg-slate-50 kanban-group-list custom-scroll" data-gid="${g.id}"></div>
             `;
             const listEl = col.querySelector('.kanban-group-list');
-            (g.route || []).forEach((did, i) => {
+            
+            let visibleIndex = 1;
+            
+            (g.route || []).forEach((did) => {
                 if(did.startsWith('NOTE:')) {
                     const noteText = did.substring(5);
                     const item = document.createElement('div');
@@ -462,11 +492,31 @@ const Donors = {
                 } else {
                     const d = Store.data.donors[did];
                     if(d) {
-                        const item = document.createElement('div');
-                        item.className = "bg-white p-2 border rounded shadow-sm text-sm flex flex-col justify-between cursor-grab hover:border-emerald-200 transition group";
-                        item.dataset.id = did;
-                        item.innerHTML = `<div class="flex justify-between items-start"><div class="flex items-center gap-2"><span class="bg-emerald-100 text-emerald-700 w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-bold">${i+1}</span><span class="truncate w-48 font-bold">${d.name}</span></div><button onclick="Groups.removeFromRoute('${g.day}','${g.id}','${did}')" class="text-red-400 hover:text-red-600 hidden group-hover:block"><i class="fas fa-times"></i></button></div><div class="text-xs text-gray-500 mt-1 truncate mr-7">${d.city||''} ${d.street||d.address||''}</div>`;
-                        listEl.appendChild(item);
+                        const isSuspended = d.isSuspended;
+                        
+                        // אם הוא מושהה, אנחנו מסתירים אותו לחלוטין מתצוגת הקנבן כדי שלא יפריע למסלול, 
+                        // אבל הוא נשאר ב-DOM כדי שהשמירה של Sortable לא תמחק אותו!
+                        if (isSuspended) {
+                            const item = document.createElement('div');
+                            item.className = "hidden"; // מוסתר לגמרי
+                            item.dataset.id = did;
+                            listEl.appendChild(item);
+                        } else {
+                            const itemClass = "bg-white border hover:border-emerald-200";
+                            const item = document.createElement('div');
+                            item.className = `${itemClass} p-2 rounded shadow-sm text-sm flex flex-col justify-between cursor-grab transition group`;
+                            item.dataset.id = did;
+                            item.innerHTML = `
+                                <div class="flex justify-between items-start">
+                                    <div class="flex items-center gap-2">
+                                        <span class="bg-emerald-100 text-emerald-700 w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-bold">${visibleIndex++}</span>
+                                        <span class="truncate w-48 font-bold">${d.name}</span>
+                                    </div>
+                                    <button onclick="Groups.removeFromRoute('${g.day}','${g.id}','${did}')" class="text-red-400 hover:text-red-600 hidden group-hover:block"><i class="fas fa-times"></i></button>
+                                </div>
+                                <div class="text-xs text-gray-500 mt-1 truncate mr-7">${d.city||''} ${d.street||d.address||''}</div>`;
+                            listEl.appendChild(item);
+                        }
                     }
                 }
             });
@@ -572,7 +622,7 @@ const Donors = {
     
     // 20 מחיקת תורם
     delete(id) {
-        if(confirm('אזהרה: למחוק תורם זה?')) {
+        if(confirm('אזהרה: למחוק תורם זה לצמיתות מהמערכת? (למחיקה רק ממסלול השנה - השתמש בכפתור ההשהיה במסלול או ברשימה)')) {
             OfflineManager.write(`global/donors/${id}`, null, 'remove');
             delete Store.data.donors[id];
             this.render(); 
