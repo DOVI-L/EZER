@@ -23,33 +23,65 @@ const Importer = {
         } else { this.startImport(type); }
     },
     
-    // 3 הפעלת דיאלוג קובץ
+// 3 הפעלת דיאלוג קובץ
     startImport(type) {
         this.currentType = type; 
         Modal.close();
-        setTimeout(() => {
-            const input = document.getElementById('excel-upload-input');
-            input.value = '';
-            input.click();
-        }, 100);
+        
+        const input = document.getElementById('excel-upload-input');
+        if (!input) {
+            alert("תקלה: אלמנט העלאת הקובץ לא נמצא בדף!");
+            return;
+        }
+        
+        input.value = ''; 
+        
+        try {
+            input.click(); 
+        } catch (e) {
+            console.error("Browser blocked file input click:", e);
+            alert("הדפדפן חסם את פתיחת הקובץ. נסה שוב.");
+        }
     },
     
     // 4 קריאת אקסל
     handleFileSelect(input) {
         const file = input.files[0];
-        if (!file) return;
+        if (!file) {
+            alert('פעולת בחירת קובץ בוטלה');
+            return;
+        }
+
+        if (typeof XLSX === 'undefined') {
+            alert('שגיאה: ספריית פענוח אקסל לא נטענה. ייתכן שיש חסימת אינטרנט (כמו נטפרי) שמונעת זאת.');
+            return;
+        }
+
+        Notify.show('קורא את הקובץ, אנא המתן...', 'info');
+
         const reader = new FileReader();
         reader.onload = (e) => {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            this.fileData = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
-            if (this.fileData.length === 0) { Notify.show('הקובץ ריק', 'error'); return; }
-            this.openMappingModal();
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                this.fileData = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
+                
+                if (!this.fileData || this.fileData.length === 0) { 
+                    alert('הקובץ ריק או שלא זוהו עמודות'); 
+                    return; 
+                }
+                
+                this.openMappingModal();
+                
+            } catch (err) {
+                console.error("Excel Parsing Error:", err);
+                alert("שגיאה בפענוח הקובץ. ודא שמדובר בקובץ אקסל תקין.");
+            }
         };
+        
         reader.readAsArrayBuffer(file);
     },
-    
     // 5 מסך מיפוי עמודות
     openMappingModal() {
         const excelHeaders = Object.keys(this.fileData[0]);
@@ -428,3 +460,4 @@ const Importer = {
 }; 
 
 window.Importer = Importer;
+
