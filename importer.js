@@ -420,9 +420,11 @@ const Importer = {
             Notify.show(msg, countFinance > 0 || countNew > 0 ? 'success' : 'info');
             if (this.currentType.includes('students')) Students.loadMore(true); else Donors.loadMore(true);
             if (countFinance > 0 && window.Finance) Finance.loadMore(true);
-        }).catch(err => {
+ }).catch(err => {
             console.error(err);
             Notify.show('שגיאה בשמירת הנתונים', 'error');
         });
     }
+}; 
+
 window.Importer = Importer;
